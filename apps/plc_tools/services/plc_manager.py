@@ -1,7 +1,8 @@
-import threading
-import time
+import threading, time
 from pymodbus.client import ModbusTcpClient
 from pymodbus.exceptions import ConnectionException, ModbusIOException
+from ..models import PLCRegister
+from django.utils import timezone
 
 class PLCManager:
     def __init__(self, host="127.0.0.1", port=502):
@@ -11,6 +12,7 @@ class PLCManager:
         self.running = False
         self.data = {}
         self.last_error = None
+        self.read_count = 5
 
     def connect(self):
         from pymodbus.client import ModbusTcpClient
@@ -20,6 +22,7 @@ class PLCManager:
 
     def start_polling(self, rate):
         if self.running:
+            print("PLC already being polled...")
             return
         try:
             self.connect()
@@ -36,12 +39,23 @@ class PLCManager:
                 if not self.client:
                     time.sleep(2)
                     continue
-                rr = self.client.read_holding_registers(0)
+                rr = self.client.read_holding_registers(0, count=self.read_count)
                 if rr.isError():
                     self.last_error = str(rr)
                     time.sleep(2)
                     continue
+                    
+                for addr, val in enumerate(rr.registers):
+                    PLCRegister.objects.create(
+                        plc_name="MainPLC",
+                        address=addr,
+                        value=val,
+                        timestamp=timezone.now(),
+                    )
+                    
                 self.data = rr.registers
+                print("Read PLC data")
+                
                 self.last_error = None
             except (ConnectionException, ModbusIOException) as e:
                 print(f"PLC connection error: {e}")
@@ -67,3 +81,4 @@ class PLCManager:
     #    }
     
 plc_manager = PLCManager()
+print("Created PLC Manager")
