@@ -4,13 +4,16 @@
 <div id="dashboard">
     {% for widget in widgets %}
         <div class="widget"
-             data-widget-id="{{ widget.external_id }}"
+             data-widget_id="{{ widget.external_id }}"
              data-type="{{ widget.widget_type }}"
-             data-tag="{{ widget.tag.external_id }}"
-             title="{{ widget.tag.alias }}"
-             style="left: {{ widget.config.x }}px; top: {{ widget.config.y }}px;">
+             data-tag="{{ widget.tag.external_id }}">
             {% include "plc_tools/widgets/"|add:widget.widget_type|add:".html" %}
         </div>
+        {% with uuid=widget.external_id|stringformat:"s" %}
+            {% with cfg_id="config-"|add:uuid %}
+                {{ widget.config|json_script:cfg_id }}
+            {% endwith %}
+        {% endwith %}
     {% endfor %}
 </div>
 

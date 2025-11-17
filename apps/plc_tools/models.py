@@ -47,6 +47,11 @@ class Tag(models.Model):
         #TODO multi-coil value?
         #TODO more stuff from pymodbus.constants
 
+    #TODO alarm states
+    #Could be a min or max value, value over/under a threshold for too long, too much change, etc
+    #Could have different message options, or threat levels, like warning or critical failure
+    #User can subscribe to notifications
+
     device = models.ForeignKey(Device, on_delete=models.CASCADE, related_name="tags")
     unit_id = models.PositiveIntegerField(default=1)
 

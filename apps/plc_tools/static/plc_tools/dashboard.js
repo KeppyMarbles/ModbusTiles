@@ -1,9 +1,17 @@
 import { updateWidget } from './widgets.js'
 
 document.querySelectorAll(".widget").forEach(widget => {
-
     const tagId = widget.dataset.tag;
     const widgetType = widget.dataset.type;
+
+    console.log(document.getElementById("config-" + widget.dataset.widget_id).textContent)
+    const config = JSON.parse(document.getElementById("config-" + widget.dataset.widget_id).textContent);
+    widget.config = config;
+
+    widget.style.left = config.position_x + "px";
+    widget.style.top = config.position_y + "px";
+
+    widget.style.transform = `scale(${config.scale_x}, ${config.scale_y})`;
 
     console.log("Found widget with id ", tagId, " type ", widgetType);
 
