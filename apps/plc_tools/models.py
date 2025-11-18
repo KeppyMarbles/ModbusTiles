@@ -135,6 +135,7 @@ class DashboardWidget(models.Model):
         BUTTON = "button", _("Button")
         LABEL = "label", _("Text Label")
         SWITCH = "switch", _("Switch")
+        METER = "meter", _("Meter")
         #("gauge", "Gauge"),
         #("slider", "Slider"),
 

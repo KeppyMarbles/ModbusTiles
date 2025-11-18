@@ -27,6 +27,10 @@ export function updateWidget(widget, value) { //TODO null values
             if(widget.shouldUpdate)
                 widget.querySelector(".switch-input").checked = value ? true : false;
             break;
+
+        case "meter":
+            widget.querySelector(".meter-bar").value = value;
+            break;
     }
 }
 
@@ -36,6 +40,7 @@ export function setupWidget(widget) {
             widget.shouldUpdate = true;
             const input = widget.querySelector(".switch-input")
             input.addEventListener("change", async () => {
+                //TODO yes/no confirmation if configured?
                 widget.shouldUpdate = false;
                 clearTimeout(widget.timeoutID);
 
@@ -63,5 +68,12 @@ export function setupWidget(widget) {
         case "label":
             widget.querySelector(".label_text").textContent = widget.config.text;
             break;
+
+        case "meter":
+            const bar = widget.querySelector(".meter-bar");
+            bar.min = widget.config.min_value;
+            bar.max = widget.config.max_value;
+            widget.querySelector(".min-label").textContent = bar.min;
+            widget.querySelector(".max-label").textContent = bar.max;
     }
 }

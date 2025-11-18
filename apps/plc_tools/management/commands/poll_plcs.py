@@ -28,7 +28,6 @@ class Command(BaseCommand):
                     client = self.__get_connection(device)
 
                     writes = TagWriteRequest.objects.filter(processed=False, tag__device=device)
-                    print(writes)
                     for req in writes:
                         self.__write_value(client, req.tag, req.value)
                         req.processed = True

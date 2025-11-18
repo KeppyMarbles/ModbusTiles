@@ -45,3 +45,9 @@ input:checked + .slider {
 input:checked + .slider:before {
   transform: translateX(26px);
 }
+.meter-widget {
+  display: flex; 
+  align-items: center; 
+  gap: 8px; 
+  width: 300px;
+}

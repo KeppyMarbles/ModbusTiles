@@ -14,7 +14,7 @@ document.querySelectorAll(".widget").forEach(widget => {
 
     setupWidget(widget);
 
-    if(widget.dataset.tag) {
+    if(widget.dataset.tag) { //TODO we only need to know the values for each tag, not each widget
         setInterval(() => { //TODO handle failed to fetch error?
             fetch(`/api/tag/${widget.dataset.tag}/value/`)
                 .then(response => response.json())

@@ -66,7 +66,7 @@ if __name__ == "__main__":
 
     #start_test_routine(test_oscillate_coil, context, coil_addr=0, interval=2)
     #start_test_routine(test_oscillate_coil, context, coil_addr=1, interval=1)
-    # start_test_routine(test_random_registers, context, start=0, count=5, interval=2)
+    start_test_routine(test_random_registers, context, start=0, count=5, interval=2)
     
     # start_test_routine(test_ramp_register, context, reg=1, min_val=0, max_val=50, step=5, interval=0.2)
 
