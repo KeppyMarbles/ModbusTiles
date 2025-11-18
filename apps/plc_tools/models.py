@@ -118,6 +118,7 @@ class Dashboard(models.Model):
 class DashboardWidget(models.Model):
     class WidgetTypeChoices(models.TextChoices):
         LED = "led", _("LED Indicator")
+        BOOL_LABEL = "bool_label", _("Boolean Label")
         VALUE = "val", _("Numeric Value")
         LINE_CHART = "chart", _("Time-Series Chart")
         BUTTON = "button", _("Button")

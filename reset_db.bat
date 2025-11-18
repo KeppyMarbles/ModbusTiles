@@ -9,15 +9,14 @@ set DB_FILE=db.sqlite3
 echo.
 echo Deleting migration files...
 
-for /r %APP_DIR% %%f in (migrations) do (
-    if exist "%%f" (
-        echo Cleaning: %%f
-        for /r "%%f" %%m in (*.py) do (
-            if NOT "%%~nxm"=="__init__.py" (
-                del "%%m"
-            )
+for /f "delims=" %%f in ('dir /ad /b /s "%APP_DIR%\migrations"') do (
+    echo Cleaning: %%f
+
+    for %%m in ("%%f\*.py") do (
+        if NOT "%%~nxm"=="__init__.py" (
+            echo Deleting: %%m
+            del "%%m"
         )
-        for /r "%%f" %%m in (*.pyc) do del "%%m"
     )
 )
 

@@ -9,42 +9,38 @@ class Command(BaseCommand):
         device, created = Device.objects.get_or_create(
             alias="TestPLC"
         )
+        if not created:
+            print("Test objects already set up; reset the DB first")
+            return
 
-        tag, created = Tag.objects.get_or_create(
+        tag = Tag.objects.create(
             device=device,
             alias="Test Coil",
             description="PLC coil 0",
             register_count=1,
-            defaults={
-                "channel": Tag.ChannelChoices.COIL,
-                "data_type": Tag.DataTypeChoices.BOOL,
-                "address": 0,
-            },
+            channel=Tag.ChannelChoices.COIL,
+            data_type=Tag.DataTypeChoices.BOOL,
+            address=0,
         )
-        tag2, created = Tag.objects.get_or_create(
+        tag2 = Tag.objects.create(
             device=device,
             alias="Test Coil 2",
             description="PLC coil 1",
             register_count=1,
-            defaults={
-                "channel": Tag.ChannelChoices.COIL,
-                "data_type": Tag.DataTypeChoices.BOOL,
-                "address": 1,
-            },
+            channel=Tag.ChannelChoices.COIL,
+            data_type=Tag.DataTypeChoices.BOOL,
+            address=1,
         )
 
-        user, created = User.objects.get_or_create(
+        user = User.objects.create(
             username="testuser",
-            defaults={
-                "email": "test@example.com",
-                "is_staff": True,
-            }
+            email="test@example.com",
+            is_staff=True,
         )
-        if created:
-            user.set_password("test1234")
-            user.save()
+        user.set_password("test1234")
+        user.save()
 
-        dashboard, created = Dashboard.objects.get_or_create(
+        dashboard = Dashboard.objects.create(
             owner=user,
             alias="TestDashboard",
         )
@@ -60,7 +56,19 @@ class Command(BaseCommand):
                 "scale_y" : 3,
                 "color_on": "green",
                 "color_off": "red",
-                "label": "Test Coil"
+            }
+        )
+        widget = DashboardWidget.objects.create(
+            dashboard=dashboard,
+            tag=tag,
+            widget_type=DashboardWidget.WidgetTypeChoices.BOOL_LABEL,
+            config = {
+                "position_x": 100,
+                "position_y": 150,
+                "scale_x" : 1,
+                "scale_y" : 1,
+                "text_on": "On",
+                "text_off": "Off",
             }
         )
         widget = DashboardWidget.objects.create(
@@ -74,7 +82,19 @@ class Command(BaseCommand):
                 "scale_y" : 3,
                 "color_on": "green",
                 "color_off": "red",
-                "label": "Test Coil 2"
+            }
+        )
+        widget = DashboardWidget.objects.create(
+            dashboard=dashboard,
+            tag=tag2,
+            widget_type=DashboardWidget.WidgetTypeChoices.BOOL_LABEL,
+            config = {
+                "position_x": 200,
+                "position_y": 150,
+                "scale_x" : 1,
+                "scale_y" : 1,
+                "text_on": "On",
+                "text_off": "Off",
             }
         )
         widget = DashboardWidget.objects.create(
@@ -82,11 +102,10 @@ class Command(BaseCommand):
             widget_type=DashboardWidget.WidgetTypeChoices.LABEL,
             config = {
                 "position_x": 100,
-                "position_y": 30,
+                "position_y": 20,
                 "scale_x" : 2,
                 "scale_y" : 2,
                 "text" : "Test Coils",
-                "label": ""
             }
         )
         

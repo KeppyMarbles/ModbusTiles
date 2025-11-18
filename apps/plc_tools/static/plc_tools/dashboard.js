@@ -7,6 +7,7 @@ document.querySelectorAll(".widget").forEach(widget => {
     console.log(document.getElementById("config-" + widget.dataset.widget_id).textContent)
     const config = JSON.parse(document.getElementById("config-" + widget.dataset.widget_id).textContent);
     widget.config = config;
+    //widget.baseTitle = widget.title;
 
     widget.style.left = config.position_x + "px";
     widget.style.top = config.position_y + "px";

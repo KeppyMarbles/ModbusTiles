@@ -1,5 +1,7 @@
-export function updateWidget(widget, type, value) {
+export function updateWidget(widget, type, value) { //TODO null values
     console.log("Updating widget");
+    //if(value !== undefined)
+    //    widget.title = `${widget.baseTitle} (Value: ${value})`
     switch (type) {
         case "led":
             const indicator = widget.querySelector(".indicator");
@@ -11,8 +13,11 @@ export function updateWidget(widget, type, value) {
             break;
         case "button":
             break;
+        case "bool_label":
+            widget.querySelector(".label_text").textContent = value ? widget.config.text_on : widget.config.text_off
+            break;
         case "label":
-            widget.textContent = widget.config.text;
+            widget.querySelector(".label_text").textContent = widget.config.text;
             break;
     }
 }

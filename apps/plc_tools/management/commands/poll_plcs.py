@@ -55,8 +55,11 @@ class Command(BaseCommand):
                     conn = ModbusUdpClient(device.ip_address, port=device.port)
                 #case Device.ProtocolChoices.MODBUS_RTU:
                 #    conn = ModbusSerialClient(device.port)
-            if not conn.connect():
+            if conn.connect():
+                print("Established connection", conn)
+            else:
                 raise ConnectionError("Could not connect to PLC")
+
         
         self.connections[device.alias] = conn
         return conn
