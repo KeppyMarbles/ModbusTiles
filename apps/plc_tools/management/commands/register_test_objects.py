@@ -240,6 +240,7 @@ class Command(BaseCommand):
                 "low_value" : 30,
                 "high_value" : 70,
                 "optimum_value" : 100,
+                "width" : 300,
                 "display_range" : False,
             }
         )
@@ -255,6 +256,7 @@ class Command(BaseCommand):
                 "scale_y" : 1,
                 "min_value" : 0,
                 "max_value" : 100,
+                "width" : 300,
                 "display_range" : True,
             }
         )
@@ -273,6 +275,7 @@ class Command(BaseCommand):
                 "low_value" : 30,
                 "high_value" : 70,
                 "optimum_value" : 100,
+                "width" : 300,
                 "display_range" : False,
             }
         )
@@ -288,6 +291,7 @@ class Command(BaseCommand):
                 "scale_y" : 1,
                 "min_value" : 0,
                 "max_value" : 100,
+                "width" : 300,
                 "display_range" : True,
             }
         )
@@ -313,6 +317,7 @@ class Command(BaseCommand):
             channel=Tag.ChannelChoices.INPUT_REGISTER,
             data_type=Tag.DataTypeChoices.INT16,
             address=0,
+            max_history_entries=100,
         )
 
         widget = DashboardWidget.objects.create(
@@ -329,7 +334,25 @@ class Command(BaseCommand):
                 "low_value" : 30,
                 "high_value" : 70,
                 "optimum_value" : 100,
+                "width" : 300,
                 "display_range" : False,
+            }
+        )
+
+        widget = DashboardWidget.objects.create(
+            dashboard=dashboard,
+            tag=tag,
+            widget_type=DashboardWidget.WidgetTypeChoices.LINE_CHART,
+            config = {
+                "position_x": 900,
+                "position_y": 100,
+                "scale_x": 1,
+                "scale_y": 1,
+                #"width": 400,
+                #"height": 300,
+                "history_seconds": 60,
+                #"line_color": "#006C9E",
+                "title": "Input Register 0 Trend"
             }
         )
 
@@ -340,6 +363,7 @@ class Command(BaseCommand):
             channel=Tag.ChannelChoices.INPUT_REGISTER,
             data_type=Tag.DataTypeChoices.INT16,
             address=1,
+            max_history_entries=100,
         )
 
         widget = DashboardWidget.objects.create(
@@ -356,7 +380,26 @@ class Command(BaseCommand):
                 "low_value" : 30,
                 "high_value" : 70,
                 "optimum_value" : 100,
+                "width" : 300,
                 "display_range" : False,
             }
         )
+
+        widget = DashboardWidget.objects.create(
+            dashboard=dashboard,
+            tag=tag2,
+            widget_type=DashboardWidget.WidgetTypeChoices.LINE_CHART,
+            config = {
+                "position_x": 900,
+                "position_y": 600,
+                "scale_x": 1,
+                "scale_y": 1,
+                #"width": 400,
+                #"height": 300,
+                "history_seconds": 60,
+                #"line_color": "#006C9E",
+                "title": "Input Register 1 Trend"
+            }
+        )
+
         

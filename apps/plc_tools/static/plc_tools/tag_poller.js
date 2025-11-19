@@ -21,8 +21,10 @@ export class TagPoller {
             const req = await fetch(`/api/tag/${tag}/value/`);
             const data = await req.json();
 
+            console.log(data.time);
+
             this.tagMap[tag].forEach(widget =>
-                widget.onValue(data.value)
+                widget.onValue(data.value, data.time)
             );
         }
     }

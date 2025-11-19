@@ -122,19 +122,34 @@ class Command(BaseCommand):
         #TODO what if we want to store entries at a lesser resolution?
         #TODO maybe we could not store the entry if the value is the same as the previous?
         tag.current_value = value
-        tag.save(update_fields=["current_value"])
+        tag.last_updated = timezone.now()
+        tag.save(update_fields=["current_value", "last_updated"])
 
-        if tag.max_history_entries != 0:
-            TagHistoryEntry.objects.create(tag=tag, value=value)
-            if tag.max_history_entries is None:
-                return
-            to_delete = (   
-                TagHistoryEntry.objects
-                .filter(tag=tag)
-                .order_by("-timestamp")[tag.max_history_entries:]
-            )
-            if to_delete.exists():
-                to_delete.delete()
+        if tag.max_history_entries == 0:
+            return
+
+        TagHistoryEntry.objects.create(tag=tag, value=value)
+
+        # Unlimited entries
+        if tag.max_history_entries < 0:
+            return
+
+        qs = (
+            TagHistoryEntry.objects
+            .filter(tag=tag)
+            .order_by("-timestamp")
+        )
+
+        try:
+            cutoff_entry = qs[tag.max_history_entries]
+        except IndexError:
+            return
+
+        # Purge
+        TagHistoryEntry.objects.filter(
+            tag=tag,
+            timestamp__lt=cutoff_entry.timestamp
+        ).delete()
 
         
     def __write_value(self, client: ModbusClient, tag: Tag, values):

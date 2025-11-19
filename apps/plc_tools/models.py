@@ -69,10 +69,11 @@ class Tag(models.Model):
     read_amount = models.PositiveIntegerField(default=1)
 
     max_history_entries = models.PositiveIntegerField(
-        null=True, blank=True, 
-        help_text="Keep at most N recent entries; null = unlimited",
+        help_text="Keep at most N recent entries; -1 = unlimited",
         default=0
     )
+
+    last_updated = models.DateTimeField(null=True)
     #max_write_entries = models.PositiveIntegerField(
     #    null=True, blank=True,
     #    default=0

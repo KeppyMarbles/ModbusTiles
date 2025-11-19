@@ -72,6 +72,8 @@ class SliderWidget extends Widget {
             this.min_label.textContent = this.input.min;
             this.max_label.textContent = this.input.max;
         }
+
+        this.elem.style.width = this.config.width;
         
         this.input.addEventListener("change", async () => {
             this.submit(this.input.value);
@@ -92,15 +94,19 @@ class MeterWidget extends Widget {
     constructor(widget_elem, config) {
         super(widget_elem, config);
         this.bar = this.elem.querySelector(".meter-bar");
+
         this.bar.min = this.config.min_value;
         this.bar.max = this.config.max_value;
         this.bar.low = this.config.low_value;
         this.bar.high = this.config.high_value;
         this.bar.optimum = this.config.optimum_value;
+
         if(this.config.display_range) {
             this.querySelector(".min-label").textContent = this.bar.min;
             this.querySelector(".max-label").textContent = this.bar.max;
         }
+
+        this.elem.style.width = this.config.width;
     }
 
     onValue(val) {
@@ -138,6 +144,84 @@ class BoolLabelWidget extends Widget {
     }
 }
 
+class ChartWidget extends Widget {
+    constructor(widget_elem, config) {
+        super(widget_elem, config);
+        this.chartDiv = this.elem.querySelector(".chart-container");
+
+        this.historyDurationSeconds = config.history_seconds || 60;
+        this.maxPoints = config.max_points || 1000;
+
+        this.initChart();
+    }
+
+    async initChart() {
+        try {
+            const response = await fetch(`/api/tag/${this.tag}/history/?minutes=${this.historyDurationMinutes}`);
+            const data = await response.json();
+            
+            // Data arrays
+            const timestamps = data.history.map(e => e.timestamp);
+            const values = data.history.map(e => e.value);
+
+            // Data trace
+            const trace = {
+                x: timestamps,
+                y: values,
+                mode: 'lines',
+                type: 'scatter',
+                line: { color: this.config.line_color || '#17BECF' }
+            };
+
+            // Layout
+            const layout = {
+                title: this.config.title || 'Tag History',
+                autosize: true,
+                margin: { l: 30, r: 10, b: 30, t: 30, pad: 4 },
+                xaxis: {
+                    type: 'date',
+                },
+                yaxis: {
+                    autorange: true
+                },
+                //paper_bgcolor: 'rgba(0,0,0,0)',
+                //plot_bgcolor: 'rgba(0,0,0,0)',
+                //font: {
+                //    color: '#ccc'
+                //}
+            };
+
+            const config = { responsive: true, displayModeBar: false };
+
+            await Plotly.newPlot(this.chartDiv, [trace], layout, config);
+
+            this.initialized = true;
+        } 
+        catch (err) {
+            console.error("Error initializing chart:", err);
+            this.chartDiv.innerHTML = "Error loading chart data";
+        }
+    }
+
+    onValue(val, time) {
+        const updateTime = new Date(time);
+        const timeStr = updateTime.toISOString();
+
+        const startTime = new Date(updateTime.getTime() - (this.historyDurationSeconds * 1000));
+        const startTimeStr = startTime.toISOString();
+        
+        if(this.initialized) {
+            Plotly.extendTraces(this.chartDiv, {
+                x: [[timeStr]],
+                y: [[val]]
+            }, [0], this.maxPoints);
+            Plotly.relayout(this.chartDiv, {
+                'xaxis.range': [startTimeStr, timeStr]
+            });
+        }
+    }
+}
+
 export const WidgetRegistry = {
     "switch": SwitchWidget,
     "slider": SliderWidget,
@@ -145,5 +229,5 @@ export const WidgetRegistry = {
     "led": LEDWidget,
     "label" : LabelWidget,
     "bool_label" : BoolLabelWidget,
-    //"chart": ChartWidget,
+    "chart": ChartWidget,
 };
