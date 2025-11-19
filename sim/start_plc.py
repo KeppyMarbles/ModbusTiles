@@ -70,5 +70,6 @@ if __name__ == "__main__":
     
     # start_test_routine(test_ramp_register, context, reg=1, min_val=0, max_val=50, step=5, interval=0.2)
 
-    print("Starting PLC server...")
+    
     StartTcpServer(context, address=("127.0.0.1", 502))
+    print("Started PLC server")

@@ -5,8 +5,8 @@
 <div id="dashboard" class="container">
     {% for widget in widgets %}
         <div class="widget"
-             data-widget_id="{{ widget.external_id }}"
-             data-type="{{ widget.widget_type }}"
+             data-widgetid="{{ widget.external_id }}"
+             data-class="{{ widget.widget_type }}"
              data-tag="{{ widget.tag.external_id }}"
              title="{{ widget.tag.description }}">
             {% include "plc_tools/widgets/"|add:widget.widget_type|add:".html" %}

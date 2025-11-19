@@ -8,6 +8,26 @@ from django.utils import timezone
 type ModbusClient = ModbusTcpClient | ModbusUdpClient | ModbusSerialClient
 #TODO tag value type?
 
+def get_modbus_reader(client: ModbusClient, tag: Tag):
+    """ Returns the function needed for reading a tag """
+    return {
+        Tag.ChannelChoices.COIL: client.read_coils,
+        Tag.ChannelChoices.DISCRETE_INPUT: client.read_discrete_inputs,
+        Tag.ChannelChoices.HOLDING_REGISTER: client.read_holding_registers,
+        Tag.ChannelChoices.INPUT_REGISTER: client.read_holding_registers
+    }[tag.channel]
+
+
+def get_modbus_datatype(client: ModbusClient, tag: Tag):
+    """ Returns the equivalent pymodbus datatype of a tag's datatype """
+    return {
+        Tag.DataTypeChoices.INT16: client.DATATYPE.INT16,
+        Tag.DataTypeChoices.UINT16: client.DATATYPE.UINT16,
+        Tag.DataTypeChoices.FLOAT32: client.DATATYPE.FLOAT32,
+        Tag.DataTypeChoices.STRING: client.DATATYPE.STRING
+    }[tag.data_type]
+
+
 class Command(BaseCommand):
     def handle(self, *args, **options):
         self.connections = {}
@@ -21,9 +41,7 @@ class Command(BaseCommand):
         Finds or creates a connection for each device and updates the value of active tags
         """
         while True:
-            devices = Device.objects.all()
-
-            for device in devices: 
+            for device in Device.objects.all(): 
                 try:
                     client = self.__get_connection(device)
 
@@ -36,14 +54,16 @@ class Command(BaseCommand):
                     tags = Tag.objects.filter(device=device, is_active=True)
                     #TODO read blocks instead of individual values?
                     for tag in tags:
-                        value = self.__read_tag(client, tag)
-                        self.__store_value(tag, value)
+                        values = self.__read_tag(client, tag)
+
+                        if not isinstance(values, str) and len(values) == 1:
+                            values = values[0] #TODO? could be confusing
+
+                        self.__store_value(tag, values)
 
                 except (ConnectionException, ModbusIOException, ConnectionError) as e: 
                     print(f"PLC connection error: {e}")
                     continue
-
-
 
                 #except Exception as e:
                 #    print(f"Unexpected error: {e}")
@@ -67,7 +87,6 @@ class Command(BaseCommand):
                 print("Established connection", conn)
             else:
                 raise ConnectionError("Could not connect to PLC", conn)
-
         
         self.connections[device.alias] = conn
         return conn
@@ -75,47 +94,33 @@ class Command(BaseCommand):
 
     def __read_tag(self, client: ModbusClient, tag: Tag):
         """ Returns the value of the register(s) or coil(s) associated with a tag """
-        #TODO should the register_count be already set based on the type? This would work for everything except string.
-        #TODO is there going to be widgets that make use of multiple register values that are int, float, bool, etc? Maybe instead of register count, we would have length field and scale it accordingly?
-        
-        read_map = {
-            Tag.ChannelChoices.COIL: client.read_coils,
-            Tag.ChannelChoices.DISCRETE_INPUT: client.read_discrete_inputs,
-            Tag.ChannelChoices.HOLDING_REGISTER: client.read_holding_registers,
-            Tag.ChannelChoices.INPUT_REGISTER: client.read_holding_registers
-        }
-        data_type_map  = {
-            Tag.DataTypeChoices.INT16: client.DATATYPE.INT16,
-            Tag.DataTypeChoices.UINT16: client.DATATYPE.UINT16,
-            Tag.DataTypeChoices.FLOAT32: client.DATATYPE.FLOAT32,
-            Tag.DataTypeChoices.STRING: client.DATATYPE.STRING
-        }
-
-        #print(tag.register_count)
-
-        result = read_map[tag.channel](tag.address, count=tag.register_count, device_id=tag.unit_id)
+        func = get_modbus_reader(client, tag)
+        result = func(tag.address, count=tag.get_read_count(), device_id=tag.unit_id)
 
         if result.isError():
             #raise Exception("Read error:", result) 
             print("Error:", result) #TODO
             return None
         
-        
-        #print(result.registers)
-        #print(result.bits)
-        
+        # Input or holding registers
         if len(result.registers) > 0:
-            stored_value = client.convert_from_registers(result.registers, data_type=data_type_map[tag.data_type])
-        elif len(result.bits) > 0:
-            stored_value = bool(result.bits[0]) #if tag.register_count == 1 else result.bits #TODO
+            values = client.convert_from_registers(result.registers, data_type=get_modbus_datatype(client, tag))
 
-        return stored_value
-        #TODO should we just always store a history entry for value fetch, but only keeping one if not tag.store_history?
+            # Ensure result is a list or a string
+            if not isinstance(values, list) and not isinstance(values, str):
+                values = [values]
+        
+        # Coils or discrete inputs
+        elif len(result.bits) > 0:
+            values = result.bits[:tag.read_amount]
+
+        return values
 
 
     def __store_value(self, tag: Tag, value):
         """ Updates the tag's value and stores history if enabled """
         #TODO what if we want to store entries at a lesser resolution?
+        #TODO maybe we could not store the entry if the value is the same as the previous?
         tag.current_value = value
         tag.save(update_fields=["current_value"])
 
@@ -132,31 +137,30 @@ class Command(BaseCommand):
                 to_delete.delete()
 
         
-    def __write_value(self, client: ModbusClient, tag: Tag, value):
+    def __write_value(self, client: ModbusClient, tag: Tag, values):
         """ Attemps to write a value to the tag's associated register(s) """
-        print("writing something")
-        data_type_map  = { #TODO reuse this? 
-            Tag.DataTypeChoices.INT16: client.DATATYPE.INT16,
-            Tag.DataTypeChoices.UINT16: client.DATATYPE.UINT16,
-            Tag.DataTypeChoices.FLOAT32: client.DATATYPE.FLOAT32,
-            Tag.DataTypeChoices.STRING: client.DATATYPE.STRING
-        }
 
-        match tag.data_type:
-            case Tag.DataTypeChoices.INT16 | Tag.DataTypeChoices.UINT16:
-                value = int(value)
-            case Tag.DataTypeChoices.FLOAT32:
-                value = float(value)
-            case Tag.DataTypeChoices.STRING:
-                value = str(value)
+        if not isinstance(values, list) and tag.data_type != Tag.DataTypeChoices.STRING:
+            values = [values]
+
+        try:
+            match tag.data_type:
+                case Tag.DataTypeChoices.BOOL:
+                    values = [bool(value) for value in values]
+                case Tag.DataTypeChoices.INT16 | Tag.DataTypeChoices.UINT16:
+                    values = [int(value) for value in values]
+                case Tag.DataTypeChoices.FLOAT32:
+                    values = [float(value) for value in values]
+        except ValueError as e:
+            print("Error attempting to write registers:", e)
 
         match tag.channel:
             case Tag.ChannelChoices.HOLDING_REGISTER:
-                result = client.convert_to_registers(value, data_type=data_type_map[tag.data_type], word_order=tag.device.word_order)
+                result = client.convert_to_registers(values, data_type=get_modbus_datatype(client, tag), word_order=tag.device.word_order)
                 client.write_registers(tag.address, result, device_id=tag.unit_id)
 
             case Tag.ChannelChoices.COIL:
-                client.write_coils(tag.address, [value], device_id=tag.unit_id)
+                client.write_coils(tag.address, values, device_id=tag.unit_id)
 
             case _:
                 print("Error: Tried to write with a read-only tag")

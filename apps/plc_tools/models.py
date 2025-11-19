@@ -28,7 +28,7 @@ class Device(models.Model):
 
     def __str__(self):
         return f"{self.alias} ({self.ip_address}:{self.port})"
-
+    
 
 class Tag(models.Model):
     class ChannelChoices(models.IntegerChoices):
@@ -41,11 +41,13 @@ class Tag(models.Model):
         BOOL = 0, _("Boolean")
         INT16 = 1, _("Signed Int16")
         UINT16 = 2, _("Unsigned Int16")
-        FLOAT32 = 3, _("Float32")
-        INT32 = 4, _("Signed Int32")
-        STRING = 5, _("String")
-        #TODO multi-coil value?
-        #TODO more stuff from pymodbus.constants
+        INT32 = 3, _("Signed Int32")
+        UINT32 = 4, _("Unsigned Int32")
+        INT64 = 5, _("Signed Int64")
+        UINT64 = 6, _("Unsigned Int64")
+        FLOAT32 = 7, _("Float32")
+        FLOAT64 = 8, _("Float64")
+        STRING = 9, _("String")
 
     #TODO alarm states
     #Could be a min or max value, value over/under a threshold for too long, too much change, etc
@@ -64,7 +66,7 @@ class Tag(models.Model):
 
     address = models.PositiveIntegerField(default=0)
 
-    register_count = models.PositiveIntegerField(default=1) #TODO need a better name. Doesn't quite suit coil reading. Could maybe do the "length" abstraction
+    read_amount = models.PositiveIntegerField(default=1)
 
     max_history_entries = models.PositiveIntegerField(
         null=True, blank=True, 
@@ -83,6 +85,21 @@ class Tag(models.Model):
 
     class Meta:
         unique_together = ("device", "channel", "address", "unit_id")
+
+    def get_read_count(self):
+        from math import ceil
+
+        match self.data_type:
+            case Tag.DataTypeChoices.BOOL | Tag.DataTypeChoices.INT16 | Tag.DataTypeChoices.UINT16:
+                return self.read_amount
+            case Tag.DataTypeChoices.INT32 | Tag.DataTypeChoices.UINT32 | Tag.DataTypeChoices.FLOAT32:
+                return 2 * self.read_amount
+            case Tag.DataTypeChoices.INT64 | Tag.DataTypeChoices.UINT64 | Tag.DataTypeChoices.FLOAT64:
+                return 4 * self.read_amount
+            case Tag.DataTypeChoices.STRING:
+                return ceil(self.read_amount / 2)
+            case _:
+                raise Exception("Could not determine read count of data type", self.data_type)
 
     def __str__(self):
         return f"{self.alias} [{self.channel}:{self.address}]"

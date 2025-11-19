@@ -1,115 +1,149 @@
 import { getCookie } from "./util.js";
 
-export function updateWidget(widget, value) { //TODO null values
-    //console.log("Updating widget");
-    //if(value !== undefined)
-    //    widget.title = `${widget.baseTitle} (Value: ${value})`
-    switch (widget.dataset.type) {
-        case "led":
-            const indicator = widget.querySelector(".indicator");
-            indicator.style.backgroundColor = value ? widget.config.color_on : widget.config.color_off;
-            break;
+class Widget {
+    constructor(widget_elem, config) {
+        this.elem = widget_elem;
+        this.config = config;
+        this.tag = this.elem.dataset.tag; //TODO?
+        this.shouldUpdate = true;
+        this.updateTimeout = 500; // TODO should be at least the server polling rate
+        this.elem.style.left = config.position_x + "px";
+        this.elem.style.top = config.position_y + "px";
+        this.elem.style.transform = `scale(${config.scale_x}, ${config.scale_y})`;
+    }
 
-        case "val":
-            break;
+    async submit(value) {
+        //TODO yes/no confirmation if configured?
+        console.log("Submitting", value)
+        this.shouldUpdate = false;
+        clearTimeout(this.timeoutID);
 
-        case "chart":
-            break;
+        const response = await fetch(`/api/tag/${this.tag}/write/`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": getCookie("csrftoken")
+            },
+            body: JSON.stringify({ value: value })
+        });
 
-        case "button":
-            break;
+        const result = await response.json();
+        console.log(result)
+        if (result.error) {
+            alert("Failed to write value: " + result.error);
+        }
 
-        case "bool_label":
-            widget.querySelector(".label_text").textContent = value ? widget.config.text_on : widget.config.text_off;
-            break;
+        this.timeoutID = setTimeout(() => {
+            this.shouldUpdate = true;
+        }, this.updateTimeout);
+    }
 
-        case "switch":
-            if(widget.shouldUpdate)
-                widget.querySelector(".switch-input").checked = value ? true : false;
-            break;
+    onValue(val) {
+        throw new Error("onValue not implemented for this widget");
+    }
+}
+//
+class SwitchWidget extends Widget {
+    constructor(widget_elem, config) {
+        super(widget_elem, config);
+        this.input = this.elem.querySelector(".switch-input");
+        this.input.addEventListener("change", async () => {
+            this.submit(this.input.checked);
+        });
+    }
 
-        case "meter":
-            widget.querySelector(".meter-bar").value = value;
-            break;
-
-        case "slider":
-            if(widget.shouldUpdate)
-                widget.querySelector(".slider-input").value = value;
-            break;
+    onValue(val) {
+        if(this.shouldUpdate)
+            this.input.checked = val ? true : false;
     }
 }
 
-async function submitValue(widget, value) {
-    //TODO yes/no confirmation if configured?
-    widget.shouldUpdate = false;
-    clearTimeout(widget.timeoutID);
+class SliderWidget extends Widget {
+    constructor(widget_elem, config) {
+        super(widget_elem, config);
+        this.input = this.elem.querySelector(".slider-input")
+        this.min_label = this.elem.querySelector(".min-label")
+        this.max_label =  this.elem.querySelector(".max-label")
 
-    const response = await fetch(`/api/tag/${widget.dataset.tag}/write/`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": getCookie("csrftoken")
-        },
-        body: JSON.stringify({ value: value })
-    });
+        this.input.min = this.config.min_value;
+        this.input.max = this.config.max_value;
 
-    const result = await response.json();
-    console.log(result)
-    if (result.error) {
-        alert("Failed to write value: " + result.error);
+        if(this.config.display_range) {
+            this.min_label.textContent = this.input.min;
+            this.max_label.textContent = this.input.max;
+        }
+        
+        this.input.addEventListener("change", async () => {
+            this.submit(this.input.value);
+        });
+        this.input.addEventListener("input", (e) => {
+            clearTimeout(this.timeoutID); //TODO make sure this happens before the "change" event
+            this.shouldUpdate = false;
+        })
     }
-    
-    widget.timeoutID = setTimeout(() => {
-        widget.shouldUpdate = true;
-    }, 500); //TODO figure out a good duration
-}
 
-export function setupWidget(widget) {
-    switch (widget.dataset.type) {
-        case "switch":
-            widget.shouldUpdate = true;
-            const input = widget.querySelector(".switch-input")
-            input.addEventListener("change", async () => {
-                submitValue(widget, input.checked);
-            });
-            break;
-
-        case "label":
-            widget.querySelector(".label_text").textContent = widget.config.text;
-            break;
-
-        case "meter":
-            const bar = widget.querySelector(".meter-bar");
-            bar.min = widget.config.min_value;
-            bar.max = widget.config.max_value;
-            bar.low = widget.config.low_value;
-            bar.high = widget.config.high_value;
-            bar.optimum = widget.config.optimum_value;
-            if(widget.config.display_range) {
-                widget.querySelector(".min-label").textContent = bar.min;
-                widget.querySelector(".max-label").textContent = bar.max;
-            }
-            break;
-
-        case "slider":
-            const input2 = widget.querySelector(".slider-input")
-            input2.min = widget.config.min_value;
-            input2.max = widget.config.max_value;
-            if(widget.config.display_range) {
-                widget.querySelector(".min-label").textContent = input2.min;
-                widget.querySelector(".max-label").textContent = input2.max;
-            }
-
-            widget.shouldUpdate = true;
-            
-            input2.addEventListener("change", async () => {
-                submitValue(widget, input2.value);
-            });
-            input2.addEventListener("input", (e) => {
-                clearTimeout(widget.timeoutID);
-                widget.shouldUpdate = false;
-            })
-
-            break;
+    onValue(val) {
+        if(this.shouldUpdate)
+            this.input.value = val;
     }
 }
+
+class MeterWidget extends Widget {
+    constructor(widget_elem, config) {
+        super(widget_elem, config);
+        this.bar = this.elem.querySelector(".meter-bar");
+        this.bar.min = this.config.min_value;
+        this.bar.max = this.config.max_value;
+        this.bar.low = this.config.low_value;
+        this.bar.high = this.config.high_value;
+        this.bar.optimum = this.config.optimum_value;
+        if(this.config.display_range) {
+            this.querySelector(".min-label").textContent = this.bar.min;
+            this.querySelector(".max-label").textContent = this.bar.max;
+        }
+    }
+
+    onValue(val) {
+        this.bar.value = val;
+    }
+}
+
+class LEDWidget extends Widget {
+    constructor(widget_elem, config) {
+        super(widget_elem, config);
+        this.indicator = this.elem.querySelector(".indicator");
+    }
+
+    onValue(val) {
+        this.indicator.style.backgroundColor = val ? this.config.color_on : this.config.color_off;
+    }
+}
+
+class LabelWidget extends Widget {
+    constructor(widget_elem, config) {
+        super(widget_elem, config);
+        this.text_elem = this.elem.querySelector(".label_text");
+        this.text_elem.textContent = this.config.text;
+    }
+}
+
+class BoolLabelWidget extends Widget {
+    constructor(widget_elem, config) {
+        super(widget_elem, config);
+        this.text_elem = this.elem.querySelector(".label_text");
+    }
+
+    onValue(val) {
+        this.text_elem.textContent = val ? this.config.text_on : this.config.text_off;
+    }
+}
+
+export const WidgetRegistry = {
+    "switch": SwitchWidget,
+    "slider": SliderWidget,
+    "meter": MeterWidget,
+    "led": LEDWidget,
+    "label" : LabelWidget,
+    "bool_label" : BoolLabelWidget,
+    //"chart": ChartWidget,
+};

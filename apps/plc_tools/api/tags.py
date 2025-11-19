@@ -21,7 +21,7 @@ def api_tag_value(request, external_id):
         return JsonResponse({"error": "Forbidden"}, status=403)
     #TODO shared dashboard
 
-    return JsonResponse({"value": tag.current_value if tag else None})
+    return JsonResponse({"value": tag.current_value})
 
 
 @require_POST
@@ -34,10 +34,13 @@ def api_write_tag(request, external_id):
         return JsonResponse({"error": "Forbidden"}, status=403)
 
     data = json.loads(request.body)
+    value = data.get("value")
 
-    TagWriteRequest.objects.create(
-        tag=tag,
-        value=data["value"],
-    )
-
-    return JsonResponse({"status": "queued"})
+    if value is None:
+        return JsonResponse({"error": "No value supplied"}, status=400)
+    else:
+        TagWriteRequest.objects.create(
+            tag=tag,
+            value=data["value"],
+        )
+        return JsonResponse({"status": "queued"})

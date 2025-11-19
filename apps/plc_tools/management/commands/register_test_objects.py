@@ -44,7 +44,6 @@ class Command(BaseCommand):
             device=device,
             alias="Test Coil",
             description="PLC coil 0",
-            register_count=1,
             channel=Tag.ChannelChoices.COIL,
             data_type=Tag.DataTypeChoices.BOOL,
             address=0,
@@ -92,7 +91,6 @@ class Command(BaseCommand):
             device=device,
             alias="Test Coil 2",
             description="PLC coil 1",
-            register_count=1,
             channel=Tag.ChannelChoices.COIL,
             data_type=Tag.DataTypeChoices.BOOL,
             address=1,
@@ -136,6 +134,26 @@ class Command(BaseCommand):
             }
         )
 
+        # ---------- Test Discrete Inputs ----------
+
+        #tag = Tag.objects.create(
+        #    device=device,
+        #    alias="Test Discrete Input 1",
+        #    description="PLC discrete input 0",
+        #    channel=Tag.ChannelChoices.DISCRETE_INPUT,
+        #    data_type=Tag.DataTypeChoices.BOOL,
+        #    address=0,
+        #)
+#
+        #tag2 = Tag.objects.create(
+        #    device=device,
+        #    alias="Test Discrete Input 2",
+        #    description="PLC discrete input 1",
+        #    channel=Tag.ChannelChoices.DISCRETE_INPUT,
+        #    data_type=Tag.DataTypeChoices.BOOL,
+        #    address=1,
+        #)
+
         # ---------- Test Holding Registers ----------
 
         widget = DashboardWidget.objects.create(
@@ -154,7 +172,6 @@ class Command(BaseCommand):
             device=device,
             alias="Test Register 1",
             description="PLC holding register 0",
-            register_count=1,
             channel=Tag.ChannelChoices.HOLDING_REGISTER,
             data_type=Tag.DataTypeChoices.UINT16,
             address=0,
@@ -164,7 +181,6 @@ class Command(BaseCommand):
             device=device,
             alias="Test Register 2",
             description="PLC holding register 1",
-            register_count=1,
             channel=Tag.ChannelChoices.HOLDING_REGISTER,
             data_type=Tag.DataTypeChoices.UINT16,
             address=1,
@@ -235,6 +251,7 @@ class Command(BaseCommand):
                 "display_range" : True,
             }
         )
+        
 
 
 
