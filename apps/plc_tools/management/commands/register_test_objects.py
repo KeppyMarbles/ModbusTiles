@@ -136,23 +136,63 @@ class Command(BaseCommand):
 
         # ---------- Test Discrete Inputs ----------
 
-        #tag = Tag.objects.create(
-        #    device=device,
-        #    alias="Test Discrete Input 1",
-        #    description="PLC discrete input 0",
-        #    channel=Tag.ChannelChoices.DISCRETE_INPUT,
-        #    data_type=Tag.DataTypeChoices.BOOL,
-        #    address=0,
-        #)
-#
-        #tag2 = Tag.objects.create(
-        #    device=device,
-        #    alias="Test Discrete Input 2",
-        #    description="PLC discrete input 1",
-        #    channel=Tag.ChannelChoices.DISCRETE_INPUT,
-        #    data_type=Tag.DataTypeChoices.BOOL,
-        #    address=1,
-        #)
+        widget = DashboardWidget.objects.create(
+            dashboard=dashboard,
+            widget_type=DashboardWidget.WidgetTypeChoices.LABEL,
+            config = {
+                "position_x": 500,
+                "position_y": 20,
+                "scale_x" : 2,
+                "scale_y" : 2,
+                "text" : "Test Discrete Inputs",
+            }
+        )
+
+        tag = Tag.objects.create(
+            device=device,
+            alias="Test Discrete Input 0",
+            description="PLC discrete input 0",
+            channel=Tag.ChannelChoices.DISCRETE_INPUT,
+            data_type=Tag.DataTypeChoices.BOOL,
+            address=0,
+        )
+
+        widget = DashboardWidget.objects.create(
+            dashboard=dashboard,
+            tag=tag,
+            widget_type=DashboardWidget.WidgetTypeChoices.LED,
+            config = {
+                "position_x": 500,
+                "position_y": 100,
+                "scale_x" : 3,
+                "scale_y" : 3,
+                "color_on": "green",
+                "color_off": "red",
+            }
+        )
+
+        tag2 = Tag.objects.create(
+            device=device,
+            alias="Test Discrete Input 1",
+            description="PLC discrete input 1",
+            channel=Tag.ChannelChoices.DISCRETE_INPUT,
+            data_type=Tag.DataTypeChoices.BOOL,
+            address=1,
+        )
+
+        widget = DashboardWidget.objects.create(
+            dashboard=dashboard,
+            tag=tag2,
+            widget_type=DashboardWidget.WidgetTypeChoices.LED,
+            config = {
+                "position_x": 600,
+                "position_y": 100,
+                "scale_x" : 3,
+                "scale_y" : 3,
+                "color_on": "green",
+                "color_off": "red",
+            }
+        )
 
         # ---------- Test Holding Registers ----------
 
@@ -160,7 +200,7 @@ class Command(BaseCommand):
             dashboard=dashboard,
             widget_type=DashboardWidget.WidgetTypeChoices.LABEL,
             config = {
-                "position_x": 100,
+                "position_x": 150,
                 "position_y": 400,
                 "scale_x" : 2,
                 "scale_y" : 2,
@@ -191,10 +231,10 @@ class Command(BaseCommand):
             tag=tag3,
             widget_type=DashboardWidget.WidgetTypeChoices.METER,
             config = {
-                "position_x": 200,
+                "position_x": 100,
                 "position_y": 500,
-                "scale_x" : 2,
-                "scale_y" : 2,
+                "scale_x" : 1,
+                "scale_y" : 1,
                 "min_value" : 0,
                 "max_value" : 100,
                 "low_value" : 30,
@@ -209,10 +249,10 @@ class Command(BaseCommand):
             tag=tag3,
             widget_type=DashboardWidget.WidgetTypeChoices.SLIDER,
             config = {
-                "position_x": 200,
+                "position_x": 100,
                 "position_y": 600,
-                "scale_x" : 2,
-                "scale_y" : 2,
+                "scale_x" : 1,
+                "scale_y" : 1,
                 "min_value" : 0,
                 "max_value" : 100,
                 "display_range" : True,
@@ -224,10 +264,10 @@ class Command(BaseCommand):
             tag=tag4,
             widget_type=DashboardWidget.WidgetTypeChoices.METER,
             config = {
-                "position_x": 200,
+                "position_x": 100,
                 "position_y": 700,
-                "scale_x" : 2,
-                "scale_y" : 2,
+                "scale_x" : 1,
+                "scale_y" : 1,
                 "min_value" : 0,
                 "max_value" : 100,
                 "low_value" : 30,
@@ -242,17 +282,81 @@ class Command(BaseCommand):
             tag=tag4,
             widget_type=DashboardWidget.WidgetTypeChoices.SLIDER,
             config = {
-                "position_x": 200,
+                "position_x": 100,
                 "position_y": 800,
-                "scale_x" : 2,
-                "scale_y" : 2,
+                "scale_x" : 1,
+                "scale_y" : 1,
                 "min_value" : 0,
                 "max_value" : 100,
                 "display_range" : True,
             }
         )
         
+        # ---------- Test Input Registers ----------
 
+        widget = DashboardWidget.objects.create(
+            dashboard=dashboard,
+            widget_type=DashboardWidget.WidgetTypeChoices.LABEL,
+            config = {
+                "position_x": 500,
+                "position_y": 400,
+                "scale_x" : 2,
+                "scale_y" : 2,
+                "text" : "Test Input Registers",
+            }
+        )
 
+        tag = Tag.objects.create(
+            device=device,
+            alias="Test Input Registers 0",
+            description="PLC input register 0",
+            channel=Tag.ChannelChoices.INPUT_REGISTER,
+            data_type=Tag.DataTypeChoices.INT16,
+            address=0,
+        )
 
+        widget = DashboardWidget.objects.create(
+            dashboard=dashboard,
+            tag=tag,
+            widget_type=DashboardWidget.WidgetTypeChoices.METER,
+            config = {
+                "position_x": 500,
+                "position_y": 500,
+                "scale_x" : 1,
+                "scale_y" : 1,
+                "min_value" : 0,
+                "max_value" : 100,
+                "low_value" : 30,
+                "high_value" : 70,
+                "optimum_value" : 100,
+                "display_range" : False,
+            }
+        )
+
+        tag2 = Tag.objects.create(
+            device=device,
+            alias="Test Input Registers 1",
+            description="PLC input register 1",
+            channel=Tag.ChannelChoices.INPUT_REGISTER,
+            data_type=Tag.DataTypeChoices.INT16,
+            address=1,
+        )
+
+        widget = DashboardWidget.objects.create(
+            dashboard=dashboard,
+            tag=tag2,
+            widget_type=DashboardWidget.WidgetTypeChoices.METER,
+            config = {
+                "position_x": 500,
+                "position_y": 600,
+                "scale_x" : 1,
+                "scale_y" : 1,
+                "min_value" : 0,
+                "max_value" : 100,
+                "low_value" : 30,
+                "high_value" : 70,
+                "optimum_value" : 100,
+                "display_range" : False,
+            }
+        )
         

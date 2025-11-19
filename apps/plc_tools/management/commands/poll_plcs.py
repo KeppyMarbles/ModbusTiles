@@ -14,7 +14,7 @@ def get_modbus_reader(client: ModbusClient, tag: Tag):
         Tag.ChannelChoices.COIL: client.read_coils,
         Tag.ChannelChoices.DISCRETE_INPUT: client.read_discrete_inputs,
         Tag.ChannelChoices.HOLDING_REGISTER: client.read_holding_registers,
-        Tag.ChannelChoices.INPUT_REGISTER: client.read_holding_registers
+        Tag.ChannelChoices.INPUT_REGISTER: client.read_input_registers,
     }[tag.channel]
 
 

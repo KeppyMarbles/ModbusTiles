@@ -17,22 +17,22 @@ store = ModbusDeviceContext(
 context = ModbusServerContext(devices=store, single=True)
 
 
-def test_oscillate_coil(context, coil_addr=0, interval=1):
-    """ Toggle a coil on/off forever """
+def test_oscillate_input(context, input_addr=0, interval=1):
+    """ Toggle an input on/off forever """
     state = 0
     while True:
         state ^= 1  # toggle
-        context[0].setValues(1, coil_addr, [state])
-        print(f"[Oscillate Coil] Coil {coil_addr} -> {state}")
+        context[0].setValues(2, input_addr, [state])
+        print(f"[Oscillate Input] Input {input_addr} -> {state}")
         time.sleep(interval)
 
 
 def test_random_registers(context, start=0, count=5, interval=2):
-    """ Write random values (0-100) to holding registers """
+    """ Write random values (0-100) to input registers """
     while True:
         values = [random.randint(0, 100) for _ in range(count)]
-        context[0].setValues(3, start, values)
-        print(f"[Random Registers] HR[{start}:{start+count}] = {values}")
+        context[0].setValues(4, start, values)
+        print(f"[Random Registers] IR[{start}:{start+count}] = {values}")
         time.sleep(interval)
 
 
@@ -42,8 +42,8 @@ def test_ramp_register(context, reg=0, min_val=0, max_val=100, step=1, interval=
     direction = 1
 
     while True:
-        context[0].setValues(3, reg, [value])
-        print(f"[Ramp Register] HR[{reg}] = {value}")
+        context[0].setValues(4, reg, [value])
+        print(f"[Ramp Register] IR[{reg}] = {value}")
 
         value += direction * step
 
@@ -63,13 +63,11 @@ def start_test_routine(func, *args, **kwargs):
 
 
 if __name__ == "__main__":
-
-    #start_test_routine(test_oscillate_coil, context, coil_addr=0, interval=2)
-    #start_test_routine(test_oscillate_coil, context, coil_addr=1, interval=1)
-    #start_test_routine(test_random_registers, context, start=0, count=5, interval=2)
     
-    # start_test_routine(test_ramp_register, context, reg=1, min_val=0, max_val=50, step=5, interval=0.2)
-
+    start_test_routine(test_oscillate_input, context, input_addr=0, interval=1)
+    start_test_routine(test_oscillate_input, context, input_addr=1, interval=5)
+    start_test_routine(test_ramp_register, context, reg=0, min_val=0, max_val=100, step=5, interval=0.5)
+    start_test_routine(test_ramp_register, context, reg=1, min_val=0, max_val=100, step=5, interval=0.2)
     
     StartTcpServer(context, address=("127.0.0.1", 502))
     print("Started PLC server")
