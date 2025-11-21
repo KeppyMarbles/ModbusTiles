@@ -2,7 +2,7 @@ import time
 from django.core.management.base import BaseCommand, CommandError
 from pymodbus.client import ModbusTcpClient, ModbusUdpClient, ModbusSerialClient
 from pymodbus.exceptions import ConnectionException, ModbusIOException
-from ...models import Device, Tag, TagHistoryEntry, TagWriteRequest
+from ...models import Device, Tag, TagHistoryEntry, TagWriteRequest, AlarmConfig, ActiveAlarm, AlarmSubscription
 from django.utils import timezone
 
 type ModbusClient = ModbusTcpClient | ModbusUdpClient | ModbusSerialClient
@@ -32,10 +32,10 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.connections = {}
         #TODO need to handle all the errors properly
-        self.__poll()
+        self._poll()
 
     
-    def __poll(self):
+    def _poll(self):
         """
         Queries the database for devices and tags,
         Finds or creates a connection for each device and updates the value of active tags
@@ -43,23 +43,24 @@ class Command(BaseCommand):
         while True:
             for device in Device.objects.all(): 
                 try:
-                    client = self.__get_connection(device)
+                    client = self._get_connection(device)
 
                     writes = TagWriteRequest.objects.filter(processed=False, tag__device=device)
                     for req in writes:
-                        self.__write_value(client, req.tag, req.value)
+                        self._write_value(client, req.tag, req.value)
                         req.processed = True
                         req.save()
 
                     tags = Tag.objects.filter(device=device, is_active=True)
                     #TODO read blocks instead of individual values?
                     for tag in tags:
-                        values = self.__read_tag(client, tag)
+                        values = self._read_tag(client, tag)
 
                         if not isinstance(values, str) and len(values) == 1:
                             values = values[0] #TODO? could be confusing
 
-                        self.__store_value(tag, values)
+                        self._store_value(tag, values)
+                        self._process_alarms(tag)
 
                 except (ConnectionException, ModbusIOException, ConnectionError) as e: 
                     print(f"PLC connection error: {e}")
@@ -71,7 +72,7 @@ class Command(BaseCommand):
             time.sleep(0.25) #TODO individual device polling rates?
 
 
-    def __get_connection(self, device: Device) -> ModbusClient:
+    def _get_connection(self, device: Device) -> ModbusClient:
         """ Creates a device connection or returns an existing one """
         conn = self.connections.get(device.alias)
         if conn is None or not conn.connected:
@@ -92,7 +93,7 @@ class Command(BaseCommand):
         return conn
 
 
-    def __read_tag(self, client: ModbusClient, tag: Tag):
+    def _read_tag(self, client: ModbusClient, tag: Tag):
         """ Returns the value of the register(s) or coil(s) associated with a tag """
         func = get_modbus_reader(client, tag)
         result = func(tag.address, count=tag.get_read_count(), device_id=tag.unit_id)
@@ -117,7 +118,7 @@ class Command(BaseCommand):
         return values
 
 
-    def __store_value(self, tag: Tag, value):
+    def _store_value(self, tag: Tag, value):
         """ Updates the tag's value and stores history if enabled """
         #TODO what if we want to store entries at a lesser resolution?
         #TODO maybe we could not store the entry if the value is the same as the previous?
@@ -152,7 +153,7 @@ class Command(BaseCommand):
         ).delete()
 
         
-    def __write_value(self, client: ModbusClient, tag: Tag, values):
+    def _write_value(self, client: ModbusClient, tag: Tag, values):
         """ Attemps to write a value to the tag's associated register(s) """
 
         if not isinstance(values, list) and tag.data_type != Tag.DataTypeChoices.STRING:
@@ -168,6 +169,7 @@ class Command(BaseCommand):
                     values = [float(value) for value in values]
         except ValueError as e:
             print("Error attempting to write registers:", e)
+            return
 
         match tag.channel:
             case Tag.ChannelChoices.HOLDING_REGISTER:
@@ -180,6 +182,51 @@ class Command(BaseCommand):
             case _:
                 print("Error: Tried to write with a read-only tag")
                 #raise IOError("Tried to write with a read-only tag") #TODO catch this error
+                
 
-        
+    def _process_alarms(self, tag: Tag):
+            """ Trigger an alarm if the tag is in an alarm state """
+
+            try:
+                value = int(tag.current_value)
+            except ValueError:
+                print("Error: Alarm state was not a valid integer:", tag)
+                return
+
+            alarm_config = AlarmConfig.objects.filter(trigger_value=value, tag=tag).first()
+
+            if alarm_config:
+                active_alarm, created = ActiveAlarm.objects.get_or_create(
+                    config=alarm_config,
+                    is_active=True,
+                )
+                if(created):
+                    print("Created an active alarm")
+
+                self._handle_notification(active_alarm)
+
+            else:
+                for alarm in ActiveAlarm.objects.filter(config__tag=tag, is_active=True):
+                    alarm.is_active = False
+                    alarm.save(update_fields=['is_active'])
+                    print("Disabled an active alarm")
+
     
+    def _handle_notification(self, active_alarm: ActiveAlarm):
+            now = timezone.now()
+
+            # Check if we ever notified, or if the cooldown has passed
+            if (active_alarm.config.last_notified is None) or \
+               (now - active_alarm.config.last_notified > active_alarm.config.notification_cooldown):
+
+                subs = AlarmSubscription.objects.filter(
+                            alarm_config=active_alarm.config, 
+                            email_enabled=True
+                        ).select_related('user')
+                
+                recipients = [sub.user.email for sub in subs if sub.user.email]
+                print(f"Sending Email to {recipients}: {active_alarm.config.message}")
+                #TODO
+
+                active_alarm.config.last_notified = now
+                active_alarm.config.save(update_fields=['last_notified'])

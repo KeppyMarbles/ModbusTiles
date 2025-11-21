@@ -1,7 +1,7 @@
 import json
 from datetime import timedelta
 from django.http import JsonResponse
-from ..models import TagHistoryEntry, Tag, DashboardWidget, TagWriteRequest
+from ..models import TagHistoryEntry, Tag, DashboardWidget, TagWriteRequest, ActiveAlarm
 from django.views.decorators.http import require_GET, require_POST
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -15,23 +15,24 @@ def api_tag_value(request, external_id):
 
     tag = get_object_or_404(Tag, external_id=external_id)
 
-    if not DashboardWidget.objects.filter(
-        tag=tag,
-        dashboard__owner=request.user
-    ).exists():
-        return JsonResponse({"error": "Forbidden"}, status=403)
-    #TODO shared dashboard
+    #TODO perms check?
 
-    return JsonResponse({"value": tag.current_value, "time": tag.last_updated })
+    # Check alarm state
+    active_alarm = ActiveAlarm.objects.filter(
+        config__tag=tag, 
+        is_active=True
+    ).select_related('config').first()
+    
+    alarm = {"message": active_alarm.config.message, "level" : active_alarm.config.threat_level} if active_alarm else None
+
+    return JsonResponse({"value": tag.current_value, "time": tag.last_updated, "alarm": alarm})
 
 
 @require_GET
 def api_tag_history(request, external_id):
     tag = get_object_or_404(Tag, external_id=external_id)
     
-    # Permission check
-    if not DashboardWidget.objects.filter(tag=tag, dashboard__owner=request.user).exists():
-        return JsonResponse({"error": "Forbidden"}, status=403)
+    #TODO perms check?
 
     seconds = int(request.GET.get('seconds', 60))
     cutoff = timezone.now() - timedelta(seconds=seconds)
@@ -51,9 +52,7 @@ def api_tag_history(request, external_id):
 def api_write_tag(request, external_id):
     tag = get_object_or_404(Tag, external_id=external_id)
 
-    # Permission check
-    if not DashboardWidget.objects.filter(tag=tag, dashboard__owner=request.user).exists():
-        return JsonResponse({"error": "Forbidden"}, status=403)
+    #TODO perms check?
 
     data = json.loads(request.body)
     value = data.get("value")

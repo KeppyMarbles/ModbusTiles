@@ -1,4 +1,5 @@
 import uuid
+from datetime import timedelta
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
@@ -6,6 +7,8 @@ from django.utils.translation import gettext_lazy as _
 User = get_user_model()
 
 class Device(models.Model):
+    """ Represents a single PLC that should be connected to via Modbus """
+
     class ProtocolChoices(models.IntegerChoices):
         MODBUS_TCP = 0, _("Modbus TCP")
         MODBUS_UDP = 1, _("Modbus UDP")
@@ -31,6 +34,8 @@ class Device(models.Model):
     
 
 class Tag(models.Model):
+    """ Represents a portion of data that should be read from a PLC """
+
     class ChannelChoices(models.IntegerChoices):
         COIL = 0, _("Coil")
         DISCRETE_INPUT = 1, _("Discrete Input")
@@ -48,11 +53,6 @@ class Tag(models.Model):
         FLOAT32 = 7, _("Float32")
         FLOAT64 = 8, _("Float64")
         STRING = 9, _("String")
-
-    #TODO alarm states
-    #Could be a min or max value, value over/under a threshold for too long, too much change, etc
-    #Could have different message options, or threat levels, like warning or critical failure
-    #User can subscribe to notifications
 
     device = models.ForeignKey(Device, on_delete=models.CASCADE, related_name="tags")
     unit_id = models.PositiveIntegerField(default=1)
@@ -107,6 +107,8 @@ class Tag(models.Model):
 
 
 class TagHistoryEntry(models.Model):
+    """ A log entry for a tag, used for querying value history """
+
     tag = models.ForeignKey(Tag, on_delete=models.CASCADE, related_name="history")
     timestamp = models.DateTimeField(auto_now_add=True)
 
@@ -123,13 +125,73 @@ class TagHistoryEntry(models.Model):
 
 
 class TagWriteRequest(models.Model):
+    """ Stores data that should be written to a tag next polling cycle """
+
     tag = models.ForeignKey(Tag, on_delete=models.CASCADE)
     value = models.JSONField()
     timestamp = models.DateTimeField(auto_now_add=True)
     processed = models.BooleanField(default=False)
 
 
+class AlarmConfig(models.Model):
+    """ Maps a specific Tag value to a human-readable alarm """
+
+    class ThreatLevelChoices(models.TextChoices):
+            LOW = "low", _("Low")
+            HIGH  = "high", _("High")
+            CRITICAL = "crit", _("Critical")
+
+    tag = models.ForeignKey(Tag, on_delete=models.CASCADE, related_name="alarm_configs")
+    
+    # The value that triggers the alarm (usually 1/True for a coil, but could be an error code)
+    trigger_value = models.IntegerField(default=1, help_text="Value that triggers this alarm")
+    
+    # Enrichment data
+    message = models.CharField(max_length=200, help_text="e.g., 'Sump Pump Failure - Check Breaker'")
+    threat_level = models.CharField(choices=ThreatLevelChoices.choices)
+    
+    # Notification rules
+    notification_cooldown = models.DurationField(default=timedelta(minutes=1), help_text="Don't resend email for this long")
+    last_notified = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.tag.alias} == {self.trigger_value} -> {self.message}"
+    
+
+class ActiveAlarm(models.Model):
+    """ Represents a currently firing or pending alarm """
+    
+    config = models.ForeignKey(AlarmConfig, on_delete=models.CASCADE)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    
+    is_active = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["-timestamp"]
+        indexes = [
+            models.Index(fields=["config", "-timestamp"]),
+        ]
+
+    def __str__(self):
+        return f"ALARM: {self.config.tag.alias} - {self.config.message}"
+    
+    
+class AlarmSubscription(models.Model):
+    """ Allows a user to be notified when a certain alarm becomes active """
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="subscriptions")
+    alarm_config = models.ForeignKey(AlarmConfig, on_delete=models.CASCADE)
+    
+    email_enabled = models.BooleanField(default=True)
+    sms_enabled = models.BooleanField(default=False)
+
+    class Meta:
+        unique_together = ('user', 'alarm_config')
+
+
 class Dashboard(models.Model):
+    """ A user-defined space to display widgets """
+
     alias = models.SlugField(max_length=100)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
     description = models.TextField(blank=True)
@@ -145,6 +207,8 @@ class Dashboard(models.Model):
 
 
 class DashboardWidget(models.Model):
+    """ An element on a dashboard used to interact with a tag """
+
     class WidgetTypeChoices(models.TextChoices):
         LED = "led", _("LED Indicator")
         BOOL_LABEL = "bool_label", _("Boolean Label")
@@ -156,7 +220,6 @@ class DashboardWidget(models.Model):
         METER = "meter", _("Meter")
         SLIDER = "slider", _("Slider")
         #("gauge", "Gauge"),
-        #("slider", "Slider"),
 
     dashboard = models.ForeignKey(Dashboard, on_delete=models.CASCADE, related_name="widgets")
 

@@ -3,6 +3,7 @@ import { getCookie } from "./util.js";
 class Widget {
     constructor(widget_elem, config) {
         this.elem = widget_elem;
+        this.alarmIndicator = widget_elem.querySelector(".alarm-indicator");
         this.config = config;
         this.tag = this.elem.dataset.tag; //TODO?
         this.shouldUpdate = true;
@@ -38,11 +39,27 @@ class Widget {
         }, this.updateTimeout);
     }
 
+    onData(data) {
+        this.onValue(data.value, data.time);
+        this.setAlarm(data.alarm);
+    }
+
+    setAlarm(alarm) {
+        if(alarm) {
+            this.alarmIndicator.classList.remove("hidden");
+            this.alarmIndicator.title = alarm.message;
+        }
+        else {
+            this.alarmIndicator.classList.add("hidden");
+            this.alarmIndicator.title = "";
+        }
+    }
+
     onValue(val) {
         throw new Error("onValue not implemented for this widget");
     }
 }
-//
+
 class SwitchWidget extends Widget {
     constructor(widget_elem, config) {
         super(widget_elem, config);
@@ -142,6 +159,10 @@ class BoolLabelWidget extends Widget {
     onValue(val) {
         this.text_elem.textContent = val ? this.config.text_on : this.config.text_off;
     }
+}
+
+class ValueLabelWidget extends Widget {
+    
 }
 
 class ChartWidget extends Widget {

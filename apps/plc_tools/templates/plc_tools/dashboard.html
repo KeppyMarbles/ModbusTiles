@@ -10,7 +10,11 @@
              data-tag="{{ widget.tag.external_id }}"
              title="{{ widget.tag.description }}">
             {% include "plc_tools/widgets/"|add:widget.widget_type|add:".html" %}
+            <div class="alarm-indicator hidden">
+                <sub>⚠️</sub>
+            </div>
         </div>
+
         {% with uuid=widget.external_id|stringformat:"s" %}
             {% with cfg_id="config-"|add:uuid %}
                 {{ widget.config|json_script:cfg_id }}

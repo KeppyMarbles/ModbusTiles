@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand, CommandError
-from ...models import Device, Tag, Dashboard, DashboardWidget
+from ...models import Device, Tag, Dashboard, DashboardWidget, AlarmConfig, AlarmSubscription
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -132,6 +132,17 @@ class Command(BaseCommand):
                 "scale_x" : 1,
                 "scale_y" : 1,
             }
+        )
+
+        alarm_config = AlarmConfig.objects.create(
+            tag=tag2,
+            trigger_value=1,
+            message="Alarm Test",
+            threat_level=AlarmConfig.ThreatLevelChoices.LOW,
+        )
+        alarm_subscription = AlarmSubscription.objects.create(
+            user=user,
+            alarm_config=alarm_config,
         )
 
         # ---------- Test Discrete Inputs ----------
