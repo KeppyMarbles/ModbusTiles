@@ -10,8 +10,8 @@
              data-tag="{{ widget.tag.external_id }}"
              title="{{ widget.tag.description }}">
             {% include "plc_tools/widgets/"|add:widget.widget_type|add:".html" %}
-            <div class="alarm-indicator hidden">
-                <sub>⚠️</sub>
+            <div>
+                <span class="alarm-indicator"></span>
             </div>
         </div>
 

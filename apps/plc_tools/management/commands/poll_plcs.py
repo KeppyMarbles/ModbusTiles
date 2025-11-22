@@ -2,7 +2,7 @@ import time
 from django.core.management.base import BaseCommand, CommandError
 from pymodbus.client import ModbusTcpClient, ModbusUdpClient, ModbusSerialClient
 from pymodbus.exceptions import ConnectionException, ModbusIOException
-from ...models import Device, Tag, TagHistoryEntry, TagWriteRequest, AlarmConfig, ActiveAlarm, AlarmSubscription
+from ...models import Device, Tag, TagHistoryEntry, TagWriteRequest, AlarmConfig, ActivatedAlarm, AlarmSubscription
 from django.utils import timezone
 
 type ModbusClient = ModbusTcpClient | ModbusUdpClient | ModbusSerialClient
@@ -196,29 +196,42 @@ class Command(BaseCommand):
             alarm_config = AlarmConfig.objects.filter(trigger_value=value, tag=tag).first()
 
             if alarm_config:
-                active_alarm, created = ActiveAlarm.objects.get_or_create(
+                active_alarm, created = ActivatedAlarm.objects.get_or_create(
                     config=alarm_config,
                     is_active=True,
                 )
                 if(created):
-                    print("Created an active alarm")
+                    print("Created an active alarm:", active_alarm)
 
                 self._handle_notification(active_alarm)
 
-            else:
-                for alarm in ActiveAlarm.objects.filter(config__tag=tag, is_active=True):
+                # Disable other alarms active for the same tag
+                stale_alarms = ActivatedAlarm.objects.filter(
+                    config__tag=tag, 
+                    is_active=True
+                ).exclude(id=active_alarm.id)
+
+                for alarm in stale_alarms:
                     alarm.is_active = False
                     alarm.save(update_fields=['is_active'])
-                    print("Disabled an active alarm")
+                    print("Disabled an alarm:", active_alarm)
+
+            else:
+                active_alarms = ActivatedAlarm.objects.filter(config__tag=tag, is_active=True)
+                if active_alarms.exists():
+                    active_alarms.update(is_active=False) # Batch update is faster
+                    print("All alarms cleared for tag:", tag)
 
     
-    def _handle_notification(self, active_alarm: ActiveAlarm):
+    def _handle_notification(self, active_alarm: ActivatedAlarm):
             now = timezone.now()
 
             # Check if we ever notified, or if the cooldown has passed
+            #TODO maybe the cooldown should be on the tag instead? So we don't get multiple emails about the different threat levels
             if (active_alarm.config.last_notified is None) or \
                (now - active_alarm.config.last_notified > active_alarm.config.notification_cooldown):
 
+                #TODO batch multiple alarms into one email?
                 subs = AlarmSubscription.objects.filter(
                             alarm_config=active_alarm.config, 
                             email_enabled=True

@@ -1,7 +1,7 @@
 import json
 from datetime import timedelta
 from django.http import JsonResponse
-from ..models import TagHistoryEntry, Tag, DashboardWidget, TagWriteRequest, ActiveAlarm
+from ..models import TagHistoryEntry, Tag, DashboardWidget, TagWriteRequest, ActivatedAlarm
 from django.views.decorators.http import require_GET, require_POST
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -18,7 +18,7 @@ def api_tag_value(request, external_id):
     #TODO perms check?
 
     # Check alarm state
-    active_alarm = ActiveAlarm.objects.filter(
+    active_alarm = ActivatedAlarm.objects.filter(
         config__tag=tag, 
         is_active=True
     ).select_related('config').first()

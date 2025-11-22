@@ -134,17 +134,6 @@ class Command(BaseCommand):
             }
         )
 
-        alarm_config = AlarmConfig.objects.create(
-            tag=tag2,
-            trigger_value=1,
-            message="Alarm Test",
-            threat_level=AlarmConfig.ThreatLevelChoices.LOW,
-        )
-        alarm_subscription = AlarmSubscription.objects.create(
-            user=user,
-            alarm_config=alarm_config,
-        )
-
         # ---------- Test Discrete Inputs ----------
 
         widget = DashboardWidget.objects.create(
@@ -247,7 +236,7 @@ class Command(BaseCommand):
                 "scale_x" : 1,
                 "scale_y" : 1,
                 "min_value" : 0,
-                "max_value" : 100,
+                "max_value" : 10,
                 "low_value" : 30,
                 "high_value" : 70,
                 "optimum_value" : 100,
@@ -266,7 +255,7 @@ class Command(BaseCommand):
                 "scale_x" : 1,
                 "scale_y" : 1,
                 "min_value" : 0,
-                "max_value" : 100,
+                "max_value" : 10,
                 "width" : 300,
                 "display_range" : True,
             }
@@ -282,7 +271,7 @@ class Command(BaseCommand):
                 "scale_x" : 1,
                 "scale_y" : 1,
                 "min_value" : 0,
-                "max_value" : 100,
+                "max_value" : 10,
                 "low_value" : 30,
                 "high_value" : 70,
                 "optimum_value" : 100,
@@ -301,10 +290,36 @@ class Command(BaseCommand):
                 "scale_x" : 1,
                 "scale_y" : 1,
                 "min_value" : 0,
-                "max_value" : 100,
+                "max_value" : 10,
                 "width" : 300,
                 "display_range" : True,
             }
+        )
+
+        alarm_config = AlarmConfig.objects.create(
+            tag=tag4,
+            trigger_value=8,
+            message="Alarm Test 1",
+            threat_level=AlarmConfig.ThreatLevelChoices.LOW,
+        )
+
+        alarm_config = AlarmConfig.objects.create(
+            tag=tag4,
+            trigger_value=9,
+            message="Alarm Test 2",
+            threat_level=AlarmConfig.ThreatLevelChoices.HIGH,
+        )
+
+        alarm_config = AlarmConfig.objects.create(
+            tag=tag4,
+            trigger_value=10,
+            message="Alarm Test 3",
+            threat_level=AlarmConfig.ThreatLevelChoices.CRITICAL,
+        )
+
+        alarm_subscription = AlarmSubscription.objects.create(
+            user=user,
+            alarm_config=alarm_config,
         )
         
         # ---------- Test Input Registers ----------

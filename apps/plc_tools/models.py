@@ -157,9 +157,11 @@ class AlarmConfig(models.Model):
     def __str__(self):
         return f"{self.tag.alias} == {self.trigger_value} -> {self.message}"
     
+    #TODO order by threat level
+    
 
-class ActiveAlarm(models.Model):
-    """ Represents a currently firing or pending alarm """
+class ActivatedAlarm(models.Model):
+    """ Represents an alarm that was or is currently activated """
     
     config = models.ForeignKey(AlarmConfig, on_delete=models.CASCADE)
     timestamp = models.DateTimeField(auto_now_add=True)
@@ -167,13 +169,14 @@ class ActiveAlarm(models.Model):
     is_active = models.BooleanField(default=False)
 
     class Meta:
+        unique_together = ('config', 'timestamp')
         ordering = ["-timestamp"]
         indexes = [
             models.Index(fields=["config", "-timestamp"]),
         ]
 
     def __str__(self):
-        return f"ALARM: {self.config.tag.alias} - {self.config.message}"
+        return f"ALARM: {self.config.tag.alias} - {self.config.message} (Level {self.config.threat_level})"
     
     
 class AlarmSubscription(models.Model):

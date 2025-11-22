@@ -3,7 +3,6 @@ import { getCookie } from "./util.js";
 class Widget {
     constructor(widget_elem, config) {
         this.elem = widget_elem;
-        this.alarmIndicator = widget_elem.querySelector(".alarm-indicator");
         this.config = config;
         this.tag = this.elem.dataset.tag; //TODO?
         this.shouldUpdate = true;
@@ -11,6 +10,8 @@ class Widget {
         this.elem.style.left = config.position_x + "px";
         this.elem.style.top = config.position_y + "px";
         this.elem.style.transform = `scale(${config.scale_x}, ${config.scale_y})`;
+        this.alarmIndicator = widget_elem.querySelector(".alarm-indicator");
+        this.showAlarm = true;
     }
 
     async submit(value) {
@@ -41,13 +42,29 @@ class Widget {
 
     onData(data) {
         this.onValue(data.value, data.time);
-        this.setAlarm(data.alarm);
+        
+        if(this.showAlarm)
+            this.setAlarm(data.alarm);
     }
 
     setAlarm(alarm) {
+        this.elem.classList.remove("threat-high");
+        
         if(alarm) {
             this.alarmIndicator.classList.remove("hidden");
             this.alarmIndicator.title = alarm.message;
+            switch(alarm.level) {
+                case "low":
+                    this.alarmIndicator.innerHTML = "🔔";
+                    break;
+                case "high":
+                    this.alarmIndicator.innerHTML = "⚠️";
+                    break;
+                case "crit":
+                    this.alarmIndicator.innerHTML = "‼️";
+                    this.elem.classList.add("threat-high");
+                    break;
+            }
         }
         else {
             this.alarmIndicator.classList.add("hidden");
@@ -67,6 +84,7 @@ class SwitchWidget extends Widget {
         this.input.addEventListener("change", async () => {
             this.submit(this.input.checked);
         });
+        this.showAlarm = false;
     }
 
     onValue(val) {
@@ -99,6 +117,7 @@ class SliderWidget extends Widget {
             clearTimeout(this.timeoutID); //TODO make sure this happens before the "change" event
             this.shouldUpdate = false;
         })
+        this.showAlarm = false;
     }
 
     onValue(val) {
@@ -147,6 +166,7 @@ class LabelWidget extends Widget {
         super(widget_elem, config);
         this.text_elem = this.elem.querySelector(".label_text");
         this.text_elem.textContent = this.config.text;
+        this.showAlarm = false;
     }
 }
 
@@ -169,6 +189,7 @@ class ChartWidget extends Widget {
     constructor(widget_elem, config) {
         super(widget_elem, config);
         this.chartDiv = this.elem.querySelector(".chart-container");
+        this.showAlarm = false;
 
         this.historyDurationSeconds = config.history_seconds || 60;
         this.maxPoints = config.max_points || 1000;
