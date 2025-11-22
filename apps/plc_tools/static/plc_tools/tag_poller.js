@@ -1,3 +1,5 @@
+import { getCookie } from "./util.js";
+
 export class TagPoller {
     constructor() {
         this.tagMap = {}; // tag → [widgets]
@@ -17,13 +19,35 @@ export class TagPoller {
     }
 
     async pollAll() {
-        for (const tag in this.tagMap) {
-            const req = await fetch(`/api/tag/${tag}/value/`);
-            const data = await req.json();
+        const tagIds = Object.keys(this.tagMap);
+        if (tagIds.length === 0) return;
 
-            this.tagMap[tag].forEach(widget =>
-                widget.onData(data)
-            );
+        try {
+            const response = await fetch(`/api/tag/values/`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": getCookie("csrftoken")
+                },
+                body: JSON.stringify({ tag_ids: tagIds })
+            });
+
+            if (!response.ok) throw new Error("Batch fetch failed");
+
+            const data = await response.json();
+
+            // Distribute data to widgets
+            for (const [tagId, tagData] of Object.entries(data)) {
+                if (this.tagMap[tagId]) {
+                    this.tagMap[tagId].forEach(widget => {
+                        widget.onData(tagData); 
+                    });
+                }
+            }
+
+        } 
+        catch (err) {
+            console.error("Polling error:", err);
         }
     }
 }

@@ -180,7 +180,8 @@ class Command(BaseCommand):
                 client.write_coils(tag.address, values, device_id=tag.unit_id)
 
             case _:
-                print("Error: Tried to write with a read-only tag")
+                print("Error: Tried to write with a read-only tag") #TODO does client side need to know about this?
+                return
                 #raise IOError("Tried to write with a read-only tag") #TODO catch this error
                 
 
@@ -211,7 +212,7 @@ class Command(BaseCommand):
                     is_active=True
                 ).exclude(id=active_alarm.id)
 
-                for alarm in stale_alarms:
+                for alarm in stale_alarms: #TODO batch?
                     alarm.is_active = False
                     alarm.save(update_fields=['is_active'])
                     print("Disabled an alarm:", active_alarm)
@@ -219,7 +220,7 @@ class Command(BaseCommand):
             else:
                 active_alarms = ActivatedAlarm.objects.filter(config__tag=tag, is_active=True)
                 if active_alarms.exists():
-                    active_alarms.update(is_active=False) # Batch update is faster
+                    active_alarms.update(is_active=False)
                     print("All alarms cleared for tag:", tag)
 
     
