@@ -78,10 +78,10 @@ class Command(BaseCommand):
                         logger.warning(f"Couldn't save values {values} to tag {tag}: {e}")
                         continue
 
-                    try:
-                        self._process_alarms(tag)
-                    except Exception as e:
-                        logger.warning(f"Coudn't process alarms for tag {tag}: {e}")
+                    #try:
+                    self._process_alarms(tag)
+                    #except Exception as e:
+                    #    logger.warning(f"Coudn't process alarms for tag {tag}: {e}")
 
             time.sleep(0.25) #TODO individual device polling rates?
 
@@ -179,13 +179,17 @@ class Command(BaseCommand):
         if not isinstance(values, list) and tag.data_type != Tag.DataTypeChoices.STRING:
             values = [values]
 
-        match tag.data_type:
-            case Tag.DataTypeChoices.BOOL:
-                values = [bool(value) for value in values]
-            case Tag.DataTypeChoices.INT16 | Tag.DataTypeChoices.UINT16:
-                values = [int(value) for value in values]
-            case Tag.DataTypeChoices.FLOAT32:
-                values = [float(value) for value in values]
+        try:
+            match tag.data_type:
+                case Tag.DataTypeChoices.BOOL:
+                    values = [bool(value) for value in values]
+                case Tag.DataTypeChoices.INT16 | Tag.DataTypeChoices.UINT16:
+                    values = [int(value) for value in values]
+                case Tag.DataTypeChoices.FLOAT32:
+                    values = [float(value) for value in values]
+        except ValueError:
+            logging.warning(f"Tag data type mismatch: writing {values} to {tag}")
+            return
 
         match tag.channel:
             case Tag.ChannelChoices.HOLDING_REGISTER:
@@ -201,10 +205,8 @@ class Command(BaseCommand):
 
     def _process_alarms(self, tag: Tag):
         """ Trigger an alarm if the tag is in an alarm state """
-
-        value = int(tag.current_value)
-
-        alarm_config = AlarmConfig.objects.filter(trigger_value=value, tag=tag).first()
+        
+        alarm_config = AlarmConfig.objects.filter(trigger_value=tag.current_value, tag=tag).first()
 
         if alarm_config:
             active_alarm, created = ActivatedAlarm.objects.get_or_create(
