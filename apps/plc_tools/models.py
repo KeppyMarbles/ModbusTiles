@@ -1,6 +1,7 @@
 import uuid
 from datetime import timedelta
 from django.db import models
+from django.utils import timezone
 from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
 
@@ -74,6 +75,7 @@ class Tag(models.Model):
     )
 
     last_updated = models.DateTimeField(null=True)
+    value_changed = models.BooleanField(null=True)
     #max_write_entries = models.PositiveIntegerField(
     #    null=True, blank=True,
     #    default=0
@@ -101,6 +103,53 @@ class Tag(models.Model):
                 return ceil(self.read_amount / 2)
             case _:
                 raise Exception("Could not determine read count of data type", self.data_type)
+            
+    def set_value(self, new_value):
+            """
+            Updates the value, manages 'last_updated', and handles history pruning.
+            Returns True if the value actually changed.
+            """
+            now = timezone.now()
+            
+            self.value_changed = (self.current_value != new_value)
+            self.current_value = new_value
+            self.last_updated = now
+            
+            self.save(update_fields=["current_value", "value_changed", "last_updated"])
+
+            if self.max_history_entries == 0:
+                return self.value_changed
+            
+            if self.value_changed: #TODO bool for saving history when not changed?
+                TagHistoryEntry.objects.create(tag=self, value=new_value, timestamp=now)
+                self._prune_history()
+
+            return self.value_changed
+
+    def _prune_history(self):
+        """ Keep history within limits """
+        if self.max_history_entries is None or self.max_history_entries < 0:
+            return
+
+        ids_to_keep = (
+            TagHistoryEntry.objects.filter(tag=self)
+            .order_by('-timestamp')
+            .values_list('id', flat=True)[:self.max_history_entries]
+        )
+        
+        # Delete everything not in keep list
+        TagHistoryEntry.objects.filter(tag=self).exclude(id__in=ids_to_keep).delete()
+
+    def get_client_data(self): #TODO do we need a batched version of this?
+        active_alarm = ActivatedAlarm.objects.filter(
+            config__tag=self, 
+            is_active=True
+        ).select_related('config').first()
+
+        alarm = {"message": active_alarm.config.message, "level" : active_alarm.config.threat_level} if active_alarm else None
+
+        return {"value": self.current_value, "time": str(self.last_updated), "alarm": alarm}
+
 
     def __str__(self):
         return f"{self.alias} [{self.channel}:{self.address}]"
@@ -153,6 +202,35 @@ class AlarmConfig(models.Model):
     notification_cooldown = models.DurationField(default=timedelta(minutes=1), help_text="Don't resend email for this long")
     last_notified = models.DateTimeField(null=True, blank=True)
 
+    def get_activation(self):
+        should_activate = (self.trigger_value == self.tag.current_value)
+
+        if(should_activate):
+            active_alarm, created = ActivatedAlarm.objects.get_or_create(
+                config=self,
+                is_active=True,
+            )
+
+            # Disable other alarms active for the same tag
+            stale_alarms = ActivatedAlarm.objects.filter(
+                config__tag=self.tag, 
+                is_active=True
+            ).exclude(id=active_alarm.id)
+
+            for alarm in stale_alarms: #TODO batch?
+                alarm.is_active = False
+                alarm.save(update_fields=['is_active'])
+                #TODO logging?
+
+            return active_alarm
+
+        else:
+            active_alarms = ActivatedAlarm.objects.filter(config=self, is_active=True)
+            if active_alarms.exists():
+                active_alarms.update(is_active=False)
+                #logger.info(f"All alarms cleared for tag: {tag}")
+            return None
+
     def __str__(self):
         return f"{self.tag.alias} == {self.trigger_value} -> {self.message}"
     
@@ -167,12 +245,30 @@ class ActivatedAlarm(models.Model):
     
     is_active = models.BooleanField(default=False)
 
+    #TODO max history entries?
+
     class Meta:
         unique_together = ('config', 'timestamp')
         ordering = ["-timestamp"]
         indexes = [
             models.Index(fields=["config", "-timestamp"]),
         ]
+
+    def should_notify(self):
+        return (self.config.last_notified is None) or (timezone.now() - self.config.last_notified > self.config.notification_cooldown)
+
+    def send_notifications(self):
+        #TODO batch multiple alarms into one email?
+        subs = AlarmSubscription.objects.filter(
+                    alarm_config=self.config, 
+                    email_enabled=True
+                ).select_related('user')
+        
+        recipients = [sub.user.email for sub in subs if sub.user.email]
+        #logger.info(f"Sending Email to {recipients}: {self.config.message}")
+
+        self.config.last_notified = timezone.now()
+        self.config.save(update_fields=['last_notified'])
 
     def __str__(self):
         return f"ALARM: {self.config.tag.alias} - {self.config.message} (Level {self.config.threat_level})"

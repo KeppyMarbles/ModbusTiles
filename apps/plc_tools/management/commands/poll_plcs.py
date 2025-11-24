@@ -13,6 +13,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 type ModbusClient = ModbusTcpClient | ModbusUdpClient | ModbusSerialClient#TODO tag value type?
 
+
 def get_modbus_reader(client: ModbusClient, tag: Tag):
     """ Returns the function needed for reading a tag """
     return {
@@ -35,8 +36,8 @@ def get_modbus_datatype(client: ModbusClient, tag: Tag):
 
 class Command(BaseCommand):
     def handle(self, *args, **options):
-        self.connections = {}
-        #TODO need to handle all the errors properly
+        self._connections = {}
+        self._redis = redis.Redis()
         self._poll()
 
     
@@ -45,11 +46,7 @@ class Command(BaseCommand):
         Queries the database for devices and tags,
         Finds or creates a connection for each device and updates the value of active tags
         """
-        r = redis.Redis()
-
         while True:
-            update_data = {}
-
             for device in Device.objects.all():
                 try:
                     client = self._get_connection(device)
@@ -69,7 +66,7 @@ class Command(BaseCommand):
                         values = self._read_tag(client, tag)
                     except (ConnectionException, ConnectionError, ConnectionResetError) as e:
                         logger.error(f"No connection from {client}: {e}")
-                        self.connections[device.alias] = None
+                        self._connections[device.alias] = None
                         break
                     except Exception as e:
                         logger.warning(f"Modbus Error reading {tag}: {e}")
@@ -78,35 +75,15 @@ class Command(BaseCommand):
                     if not isinstance(values, str) and len(values) == 1:
                         values = values[0] #TODO? could be confusing
 
-                    try:
-                        self._store_value(tag, values)
-                    except Exception as e:
-                        logger.warning(f"Couldn't save values {values} to tag {tag}: {e}")
-                        continue
+                    tag.set_value(values)
 
-                    #TODO only set this if the value changed? Could be a bool on tags.
-                    #TODO only set if it's currently subscribed to?
-                    
-                    #try:
-                    self._process_alarms(tag)
-
-                    active_alarm = ActivatedAlarm.objects.filter(
-                        config__tag=tag, 
-                        is_active=True
-                    ).select_related('config').first()
-
-                    alarm = {"message": active_alarm.config.message, "level" : active_alarm.config.threat_level} if active_alarm else None
-
-                    update_data[str(tag.external_id)] = {"value": tag.current_value, "time": str(tag.last_updated), "alarm": alarm}
-                    #except Exception as e:
-                    #    logger.warning(f"Coudn't process alarms for tag {tag}: {e}")
-            r.publish("plc_events", json.dumps(update_data))
+            self._on_poll_cycle_complete()
             time.sleep(0.25) #TODO individual device polling rates?
 
 
     def _get_connection(self, device: Device) -> ModbusClient:
         """ Creates a device connection or returns an existing one """
-        conn = self.connections.get(device.alias)
+        conn = self._connections.get(device.alias)
         if conn is None or not conn.connected:
             match device.protocol:
                 case Device.ProtocolChoices.MODBUS_TCP:
@@ -121,7 +98,7 @@ class Command(BaseCommand):
             else:
                 raise ConnectionError("Could not connect to PLC", conn)
         
-        self.connections[device.alias] = conn
+        self._connections[device.alias] = conn
         return conn
 
 
@@ -147,52 +124,19 @@ class Command(BaseCommand):
 
         return values
 
-
-    def _store_value(self, tag: Tag, value):
-        """ Updates the tag's value and stores history if enabled """
-        #TODO what if we want to store entries at a lesser resolution?
-        #TODO maybe we could not store the entry if the value is the same as the previous?
-        tag.current_value = value
-        tag.last_updated = timezone.now()
-        tag.save(update_fields=["current_value", "last_updated"])
-
-        if tag.max_history_entries == 0:
-            return
-
-        TagHistoryEntry.objects.create(tag=tag, value=value)
-
-        # Unlimited entries
-        if tag.max_history_entries < 0:
-            return
-
-        qs = (
-            TagHistoryEntry.objects
-            .filter(tag=tag)
-            .order_by("-timestamp")
-        )
-
-        try:
-            cutoff_entry = qs[tag.max_history_entries]
-        except IndexError:
-            return
-
-        # Purge
-        TagHistoryEntry.objects.filter(
-            tag=tag,
-            timestamp__lt=cutoff_entry.timestamp
-        ).delete()
-
-
     def _process_writes(self, client: ModbusClient, device: Device):
+        """ Queries all PLC write requests and attempts to fullfill them """
+
         writes = TagWriteRequest.objects.filter(processed=False, tag__device=device)
         for req in writes:
             self._write_value(client, req.tag, req.value) #TODO should i try/except here instead? should i log/notify server if it fails?
+            logger.info(f"Processed write request for tag {req.tag}")
             req.processed = True
             req.save()
 
         
     def _write_value(self, client: ModbusClient, tag: Tag, values):
-        """ Attemps to write a value to the tag's associated register(s) """
+        """ Attempts to write a value to the tag's associated register(s) """
 
         if not isinstance(values, list) and tag.data_type != Tag.DataTypeChoices.STRING:
             values = [values]
@@ -220,58 +164,18 @@ class Command(BaseCommand):
             case _:
                 logger.warning("Tried to write with a read-only tag")
                 return
-                
 
-    def _process_alarms(self, tag: Tag):
-        """ Trigger an alarm if the tag is in an alarm state """
 
-        alarm_config = AlarmConfig.objects.filter(trigger_value=tag.current_value, tag=tag).first()
+    def _on_poll_cycle_complete(self):
+        for alarm_config in AlarmConfig.objects.all():
+            activated = alarm_config.get_activation()
+            if(activated):
+                if(activated.should_notify()):
+                    activated.send_notifications()
+                    logger.info(f"Notifying alarm: {activated}")
 
-        if alarm_config:
-            active_alarm, created = ActivatedAlarm.objects.get_or_create(
-                config=alarm_config,
-                is_active=True,
-            )
-            if(created):
-                logger.info(f"Activated alarm: {active_alarm}")
-
-            self._handle_notification(active_alarm)
-
-            # Disable other alarms active for the same tag
-            stale_alarms = ActivatedAlarm.objects.filter(
-                config__tag=tag, 
-                is_active=True
-            ).exclude(id=active_alarm.id)
-
-            for alarm in stale_alarms: #TODO batch?
-                alarm.is_active = False
-                alarm.save(update_fields=['is_active'])
-                logger.info(f"Disabled alarm: {alarm}")
-
-        else:
-            active_alarms = ActivatedAlarm.objects.filter(config__tag=tag, is_active=True)
-            if active_alarms.exists():
-                active_alarms.update(is_active=False)
-                logger.info(f"All alarms cleared for tag: {tag}")
-
-    
-    def _handle_notification(self, active_alarm: ActivatedAlarm):
-        now = timezone.now()
-
-        # Check if we ever notified, or if the cooldown has passed
-        #TODO maybe the cooldown should be on the tag instead? So we don't get multiple emails about the different threat levels
-        if (active_alarm.config.last_notified is None) or \
-            (now - active_alarm.config.last_notified > active_alarm.config.notification_cooldown):
-
-            #TODO batch multiple alarms into one email?
-            subs = AlarmSubscription.objects.filter(
-                        alarm_config=active_alarm.config, 
-                        email_enabled=True
-                    ).select_related('user')
-            
-            recipients = [sub.user.email for sub in subs if sub.user.email]
-            logger.info(f"Sending Email to {recipients}: {active_alarm.config.message}")
-            #TODO
-
-            active_alarm.config.last_notified = now
-            active_alarm.config.save(update_fields=['last_notified'])
+        update_data = {} #TODO try doing only one active_alarms query?
+        for tag in Tag.objects.filter(is_active=True, value_changed=True): #TODO bool for fetch if not value changed?
+            update_data[str(tag.external_id)] = tag.get_client_data()
+        
+        self._redis.publish("plc_events", json.dumps(update_data))

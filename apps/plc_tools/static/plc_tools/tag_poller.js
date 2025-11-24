@@ -16,8 +16,6 @@ export class TagPoller {
     }
 
     start() {
-        console.log("Starting")
-
         this.connectionBanner.classList.add("hidden");
 
         const tagIds = Object.keys(this.tagMap).join(",");
@@ -25,7 +23,6 @@ export class TagPoller {
 
         evt.onmessage = (event) => {
             const updated = JSON.parse(event.data);
-            console.log(updated);
             for (const [tagId, tagData] of Object.entries(updated)) {
                 if (this.tagMap[tagId]) {
                     this.tagMap[tagId].forEach(widget => widget.onData(tagData));

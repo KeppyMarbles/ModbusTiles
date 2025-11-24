@@ -23,8 +23,6 @@ def dashboard_view(request, alias):
 
     widgets = DashboardWidget.objects.filter(dashboard=dashboard)
 
-    print("Widgets:", widgets)
-
     return render(request, "plc_tools/dashboard.html", {
         "dashboard": dashboard,
         "widgets": widgets,

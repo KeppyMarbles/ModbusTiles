@@ -6,8 +6,6 @@ from django.views.decorators.http import require_GET
 
 @require_GET
 async def tag_updates(request):
-    print("tag update request")
-
     tags_param = request.GET.get("tags", "")
     subscribed_tags = set(tags_param.split(","))
 
@@ -17,7 +15,6 @@ async def tag_updates(request):
 
     async def event_stream():
         async for message in pubsub.listen():
-            print(message)
 
             if message["type"] != "message":
                 continue

@@ -15,17 +15,7 @@ def api_tag_value(request, external_id):
 
     tag = get_object_or_404(Tag, external_id=external_id)
 
-    #TODO perms check?
-
-    # Check alarm state
-    active_alarm = ActivatedAlarm.objects.filter(
-        config__tag=tag, 
-        is_active=True
-    ).select_related('config').first()
-    
-    alarm = {"message": active_alarm.config.message, "level" : active_alarm.config.threat_level} if active_alarm else None
-
-    return JsonResponse({"value": tag.current_value, "time": tag.last_updated, "alarm": alarm})
+    return JsonResponse(tag.get_client_data())
 
 
 @require_GET
@@ -48,7 +38,7 @@ def api_tag_history(request, external_id):
 
 
 @require_POST
-def api_batch_tag_values(request):
+def api_batch_tag_values(request): #TODO move some logic to models?
     """ Returns data for multiple tags """
 
     try:
