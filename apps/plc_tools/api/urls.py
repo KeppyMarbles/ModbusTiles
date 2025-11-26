@@ -1,9 +1,17 @@
-from django.urls import path
-from .tags import api_tag_value, api_tag_values, api_write_tag, api_tag_history
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from . import views
+
+# Create a router and register our viewsets with it.
+router = DefaultRouter()
+router.register(r'devices', views.DeviceViewSet, basename='device')
+router.register(r'tags', views.TagViewSet, basename='tag')
+router.register(r'alarms', views.AlarmConfigViewSet, basename='alarm')
+router.register(r'dashboards', views.DashboardWidgetViewSet, basename='dashboard')
+router.register(r'write-requests', views.TagWriteRequestViewSet, basename='write-request')
 
 urlpatterns = [
-    path("values/", api_tag_values, name="api_tag_values"),
-    path("tag/<uuid:external_id>/value/", api_tag_value, name="api_tag_value"),
-    path("tag/<uuid:external_id>/write/", api_write_tag, name="api_tag_write"),
-    path("tag/<uuid:external_id>/history/", api_tag_history, name="api_tag_history"),
+    path('', include(router.urls)),
+    path('values/', views.TagMultiValueView.as_view(), name='tag-values'),
+    path('history/', views.TagHistoryView.as_view(), name='tag-history'),
 ]

@@ -299,21 +299,21 @@ class Command(BaseCommand):
         alarm_config = AlarmConfig.objects.create(
             tag=tag4,
             trigger_value=8,
-            message="Alarm Test 1",
+            alias="Alarm Test 1",
             threat_level=AlarmConfig.ThreatLevelChoices.LOW,
         )
 
         alarm_config = AlarmConfig.objects.create(
             tag=tag4,
             trigger_value=9,
-            message="Alarm Test 2",
+            alias="Alarm Test 2",
             threat_level=AlarmConfig.ThreatLevelChoices.HIGH,
         )
 
         alarm_config = AlarmConfig.objects.create(
             tag=tag4,
             trigger_value=10,
-            message="Alarm Test 3",
+            alias="Alarm Test 3",
             threat_level=AlarmConfig.ThreatLevelChoices.CRITICAL,
         )
 

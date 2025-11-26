@@ -141,53 +141,14 @@ class Tag(models.Model):
         # Delete everything not in keep list
         TagHistoryEntry.objects.filter(tag=self).exclude(id__in=ids_to_keep).delete()
 
-    def get_client_data(self, active_alarm=...): #TODO should this be here or in the api logic?
-        if active_alarm == ...:
-            active_alarm = ActivatedAlarm.objects.filter(
-                config__tag=self, 
-                is_active=True
-            ).select_related('config').first()
-
-        return {
-            "value": self.current_value, 
-            "time": str(self.last_updated), 
-            "age": (timezone.now() - self.last_updated).total_seconds() * 1000,
-            "alarm": active_alarm.get_client_data() if active_alarm else None
-        }
-    
-    def get_history(self, amount: timedelta):
-        cutoff = timezone.now() - amount
-        entries = TagHistoryEntry.objects.filter(
-            tag=self, 
-            timestamp__gte=cutoff
-        ).values('timestamp', 'value').order_by('timestamp')
-
-        return entries
-
-    def request_change(self, value):
-        TagWriteRequest.objects.create(
-            tag=self,
-            value=value,
-        ) #TODO probably limit in DB 
-    
     @staticmethod
-    def get_client_data_multiple(tags):
-        active_alarms = ActivatedAlarm.objects.filter(
-            config__tag__in=tags, 
-            is_active=True
-        ).select_related('config', 'config__tag')
-
-        alarm_map = {
-            alarm.config.tag.external_id: alarm 
-            for alarm in active_alarms
-        }
-
-        results = {}
-        for tag in tags:
-            alarm = alarm_map.get(tag.external_id)
-            results[str(tag.external_id)] = tag.get_client_data(alarm)
-
-        return results
+    def get_alarm_map(tags):
+        alarms = (
+            ActivatedAlarm.objects.filter(
+                config__tag__in=tags, is_active=True
+            ).select_related("config", "config__tag")
+        )
+        return {a.config.tag_id: a.config for a in alarms}
 
     def __str__(self):
         return f"{self.alias} [{self.channel}:{self.address}]"
@@ -231,10 +192,11 @@ class AlarmConfig(models.Model):
     tag = models.ForeignKey(Tag, on_delete=models.CASCADE, related_name="alarm_configs")
     trigger_value = models.JSONField(help_text="Value that triggers this alarm")
     owner = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    enabled = models.BooleanField(default=True)
     
     # Enrichment data
-    alias = models.CharField(default="", max_length=100)
-    message = models.CharField(max_length=200, help_text="e.g., 'Sump Pump Failure - Check Breaker'")
+    alias = models.CharField(max_length=100)
+    message = models.CharField(default="", max_length=200, help_text="e.g., 'Sump Pump Failure - Check Breaker'")
     threat_level = models.CharField(choices=ThreatLevelChoices.choices)
     
     # Notification rules
@@ -320,12 +282,6 @@ class ActivatedAlarm(models.Model):
 
         self.config.last_notified = timezone.now()
         self.config.save(update_fields=['last_notified'])
-
-    def get_client_data(self):
-        return {
-            "message": self.config.message, 
-            "level": self.config.threat_level
-        }
 
     def __str__(self):
         return f"ALARM: {self.config.tag.alias} - {self.config.message} (Level {self.config.threat_level})"

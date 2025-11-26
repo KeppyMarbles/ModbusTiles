@@ -21,7 +21,7 @@ def dashboard_view(request, alias):
         owner=request.user
     )
 
-    widgets = DashboardWidget.objects.filter(dashboard=dashboard)
+    widgets = DashboardWidget.objects.filter(dashboard=dashboard).select_related('tag')
 
     return render(request, "plc_tools/dashboard.html", {
         "dashboard": dashboard,

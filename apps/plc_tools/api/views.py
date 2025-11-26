@@ -1,0 +1,157 @@
+from datetime import timedelta
+from rest_framework.viewsets import ModelViewSet
+from rest_framework.generics import ListAPIView
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import MethodNotAllowed
+from .serializers import TagDetailSerializer, TagDropdownSerializer, TagCreateSerializer, TagUpdateSerializer, TagValueSerializer, TagWriteRequestSerializer, TagHistoryEntrySerializer
+from .serializers import AlarmConfigSerializer, AlarmConfigDropdownSerializer, ActivatedAlarmSerializer
+from .serializers import DashboardDropdownSerializer, DashboardSerializer, DashboardWidgetSerializer
+from .serializers import DeviceSerializer, DeviceDropdownSerializer
+from ..models import DashboardWidget, Dashboard, Tag, Device, AlarmConfig, TagWriteRequest, TagHistoryEntry
+from rest_framework.exceptions import PermissionDenied, ValidationError
+from django.utils import timezone
+
+
+class DeviceViewSet(ModelViewSet):
+    queryset = Device.objects.all()
+    max_count = 99
+    serializers = {
+        "list": DeviceDropdownSerializer,
+    }
+
+    def get_serializer_class(self):
+        return self.serializers.get(self.action) or DeviceSerializer
+
+    def perform_create(self, serializer):
+        if Device.objects.all().count() > self.max_count:
+            raise ValidationError("Max devices reached") #TODO better error class/status code?
+        
+        serializer.save()
+
+
+class TagViewSet(ModelViewSet):
+    max_count = 999
+    serializers = {
+        "list": TagDropdownSerializer,
+        "retrieve": TagDetailSerializer,
+        "create": TagCreateSerializer,
+        "update": TagUpdateSerializer,
+        "partial_update": TagUpdateSerializer,
+    }
+
+    def get_queryset(self):
+        qs = Tag.objects.all()
+
+        device_alias = self.request.query_params.get("device")
+        if device_alias:
+            qs = qs.filter(device__alias=device_alias)
+
+        return qs
+    
+    def get_serializer_class(self):
+        return self.serializers.get(self.action) or TagDetailSerializer
+
+    def perform_create(self, serializer):
+        if Tag.objects.filter(owner=self.request.user).count() > self.max_count:
+            raise ValidationError("Max tags reached")
+        
+        serializer.save(owner=self.request.user)
+    
+
+class TagWriteRequestViewSet(ModelViewSet):
+    queryset = TagWriteRequest.objects.all()
+    serializer_class = TagWriteRequestSerializer
+    #permission_classes = [IsAuthenticated]
+
+    def update(self, request, *args, **kwargs):
+        raise MethodNotAllowed("PUT/PATCH not allowed on TagWriteRequest")
+
+    def partial_update(self, request, *args, **kwargs):
+        raise MethodNotAllowed("PATCH not allowed on TagWriteRequest")
+
+    def destroy(self, request, *args, **kwargs):
+        raise MethodNotAllowed("DELETE not allowed on TagWriteRequest")
+
+
+class DashboardWidgetViewSet(ModelViewSet):
+    serializer_class = DashboardWidgetSerializer
+    max_count = 99
+
+    def get_queryset(self):
+        # Only show widgets for dashboards owned by the user
+        return DashboardWidget.objects.filter(
+            dashboard__owner=self.request.user
+        )
+
+    def perform_create(self, serializer):
+        dashboard = serializer.validated_data["dashboard"]
+
+        if dashboard.owner != self.request.user:
+            raise PermissionDenied("Not your dashboard")
+
+        if DashboardWidget.objects.filter(dashboard=dashboard).count() >= self.max_count:
+            raise ValidationError("Max widgets reached for dashboard")
+        
+        serializer.save()
+
+
+class AlarmConfigViewSet(ModelViewSet):
+    max_count = 999
+    serializers = {
+        "list": AlarmConfigDropdownSerializer,
+    }
+
+    def get_queryset(self):
+        qs = AlarmConfig.objects.all()
+
+        # Get alarms for a specified tag
+        tag_id = self.request.query_params.get("tag")
+        if tag_id:
+            qs = qs.filter(tag__external_id=tag_id)
+
+        return qs
+    
+    def get_serializer_class(self):
+        return self.serializers.get(self.action) or AlarmConfigSerializer
+    
+    def perform_create(self, serializer):
+        if AlarmConfig.objects.filter(owner=self.request.user).count() > 999:
+            raise ValidationError("Max alarms reached")
+        
+        serializer.save()
+    
+    
+class TagMultiValueView(APIView):
+    def get(self, request):
+        ids = request.query_params.get("tags", "").split(",")
+        tags = list(Tag.objects.filter(external_id__in=ids))
+
+        alarm_map = Tag.get_alarm_map(tags)
+
+        serialized = TagValueSerializer(
+            tags, many=True, context={"alarm_map": alarm_map}
+        )
+
+        return Response(serialized.data)
+    
+
+class TagHistoryView(ListAPIView):
+    serializer_class = TagHistoryEntrySerializer
+    
+    def get_queryset(self):
+        qs = TagHistoryEntry.objects.all().order_by('timestamp')
+        
+        # Filter by Tags
+        tag_param = self.request.query_params.get('tags')
+        if tag_param:
+            ids = tag_param.split(',')
+            qs = qs.filter(tag__external_id__in=ids)
+            
+        # Filter by Time
+        seconds = int(self.request.query_params.get('seconds', 60))
+        cutoff = timezone.now() - timedelta(seconds=seconds)
+        qs = qs.filter(timestamp__gte=cutoff)
+        
+        return qs

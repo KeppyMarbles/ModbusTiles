@@ -27,16 +27,17 @@ export class TagPoller {
 
             if (!req.ok) throw new Error("Batch fetch failed");
 
-            const data = await req.json();
+            const response = await req.json();
+            console.log(response)
 
             // Distribute data to widgets
-            for (const [tagId, tagData] of Object.entries(data)) {
-                if (this.tagMap[tagId]) {
-                    this.tagMap[tagId].forEach(widget => {
+            response.forEach(tagData => {
+                if (this.tagMap[tagData.id]) {
+                    this.tagMap[tagData.id].forEach(widget => {
                         widget.onData(tagData); 
                     });
                 }
-            }
+            });
 
         } 
         catch (err) {
