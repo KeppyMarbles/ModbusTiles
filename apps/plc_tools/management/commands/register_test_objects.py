@@ -32,10 +32,10 @@ class Command(BaseCommand):
             dashboard=dashboard,
             widget_type=DashboardWidget.WidgetTypeChoices.LABEL,
             config = {
-                "position_x": 100,
-                "position_y": 20,
+                "position_x": 0,
+                "position_y": 0,
                 "scale_x" : 2,
-                "scale_y" : 2,
+                "scale_y" : 1,
                 "text" : "Test Coils",
             }
         )
@@ -54,10 +54,10 @@ class Command(BaseCommand):
             tag=tag,
             widget_type=DashboardWidget.WidgetTypeChoices.LED,
             config = {
-                "position_x": 100,
-                "position_y": 100,
-                "scale_x" : 3,
-                "scale_y" : 3,
+                "position_x": 0,
+                "position_y": 1,
+                "scale_x" : 1,
+                "scale_y" : 1,
                 "color_on": "green",
                 "color_off": "red",
             }
@@ -67,8 +67,8 @@ class Command(BaseCommand):
             tag=tag,
             widget_type=DashboardWidget.WidgetTypeChoices.BOOL_LABEL,
             config = {
-                "position_x": 100,
-                "position_y": 150,
+                "position_x": 0,
+                "position_y": 2,
                 "scale_x" : 1,
                 "scale_y" : 1,
                 "text_on": "On",
@@ -80,8 +80,8 @@ class Command(BaseCommand):
             tag=tag,
             widget_type=DashboardWidget.WidgetTypeChoices.SWITCH,
             config = {
-                "position_x": 100,
-                "position_y": 200,
+                "position_x": 0,
+                "position_y": 3,
                 "scale_x" : 1,
                 "scale_y" : 1,
             }
@@ -101,10 +101,10 @@ class Command(BaseCommand):
             tag=tag2,
             widget_type=DashboardWidget.WidgetTypeChoices.LED,
             config = {
-                "position_x": 200,
-                "position_y": 100,
-                "scale_x" : 3,
-                "scale_y" : 3,
+                "position_x": 1,
+                "position_y": 1,
+                "scale_x" : 1,
+                "scale_y" : 1,
                 "color_on": "green",
                 "color_off": "red",
             }
@@ -114,8 +114,8 @@ class Command(BaseCommand):
             tag=tag2,
             widget_type=DashboardWidget.WidgetTypeChoices.BOOL_LABEL,
             config = {
-                "position_x": 200,
-                "position_y": 150,
+                "position_x": 1,
+                "position_y": 2,
                 "scale_x" : 1,
                 "scale_y" : 1,
                 "text_on": "On",
@@ -127,12 +127,14 @@ class Command(BaseCommand):
             tag=tag2,
             widget_type=DashboardWidget.WidgetTypeChoices.SWITCH,
             config = {
-                "position_x": 200,
-                "position_y": 200,
+                "position_x": 1,
+                "position_y": 3,
                 "scale_x" : 1,
                 "scale_y" : 1,
             }
         )
+
+        return
 
         # ---------- Test Discrete Inputs ----------
 

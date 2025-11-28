@@ -28,7 +28,6 @@ export class TagPoller {
             if (!req.ok) throw new Error("Batch fetch failed");
 
             const response = await req.json();
-            console.log(response)
 
             // Distribute data to widgets
             response.forEach(tagData => {

@@ -1,27 +1,42 @@
 {% load static %}
 <link rel="stylesheet" href="{% static 'plc_tools/widgets.css' %}">
 <link rel="stylesheet" href="{% static 'plc_tools/styles.css' %}">
+<link href="https://cdn.jsdelivr.net/npm/gridstack@12.3.3/dist/gridstack.min.css" rel="stylesheet">
 
-<div id="dashboard" class="container">
-    <div class="connection-banner hidden">⚠️ No connection</div>
-    {% for widget in widgets %}
-        <div class="widget"
-             data-widgetid="{{ widget.external_id }}"
-             data-class="{{ widget.widget_type }}"
-             data-tag="{{ widget.tag.external_id }}"
-             title="{{ widget.tag.description }}">
-            {% include "plc_tools/widgets/"|add:widget.widget_type|add:".html" %}
-            <div>
-                <span class="alarm-indicator"></span>
+<div class="container">  
+
+    <div class="grid-stack" id="dashboard-grid">
+        <div class="connection-banner hidden">⚠️ No connection</div>
+        
+        {% for widget in widgets %}
+            <div class="grid-stack-item widget-wrapper"
+                gs-x="{{ widget.config.position_x|default:0 }}"
+                gs-y="{{ widget.config.position_y|default:0 }}"
+                gs-w="{{ widget.config.scale_x|default:2 }}" 
+                gs-h="{{ widget.config.scale_y|default:2 }}"
+                data-widgetid="{{ widget.external_id }}"
+                data-class="{{ widget.widget_type }}">
+                
+                <div class="grid-stack-item-content widget"
+                     data-tag="{{ widget.tag.external_id }}"
+                     title="{{ widget.tag.description }}">
+                    
+                    {% include "plc_tools/widgets/"|add:widget.widget_type|add:".html" %}
+                    
+                    <div>
+                        <span class="alarm-indicator"></span>
+                    </div>
+                </div>
             </div>
-        </div>
-        {% with uuid=widget.external_id|stringformat:"s" %}
-            {% with cfg_id="config-"|add:uuid %}
-                {{ widget.config|json_script:cfg_id }}
+
+            {% with uuid=widget.external_id|stringformat:"s" %}
+                {% with cfg_id="config-"|add:uuid %}
+                    {{ widget.config|json_script:cfg_id }}
+                {% endwith %}
             {% endwith %}
-        {% endwith %}
-    {% endfor %}
+        {% endfor %}
+    </div>
 </div>
 
-<script type="module" src="{% static 'plc_tools/dashboard.js' %}"></script>
 <script src="https://cdn.plot.ly/plotly-3.3.0.min.js" charset="utf-8"></script>
+<script type="module" src="{% static 'plc_tools/dashboard.js' %}"></script>

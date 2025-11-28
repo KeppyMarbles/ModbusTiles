@@ -18,9 +18,9 @@ class Widget {
         this.shouldUpdate = true;
         this.updateTimeout = 500; //TODO where should these values live?
         this.valueTimeout = 5000;
-        this.elem.style.left = config.position_x + "px";
-        this.elem.style.top = config.position_y + "px";
-        this.elem.style.transform = `scale(${config.scale_x}, ${config.scale_y})`;
+        //this.elem.style.left = config.position_x + "px";
+        //this.elem.style.top = config.position_y + "px";
+        //this.elem.style.transform = `scale(${config.scale_x}, ${config.scale_y})`;
         this.alarmIndicator = widget_elem.querySelector(".alarm-indicator");
         this.showAlarm = true;
     }
@@ -137,7 +137,8 @@ class SliderWidget extends Widget {
             this.max_label.textContent = this.input.max;
         }
 
-        this.elem.style.width = this.config.width;
+        //this.elem.style.width = this.config.width;
+        this.elem.style.width = "100%";
         
         this.input.addEventListener("change", async () => {
             this.submit(this.input.value);
@@ -182,7 +183,8 @@ class MeterWidget extends Widget {
             this.querySelector(".max-label").textContent = this.bar.max;
         }
 
-        this.elem.style.width = this.config.width;
+        //this.elem.style.width = this.config.width;
+        this.elem.style.width = "100%";
     }
 
     onValue(val) {
@@ -204,6 +206,7 @@ class LEDWidget extends Widget {
 
     onValue(val) {
         this.indicator.style.backgroundColor = val ? this.config.color_on : this.config.color_off;
+        //this.indicator.style.boxShadow = val ? `0 0 15px ${this.config.color_on}` : "none";
     }
 }
 

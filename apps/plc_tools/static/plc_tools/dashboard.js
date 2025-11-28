@@ -1,13 +1,26 @@
 import { WidgetRegistry } from "./widgets.js";
 import { TagPoller } from "./tag_poller.js";
+import { GridStack } from 'https://cdn.jsdelivr.net/npm/gridstack@12.3.3/+esm'
+
 
 const poller = new TagPoller();
 
-document.querySelectorAll(".widget").forEach(elem => {
-    const widgetClass = WidgetRegistry[elem.dataset.class];
-    const config = JSON.parse(document.getElementById("config-" + elem.dataset.widgetid).textContent);
+const grid = GridStack.init({
+    //staticGrid: true, 
+    cellHeight: 100,
+    margin: 5,
+});
 
-    const widget = new widgetClass(elem, config);
+
+document.querySelectorAll(".widget-wrapper").forEach(wrapper => {
+    const widgetType = wrapper.dataset.class;
+    const widgetClass = WidgetRegistry[widgetType];
+    
+    const contentElem = wrapper.querySelector('.widget');
+
+    const config = JSON.parse(document.getElementById("config-" + wrapper.dataset.widgetid).textContent);
+
+    const widget = new widgetClass(contentElem, config);
     poller.registerWidget(widget);
 });
 
