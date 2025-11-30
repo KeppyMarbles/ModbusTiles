@@ -22,8 +22,10 @@ def dashboard_view(request, alias):
     )
 
     widgets = DashboardWidget.objects.filter(dashboard=dashboard).select_related('tag')
+    widget_types = ["switch", "slider", "meter", "led", "label", "bool_label", "chart"] #TODO read from a file or infer from widgets/ html folder?
 
     return render(request, "plc_tools/dashboard.html", {
         "dashboard": dashboard,
         "widgets": widgets,
+        "widget_types": widget_types,
     })

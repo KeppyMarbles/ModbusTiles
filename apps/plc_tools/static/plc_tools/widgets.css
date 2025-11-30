@@ -1,11 +1,8 @@
-.widget {
-  position: absolute;
-}
-.widget.no-connection {
+.dashboard-widget.no-connection {
   cursor: not-allowed;
   position: absolute;
 }
-.widget.no-connection::after {
+.dashboard-widget.no-connection::after {
   content: "❌";
   position: absolute;
   top: 50%;
@@ -19,28 +16,33 @@
   border-radius: 4px;
   z-index: 20;
 }
-.led-widget {
+.dashboard-widget.led {
     container-type: size;
     display: flex;
     justify-content: center;
     align-items: center;
-    width: 100%;
-    height: 100%;
+    width:100px;
+    height:100px;
 }
-.led-widget .indicator {
+#dashboard-grid .dashboard-widget.led {
+    width:100%;
+    height:100%;
+
+}
+.dashboard-widget.led .indicator {
     width: 80cqmin;
     height: 80cqmin;
     border-radius: 50%;
     border: 2px solid #555;
-    background-color: #333;
+    background-color: #ffffff;
 }
-.switch-widget {
+.dashboard-widget.switch {
   position: relative;
   display: inline-block;
   width: 50px;
   height: 24px;
 }
-.switch-widget input {
+.dashboard-widget.switch input {
   opacity: 0;
   width: 0;
   height: 0;
@@ -72,15 +74,21 @@ input:checked + .switch_slider {
 input:checked + .switch_slider:before {
   transform: translateX(26px);
 }
-.meter-widget {
+.dashboard-widget.meter {
   display: flex; 
   align-items: center; 
   gap: 8px; 
-  width: 300px;
+  width: 100%;
 }
-.slider-widget {
+.dashboard-widget.slider {
   display: flex; 
   align-items: center; 
   gap: 8px; 
-  width: 300px;
+  width: 100%;
+}
+
+.dashboard-widget.grid-stack-item-content.ui-resizable-resizing,
+.dashboard-widget.selected {
+    outline: 2px solid #b5c8e6;
+    box-shadow: 0 0 10px #b5c8e6;
 }

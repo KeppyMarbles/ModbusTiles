@@ -17,6 +17,10 @@ export class TagPoller {
         this.pollInterval = setInterval(() => this.pollAll(), interval);
     }
 
+    stop() {
+        clearTimeout(this.pollInterval);
+    }
+
     async pollAll() {
         this.connectionBanner.classList.add("hidden");
         const tagIds = Object.keys(this.tagMap).join(",");
@@ -42,7 +46,7 @@ export class TagPoller {
         catch (err) {
             console.error("Polling error:", err);
             this.connectionBanner.classList.remove("hidden");
-            clearTimeout(this.pollInterval);
+            this.stop();
         }
     }
 }

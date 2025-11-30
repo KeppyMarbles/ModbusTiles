@@ -1,5 +1,6 @@
 .container {
-  font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif
+  font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #e3eeff
 }
 .hidden {
   display: none;
@@ -32,40 +33,93 @@
     z-index: 9999;
     transition: transform 0.3s ease-in-out;
 }
+
+.edit-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 8px 15px;
+    background-color: #b1b1b1;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    z-index: 9999;
+}
 .sidebar {
     position: fixed;
     right: 0;
     top: 0;
     width: 300px;
     height: 100vh;
-    background: #2a2a2a;
+    background: #f3f8ff;
     transform: translateX(100%); /* Hidden */
     transition: transform 0.3s ease;
     z-index: 1000;
-    border-left: 1px solid #444;
+    border-left: 1px solid #b5c8e6;
+    
 }
 .edit-mode .sidebar {
     transform: translateX(0); /* Visible */
 }
 .edit-mode .canvas-wrapper {
-    margin-right: 300px;
+    /* scale: 0.9; */
     transition: margin 0.3s ease;
 }
-.edit-mode #dashboard-canvas {
-    background-image: radial-gradient(#444 1px, transparent 1px);
+.edit-mode #dashboard-grid {
+    background-image: radial-gradient(#b5c8e6 1px, transparent 1px);
     background-size: 20px 20px;
-    border: 2px dashed #666;
+    border: 2px dashed #b5c8e6;
+    
 }
-.widget.grid-stack-item-content.ui-resizable-resizing,
-.widget.selected {
-    outline: 2px solid #007bff;
-    box-shadow: 0 0 10px rgba(0,123,255,0.5);
+
+.grid-stack-item,
+.grid-stack-item .grid-stack-item-content {
+    overflow: hidden !important;
 }
 .grid-stack-item-content {
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    overflow: hidden;
     padding: 10px;
+}
+
+.tab-buttons {
+  display: flex;
+  border-bottom: 1px solid #ccc;
+  margin-bottom: 0.5rem;
+}
+.tab-buttons button {
+  flex: 1;
+  padding: 0.5rem;
+  background: #e3eeff;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+}
+.tab-buttons button.active {
+  background: #cbdfff;
+  border-bottom: 2px solid #003399;
+}
+.tab-content {
+  display: none;
+}
+.tab-content.active {
+  display: block;
+}
+.inspector-input {
+  margin-right: 10px;
+  width: 100px;
+  text-align: right;
+}
+.inspector-label {
+  margin-left: 10px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+}
+.inspector-title {
+  margin-left: 10px;
+  font-weight: bold;
 }

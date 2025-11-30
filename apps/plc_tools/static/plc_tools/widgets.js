@@ -1,32 +1,45 @@
 import { getCookie } from "./util.js";
 
 class Widget {
-    displayName = "Default Widget";
-    defaultFields = [
-        { name: "position_x", type: "number", default: 0, label: "Position X" },
-        { name: "position_x", type: "number", default: 0, label: "Position Y" },
-        { name: "scale_x", type: "number", default: 1, label: "Size X" },
-        { name: "scale_y", type: "number", default: 1, label: "Size Y" },
+    static displayName = "Default Widget";
+    static defaultFields = [
+        //{ name: "position_x", type: "number", default: 0, label: "Position X" },
+        //{ name: "position_x", type: "number", default: 0, label: "Position Y" },
+        //{ name: "scale_x", type: "number", default: 1, label: "Size X" },
+        //{ name: "scale_y", type: "number", default: 1, label: "Size Y" },
         { name: "tag", type: "tag_picker", default: null, label: "Control Tag"},
     ]
-    customFields = [];
+    static customFields = [];
 
-    constructor(widget_elem, config) {
-        this.elem = widget_elem;
-        this.config = config;
-        this.tag = this.elem.dataset.tag; //TODO?
+    constructor(widgetElem, config, tagID) { // unsure if the tagID should be part of config or not
+        if(config) {
+            this.config = config;
+        }
+        else {
+            this.config = {};
+            const allFields = [...(new.target.defaultFields), ...(new.target.customFields)];
+            allFields.forEach(field => {
+                this.config[field.name] = field.default;
+            });
+        }
+
+        this.elem = widgetElem;
+        this.tag = tagID;
         this.shouldUpdate = true;
         this.updateTimeout = 500; //TODO where should these values live?
         this.valueTimeout = 5000;
-        //this.elem.style.left = config.position_x + "px";
-        //this.elem.style.top = config.position_y + "px";
-        //this.elem.style.transform = `scale(${config.scale_x}, ${config.scale_y})`;
-        this.alarmIndicator = widget_elem.querySelector(".alarm-indicator");
+        this.alarmIndicator = widgetElem.parentNode?.querySelector(".alarm-indicator");
         this.showAlarm = true;
+        widgetElem.widgetInstance = this;
     }
 
     async submit(value) {
         //TODO yes/no confirmation if configured?
+        if(!this.tag) {
+            console.error("No tag value to submit");
+            return;
+        }
+
         console.log("Submitting", value)
         this.shouldUpdate = false;
         clearTimeout(this.timeoutID);
@@ -91,19 +104,29 @@ class Widget {
         }
     }
 
+    applyConfig() {
+        return;
+    }
+
     onValue(val) {
         throw new Error("onValue not implemented for this widget");
     }
 }
 
 class SwitchWidget extends Widget {
-    displayName = "Switch";
+    static displayName = "Switch";
+    static customFields = [
+        { name: "confirmation", type: "bool", default: false, label: "Prompt Confirmation" },
+    ]
 
-    constructor(widget_elem, config) {
-        super(widget_elem, config);
+    constructor(widget_elem, config, tagID) {
+        super(widget_elem, config, tagID);
         this.input = this.elem.querySelector(".switch-input");
         this.input.addEventListener("change", async () => {
-            this.submit(this.input.checked);
+            if(this.config.confirmation && !window.confirm(`Switch to ${this.input.checked ? "ON" : "OFF"} position?`))
+                this.input.checked = !this.input.checked;
+            else
+                this.submit(this.input.checked);
         });
         this.showAlarm = false;
     }
@@ -115,30 +138,23 @@ class SwitchWidget extends Widget {
 }
 
 class SliderWidget extends Widget {
-    displayName = "Slider";
-    customFields = [
+    static displayName = "Slider";
+    static customFields = [
         { name: "min_value", type: "number", default: 0, label: "Minimum Value" },
         { name: "max_value", type: "number", default: 10, label: "Maximum Value" },
-        { name: "display_range", type: "bool", default: true, label: "Show Range"},
         { name: "width", type: "number", default: 300, label: "Width"},
+        { name: "display_range", type: "bool", default: true, label: "Show Range"},
     ]
 
-    constructor(widget_elem, config) {
-        super(widget_elem, config);
+    constructor(widget_elem, config, tagID) {
+        super(widget_elem, config, tagID);
+        console.log(widget_elem);
         this.input = this.elem.querySelector(".slider-input")
+        console.log(this.input);
         this.min_label = this.elem.querySelector(".min-label")
         this.max_label =  this.elem.querySelector(".max-label")
 
-        this.input.min = this.config.min_value;
-        this.input.max = this.config.max_value;
-
-        if(this.config.display_range) {
-            this.min_label.textContent = this.input.min;
-            this.max_label.textContent = this.input.max;
-        }
-
-        //this.elem.style.width = this.config.width;
-        this.elem.style.width = "100%";
+        this.applyConfig();
         
         this.input.addEventListener("change", async () => {
             this.submit(this.input.value);
@@ -150,6 +166,20 @@ class SliderWidget extends Widget {
         this.showAlarm = false;
     }
 
+    applyConfig() {
+        this.input.min = this.config.min_value;
+        this.input.max = this.config.max_value;
+
+        if(this.config.display_range) {
+            this.min_label.textContent = this.input.min;
+            this.max_label.textContent = this.input.max;
+        }
+        else {
+            this.min_label.textContent = "";
+            this.max_label.textContent = "";
+        }
+    }
+
     onValue(val) {
         if(this.shouldUpdate)
             this.input.value = val;
@@ -157,8 +187,8 @@ class SliderWidget extends Widget {
 }
 
 class MeterWidget extends Widget {
-    displayName = "Meter";
-    customFields = [
+    static displayName = "Meter";
+    static customFields = [
         { name: "min_value", type: "number", default: 0, label: "Minimum Value" },
         { name: "max_value", type: "number", default: 10, label: "Maximum Value" },
         { name: "low_value", type: "number", default: 0, label: "Low Value" },
@@ -168,10 +198,16 @@ class MeterWidget extends Widget {
         { name: "width", type: "number", default: 300, label: "Width"},
     ]
 
-    constructor(widget_elem, config) {
-        super(widget_elem, config);
+    constructor(widget_elem, config, tagID) {
+        super(widget_elem, config, tagID);
         this.bar = this.elem.querySelector(".meter-bar");
+        this.min_label = this.elem.querySelector(".min-label")
+        this.max_label =  this.elem.querySelector(".max-label")
+        
+        this.applyConfig();
+    }
 
+    applyConfig() {
         this.bar.min = this.config.min_value;
         this.bar.max = this.config.max_value;
         this.bar.low = this.config.low_value;
@@ -179,12 +215,13 @@ class MeterWidget extends Widget {
         this.bar.optimum = this.config.optimum_value;
 
         if(this.config.display_range) {
-            this.querySelector(".min-label").textContent = this.bar.min;
-            this.querySelector(".max-label").textContent = this.bar.max;
+            this.min_label.textContent = this.bar.min;
+            this.max_label.textContent = this.bar.max;
         }
-
-        //this.elem.style.width = this.config.width;
-        this.elem.style.width = "100%";
+        else {
+            this.min_label.textContent = "";
+            this.max_label.textContent = "";
+        }
     }
 
     onValue(val) {
@@ -193,15 +230,20 @@ class MeterWidget extends Widget {
 }
 
 class LEDWidget extends Widget {
-    displayName = "Light";
-    customFields = [
+    static displayName = "Light";
+    static customFields = [
         { name: "color_on", type: "color", default: "green", label: "On Color" },
-        { name: "color_off", type: "number", default: 10, label: "Off Color" },
+        { name: "color_off", type: "color", default: "red", label: "Off Color" },
     ]
     
-    constructor(widget_elem, config) {
-        super(widget_elem, config);
+    constructor(widget_elem, config, tagID) {
+        super(widget_elem, config, tagID);
         this.indicator = this.elem.querySelector(".indicator");
+        this.applyConfig();
+    }
+
+    applyConfig() {
+        this.indicator.style.backgroundColor = this.config.color_off; //TODO?
     }
 
     onValue(val) {
@@ -210,30 +252,41 @@ class LEDWidget extends Widget {
     }
 }
 
-class LabelWidget extends Widget {
-    displayName = "Label";
-    customFields = [
-        { name: "text", type: "text", default: "Text Label", label: "Text" },
+class LabelWidget extends Widget { //TODO font size, formatting?
+    static displayName = "Label";
+    static customFields = [
+        { name: "text", type: "text", default: "Label Text", label: "Text" },
     ]
 
     constructor(widget_elem, config) {
         super(widget_elem, config);
         this.text_elem = this.elem.querySelector(".label_text");
-        this.text_elem.textContent = this.config.text;
+        
+        this.applyConfig();
+        
         this.showAlarm = false;
+    }
+
+    applyConfig() {
+        this.text_elem.textContent = this.config.text;
     }
 }
 
 class BoolLabelWidget extends Widget {
-    displayName = "Boolean Label";
-    customFields = [
+    static displayName = "Boolean Label";
+    static customFields = [
         { name: "text_on", type: "text", default: "On", label: "On Text" },
         { name: "text_off", type: "text", default: "Off", label: "Off Text" },
     ]
 
-    constructor(widget_elem, config) {
-        super(widget_elem, config);
+    constructor(widget_elem, config, tagID) {
+        super(widget_elem, config, tagID);
         this.text_elem = this.elem.querySelector(".label_text");
+        this.applyConfig();
+    }
+
+    applyConfig() {
+        this.text_elem.textContent = this.config.text_off; //TODO?
     }
 
     onValue(val) {
@@ -246,19 +299,19 @@ class ValueLabelWidget extends Widget {
 }
 
 class ChartWidget extends Widget {
-    displayName = "History Chart";
-    customFields = [
+    static displayName = "History Chart";
+    static customFields = [
         { name: "title", type: "text", default: "Title", label: "Title" },
         { name: "history_seconds", type: "number", default: 60, label: "History Length (seconds)" },
     ]
 
-    constructor(widget_elem, config) {
-        super(widget_elem, config);
+    constructor(widget_elem, config, tagID) {
+        super(widget_elem, config, tagID);
         this.chartDiv = this.elem.querySelector(".chart-container");
         this.showAlarm = false;
 
-        this.historyDurationSeconds = config.history_seconds || 60;
-        this.maxPoints = config.max_points || 1000;
+        this.historyDurationSeconds = this.config.history_seconds || 60;
+        this.maxPoints = this.config.max_points || 1000;
     }
 
     async initChart() {
@@ -308,6 +361,10 @@ class ChartWidget extends Widget {
             console.error("Error initializing chart:", err);
             this.chartDiv.innerHTML = "Error loading chart data";
         }
+    }
+
+    applyConfig() {
+        //TODO
     }
 
     onValue(val, time) {
