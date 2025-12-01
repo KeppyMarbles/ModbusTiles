@@ -13,6 +13,7 @@ from ..models import DashboardWidget, Dashboard, Tag, Device, AlarmConfig, TagWr
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from django.utils import timezone
 
+#TODO should the metadata views all be one class?
 
 class DeviceViewSet(ModelViewSet):
     queryset = Device.objects.all()
@@ -29,6 +30,21 @@ class DeviceViewSet(ModelViewSet):
             raise ValidationError("Max devices reached") #TODO better error class/status code?
         
         serializer.save()
+
+
+class DeviceMetadataView(APIView):
+    """ Returns the available choices for protocols and word orders """
+    #permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return Response({
+            "protocols": [
+                {"value": k, "label": v} for k, v in Device.ProtocolChoices.choices
+            ],
+            "word_orders": [
+                {"value": k, "label": v} for k, v in Device.WordOrderChoices.choices
+            ],
+        })
 
 
 class TagViewSet(ModelViewSet):
@@ -58,6 +74,21 @@ class TagViewSet(ModelViewSet):
             raise ValidationError("Max tags reached")
         
         serializer.save(owner=self.request.user)
+
+
+class TagMetadataView(APIView):
+    """ Returns the available choices for Channels and Data Types """
+    #permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return Response({
+            "channels": [
+                {"value": k, "label": v} for k, v in Tag.ChannelChoices.choices
+            ],
+            "data_types": [
+                {"value": k, "label": v} for k, v in Tag.DataTypeChoices.choices
+            ],
+        })
     
 
 class TagWriteRequestViewSet(ModelViewSet):
@@ -121,6 +152,18 @@ class AlarmConfigViewSet(ModelViewSet):
             raise ValidationError("Max alarms reached")
         
         serializer.save()
+
+
+class AlarmMetadataView(APIView):
+    """ Returns the available choices alarm threat levels """
+    #permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return Response({
+            "threat_levels": [
+                {"value": k, "label": v} for k, v in AlarmConfig.ThreatLevelChoices.choices
+            ],
+        })
     
     
 class TagMultiValueView(APIView):

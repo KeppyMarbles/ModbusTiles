@@ -21,6 +21,11 @@ class DashboardDropdownSerializer(serializers.ModelSerializer):
 
 
 class TagCreateSerializer(serializers.ModelSerializer):
+    device = serializers.SlugRelatedField(
+        slug_field='alias', 
+        queryset=Device.objects.all()
+    )
+
     class Meta:
         model = Tag
         fields = [
@@ -72,6 +77,7 @@ class TagDropdownSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
         fields = [
+            "external_id",
             "alias",
             "channel",
             "data_type",

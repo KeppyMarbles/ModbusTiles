@@ -10,10 +10,10 @@ User = get_user_model()
 class Device(models.Model):
     """ Represents a single PLC that should be connected to via Modbus """
 
-    class ProtocolChoices(models.IntegerChoices):
-        MODBUS_TCP = 0, _("Modbus TCP")
-        MODBUS_UDP = 1, _("Modbus UDP")
-        MODBUS_RTU = 2, _("Modbus Serial")
+    class ProtocolChoices(models.TextChoices):
+        MODBUS_TCP = "tcp", _("Modbus TCP")
+        MODBUS_UDP = "udp", _("Modbus UDP")
+        MODBUS_RTU = "rtu", _("Modbus Serial")
 
     class WordOrderChoices(models.TextChoices):
         BIG = "big", _("Big Endian")
@@ -22,7 +22,7 @@ class Device(models.Model):
     alias = models.SlugField(max_length=100, unique=True) #TODO regular string field?
     ip_address = models.GenericIPAddressField(default="127.0.0.1")
     port = models.PositiveIntegerField(default=502)
-    protocol = models.PositiveIntegerField(choices=ProtocolChoices.choices, default=ProtocolChoices.MODBUS_TCP)
+    protocol = models.TextField(choices=ProtocolChoices.choices, default=ProtocolChoices.MODBUS_TCP)
     word_order = models.TextField(choices=WordOrderChoices.choices, default=WordOrderChoices.BIG)
     #poll_rate = models.FloatField(default=0.5)
 
@@ -37,23 +37,23 @@ class Device(models.Model):
 class Tag(models.Model):
     """ Represents a portion of data that should be read from a PLC """
 
-    class ChannelChoices(models.IntegerChoices):
-        COIL = 0, _("Coil")
-        DISCRETE_INPUT = 1, _("Discrete Input")
-        HOLDING_REGISTER = 2, _("Holding Register")
-        INPUT_REGISTER = 3, _("Input Register")
+    class ChannelChoices(models.TextChoices):
+        COIL = "coil", _("Coil")
+        DISCRETE_INPUT = "di", _("Discrete Input")
+        HOLDING_REGISTER = "hr", _("Holding Register")
+        INPUT_REGISTER = "ir", _("Input Register")
 
-    class DataTypeChoices(models.IntegerChoices):
-        BOOL = 0, _("Boolean")
-        INT16 = 1, _("Signed Int16")
-        UINT16 = 2, _("Unsigned Int16")
-        INT32 = 3, _("Signed Int32")
-        UINT32 = 4, _("Unsigned Int32")
-        INT64 = 5, _("Signed Int64")
-        UINT64 = 6, _("Unsigned Int64")
-        FLOAT32 = 7, _("Float32")
-        FLOAT64 = 8, _("Float64")
-        STRING = 9, _("String")
+    class DataTypeChoices(models.TextChoices):
+        BOOL = "bool", _("Boolean")
+        INT16 = "int16", _("Signed Int16")
+        UINT16 = "uint16", _("Unsigned Int16")
+        INT32 = "int32", _("Signed Int32")
+        UINT32 = "uint32", _("Unsigned Int32")
+        INT64 = "int64", _("Signed Int64")
+        UINT64 = "uint64", _("Unsigned Int64")
+        FLOAT32 = "float32", _("Float32")
+        FLOAT64 = "float64", _("Float64")
+        STRING = "string", _("String")
 
     device = models.ForeignKey(Device, on_delete=models.CASCADE, related_name="tags")
     unit_id = models.PositiveIntegerField(default=1)
@@ -63,8 +63,8 @@ class Tag(models.Model):
     external_id = models.UUIDField(default=uuid.uuid4, unique=True)
     description = models.TextField(max_length=200, blank=True)
 
-    channel = models.PositiveIntegerField(choices=ChannelChoices.choices)
-    data_type = models.PositiveIntegerField(choices=DataTypeChoices.choices)
+    channel = models.TextField(choices=ChannelChoices.choices)
+    data_type = models.TextField(choices=DataTypeChoices.choices)
 
     address = models.PositiveIntegerField(default=0)
 
@@ -197,7 +197,7 @@ class AlarmConfig(models.Model):
     # Enrichment data
     alias = models.CharField(max_length=100)
     message = models.CharField(default="", max_length=200, help_text="e.g., 'Sump Pump Failure - Check Breaker'")
-    threat_level = models.CharField(choices=ThreatLevelChoices.choices)
+    threat_level = models.CharField(choices=ThreatLevelChoices.choices) #TODO textField?
     
     # Notification rules
     notification_cooldown = models.DurationField(default=timedelta(minutes=1), help_text="Don't resend email for this long")

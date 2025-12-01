@@ -2,6 +2,8 @@ import { getCookie } from "./util.js";
 
 class Widget {
     static displayName = "Default Widget";
+    static allowedChannels = [];
+    static allowedTypes = [];
     static defaultFields = [
         //{ name: "position_x", type: "number", default: 0, label: "Position X" },
         //{ name: "position_x", type: "number", default: 0, label: "Position Y" },
@@ -10,6 +12,7 @@ class Widget {
         { name: "tag", type: "tag_picker", default: null, label: "Control Tag"},
     ]
     static customFields = [];
+
 
     constructor(widgetElem, config, tagID) { // unsure if the tagID should be part of config or not
         if(config) {
@@ -115,6 +118,8 @@ class Widget {
 
 class SwitchWidget extends Widget {
     static displayName = "Switch";
+    static allowedChannels = ["coil"];
+    static allowedTypes = ["bool"];
     static customFields = [
         { name: "confirmation", type: "bool", default: false, label: "Prompt Confirmation" },
     ]
@@ -139,10 +144,12 @@ class SwitchWidget extends Widget {
 
 class SliderWidget extends Widget {
     static displayName = "Slider";
+    static allowedChannels = ["hr"];
+    static allowedTypes = ["int16, uint16, int32, uint32, int64, uint64, float32, float64"];
     static customFields = [
         { name: "min_value", type: "number", default: 0, label: "Minimum Value" },
         { name: "max_value", type: "number", default: 10, label: "Maximum Value" },
-        { name: "width", type: "number", default: 300, label: "Width"},
+        { name: "step", type: "number", default: 1, label: "Step"},
         { name: "display_range", type: "bool", default: true, label: "Show Range"},
     ]
 
@@ -169,6 +176,7 @@ class SliderWidget extends Widget {
     applyConfig() {
         this.input.min = this.config.min_value;
         this.input.max = this.config.max_value;
+        this.input.step = this.config.step;
 
         if(this.config.display_range) {
             this.min_label.textContent = this.input.min;
@@ -188,6 +196,8 @@ class SliderWidget extends Widget {
 
 class MeterWidget extends Widget {
     static displayName = "Meter";
+    static allowedChannels = ["hr", "ir"];
+    static allowedTypes = ["int16, uint16, int32, uint32, int64, uint64, float32, float64"];
     static customFields = [
         { name: "min_value", type: "number", default: 0, label: "Minimum Value" },
         { name: "max_value", type: "number", default: 10, label: "Maximum Value" },
@@ -195,7 +205,6 @@ class MeterWidget extends Widget {
         { name: "high_value", type: "number", default: 0, label: "High Value" },
         { name: "optimum_value", type: "number", default: 0, label: "Optimum Value" },
         { name: "display_range", type: "bool", default: true, label: "Show Range"},
-        { name: "width", type: "number", default: 300, label: "Width"},
     ]
 
     constructor(widget_elem, config, tagID) {
@@ -231,6 +240,8 @@ class MeterWidget extends Widget {
 
 class LEDWidget extends Widget {
     static displayName = "Light";
+    static allowedChannels = ["coil", "di"];
+    static allowedTypes = ["bool"];
     static customFields = [
         { name: "color_on", type: "color", default: "green", label: "On Color" },
         { name: "color_off", type: "color", default: "red", label: "Off Color" },
@@ -274,6 +285,8 @@ class LabelWidget extends Widget { //TODO font size, formatting?
 
 class BoolLabelWidget extends Widget {
     static displayName = "Boolean Label";
+    static allowedChannels = ["coil", "di"];
+    static allowedTypes = ["bool"];
     static customFields = [
         { name: "text_on", type: "text", default: "On", label: "On Text" },
         { name: "text_off", type: "text", default: "Off", label: "Off Text" },
@@ -300,6 +313,8 @@ class ValueLabelWidget extends Widget {
 
 class ChartWidget extends Widget {
     static displayName = "History Chart";
+    static allowedChannels = ["hr", "ir"]; //TODO support boolean values
+    static allowedTypes = ["int16, uint16, int32, uint32, int64, uint64, float32, float64"];
     static customFields = [
         { name: "title", type: "text", default: "Title", label: "Title" },
         { name: "history_seconds", type: "number", default: 60, label: "History Length (seconds)" },

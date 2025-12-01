@@ -14,4 +14,7 @@ urlpatterns = [
     path('', include(router.urls)),
     path('values/', views.TagMultiValueView.as_view(), name='tag-values'),
     path('history/', views.TagHistoryView.as_view(), name='tag-history'),
+    path('tag-options/', views.TagMetadataView.as_view(), name='tag-options'),
+    path('device-options/', views.DeviceMetadataView.as_view(), name='device-options'),
+    path('alarm-options/', views.AlarmMetadataView.as_view(), name='alarm-options'),
 ]
