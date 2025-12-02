@@ -48,8 +48,10 @@ export class Inspector {
         input.value = currentValue;
         input.type = 'text';
 
+        // Function used to get this field's current value
         let getValue = () => {return input.value};
 
+        // Add input based on value type
         switch (def.type) {
             case "bool":
                 input.type = 'checkbox';
@@ -57,7 +59,7 @@ export class Inspector {
                 getValue = () => {return input.checked};
                 break;
             
-            case "select": // Generic select for Global settings
+            case "select":
                 input = document.createElement('select');
 
                 const defaultOpt = document.createElement('option');
@@ -77,6 +79,10 @@ export class Inspector {
                 getValue = () => {return input.value};
                 break;
 
+            case "color":
+                input.type = "color";
+                break;
+
             case "int":
                 getValue = () => {return parseInt(input.value)};
                 input.type = "number";
@@ -94,12 +100,14 @@ export class Inspector {
         }
         input.className = "inspector-input";
 
+        // On value change callback
         if (onChange) {
             input.addEventListener('change', (e) => {
                 onChange(getValue());
             });
         }
 
+        // Add to document
         label.appendChild(input);
         wrapper.appendChild(label);
 
@@ -107,7 +115,6 @@ export class Inspector {
             section = this.container;
         section.appendChild(wrapper);
 
-        //return { wrapper, input }; // Return input so imperative forms can read .value later
         return { wrapper, getValue };
     }
 
@@ -116,6 +123,7 @@ export class Inspector {
         this.addTitle(widget.constructor.displayName);
 
         {
+            // Create dropdown with tags that are compatible with this widget
             const allowedTypes = widget.constructor.allowedTypes;
             const allowedChannels = widget.constructor.allowedChannels;
 
@@ -135,13 +143,13 @@ export class Inspector {
             ...widget.constructor.customFields
         ];
 
+        // Add rest of fields
         allFields.forEach(field => { 
             this.createField(field, widget.config[field.name], (newVal) => {
                 widget.config[field.name] = newVal;
-                widget.applyConfig(); // Immediate visual update
+                widget.applyConfig(); // Visual update
             });
         });
-
     }
 
     inspectGlobal() {
@@ -169,6 +177,7 @@ export class Inspector {
             let dataTypeOptions = serverCache.tagOptions.data_types;
             let currentValue = "";
 
+            // Only show data types that are compatible with the selected channel
             if(!value)
                 dataTypeOptions = [];
             else if(["coil", "di"].includes(value)) {
@@ -177,7 +186,6 @@ export class Inspector {
             }
             else 
                 dataTypeOptions = dataTypeOptions.filter(t => {return t.value !== 'bool'});
-                
 
             const newField = this.createField({ label: "Data Type", type: "select", options: dataTypeOptions }, currentValue, null, dataTypeContainer);
             getDataTypeValue = newField.getValue;
@@ -193,13 +201,14 @@ export class Inspector {
         //const readAmount = this.createField({label: "Read Amount", type: "int"}, 1, null, tagSection)
         const maxHistory = this.createField({ label: "Max History", type: "int" }, 0, null, tagSection)
 
+        // Post values to server
         const tagSubmit = async () => {
             const payload = {
                 alias: alias.getValue(),
                 device: device.getValue(),
                 address: address.getValue(),
                 channel: channel.getValue(),
-                data_type: getDataTypeValue(), 
+                data_type: getDataTypeValue(), // Use latest getValue
                 unit_id: 1,
                 //read_amount: readAmount.getValue(),
                 read_amount: 1,
@@ -229,6 +238,8 @@ export class Inspector {
                 console.error("Couldn't get tag info for alarm");
                 return;
             }
+
+            // Create an input with the same value type as the selected tag
             let fieldType = "text";
             if(tag.data_type === "bool") fieldType = "bool";
             else if(["int16", "uint16", "int32", "uint32", "int64"].includes(tag.data_type)) fieldType = "int";
@@ -250,12 +261,13 @@ export class Inspector {
 
         const message = this.createField({ label: "Message", type: "text" }, "", null, alarmSection);
 
+        // Post values to server
         const alarmSubmit = async () => {
             const payload = {
                 alias: alias.getValue(),
                 tag: tag.getValue(),
                 threat_level: threatLevel.getValue(),
-                trigger_value: getTriggerValue(), // Get latest version of trigger value input
+                trigger_value: getTriggerValue(), // Use latest getValue
                 message: message.getValue(),
             }
             

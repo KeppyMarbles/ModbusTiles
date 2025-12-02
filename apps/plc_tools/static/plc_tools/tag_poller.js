@@ -5,7 +5,8 @@ export class TagPoller {
     }
 
     registerWidget(widget) {
-        if (!widget.tag) return;
+        if (!widget.tag)
+            return;
 
         if (!this.tagMap[widget.tag])
             this.tagMap[widget.tag] = [];
@@ -14,10 +15,12 @@ export class TagPoller {
     }
 
     start(interval = 500) {
+        clearTimeout(this.pollInterval);
         this.pollInterval = setInterval(() => this.pollAll(), interval);
     }
 
-    stop() {
+    clear() {
+        this.tagMap = {};
         clearTimeout(this.pollInterval);
     }
 

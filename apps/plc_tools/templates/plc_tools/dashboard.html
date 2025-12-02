@@ -9,6 +9,7 @@
         <div>
             <button type="button" id="edit-button" class="edit-button">Edit</button>
         </div>
+        <div id="loading-spinner" class="spinner">Loading Dashboard...</div>
         <div class="canvas-wrapper">
             <div id="dashboard-grid" class="grid-stack">
             </div>
@@ -36,11 +37,6 @@
         </aside>
     </div>
 </body>
-{% for widget in widgets %}
-    <widget-config data-type="{{ widget.widget_type }}" data-tagid="{{ widget.tag.external_id }}" data-title="{{ widget.tag.description }}">
-        {{ widget.config|json_script:"ignored" }}
-    </widget-config>
-{% endfor %}
 
 <script src="https://cdn.plot.ly/plotly-3.3.0.min.js" charset="utf-8"></script>
 <script type="module" src="{% static 'plc_tools/dashboard.js' %}"></script>

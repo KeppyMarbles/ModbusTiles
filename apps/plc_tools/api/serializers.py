@@ -208,9 +208,17 @@ class DashboardSerializer(serializers.ModelSerializer):
 
 
 class DashboardWidgetSerializer(serializers.ModelSerializer):
+    tag = serializers.SlugRelatedField(
+        slug_field='external_id',
+        queryset=Tag.objects.all()
+    )
     class Meta:
         model = DashboardWidget
-        fields = "__all__"
+        fields = [
+            "tag",
+            "widget_type",
+            "config",
+        ]
 
 
 class DashboardWidgetBulkSerializer(serializers.Serializer):

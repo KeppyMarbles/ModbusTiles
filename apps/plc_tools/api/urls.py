@@ -8,6 +8,7 @@ router.register(r'devices', views.DeviceViewSet, basename='device')
 router.register(r'tags', views.TagViewSet, basename='tag')
 router.register(r'alarms', views.AlarmConfigViewSet, basename='alarm')
 router.register(r'dashboards', views.DashboardViewSet, basename='dashboard')
+router.register(r'dashboard-widgets', views.DashboardWidgetViewSet, basename='dashboard-widget')
 router.register(r'write-requests', views.TagWriteRequestViewSet, basename='write-request')
 
 urlpatterns = [

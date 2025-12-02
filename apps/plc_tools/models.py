@@ -335,7 +335,7 @@ class DashboardWidget(models.Model):
 
     dashboard = models.ForeignKey(Dashboard, on_delete=models.CASCADE, related_name="widgets")
 
-    widget_type = models.TextField(choices=WidgetTypeChoices.choices)
+    widget_type = models.TextField(choices=WidgetTypeChoices.choices) #TODO still need this?
 
     tag = models.ForeignKey(Tag, null=True, blank=True, on_delete=models.SET_NULL, related_name="widgets")
     external_id = models.UUIDField(default=uuid.uuid4, unique=True)

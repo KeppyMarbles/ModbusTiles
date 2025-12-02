@@ -38,7 +38,11 @@ class Dashboard {
             }
         });
         
-        // Create the grid
+        this.setupGridStack();
+        this.load();
+    }
+
+    setupGridStack() {
         this.canvasGridStack = GridStack.init({
             staticGrid: true, 
             column: 20,
@@ -49,31 +53,6 @@ class Dashboard {
             dragIn: '.palette-item',
         });
         GridStack.setupDragIn('#palette .palette-item', { appendTo: 'body', helper: 'clone' });
-        // TODO need a "trash" area for delete
-
-        // Create saved widgets
-        document.querySelectorAll('widget-config').forEach(configElem => {
-            const widgetType = configElem.dataset.type;
-            const tagID = configElem.dataset.tagid;
-            const title = configElem.dataset.title;
-            const config = JSON.parse(configElem.querySelector('script[type="application/json"]').textContent);
-
-            const palette = document.getElementById('palette');
-            const gridStackPaletteItem = palette.querySelector(`[data-type="${widgetType}"]`);
-            const gridStackNewItem = gridStackPaletteItem.cloneNode(true);
-            gridStackNewItem.title = title;
-
-            this.canvasGridStack.makeWidget(gridStackNewItem, {
-                x: config.position_x,
-                y: config.position_y,
-                w: config.scale_x,
-                h: config.scale_y,
-            });
-
-            const widgetElem = gridStackNewItem.querySelector('.dashboard-widget');
-            const widget = new WidgetRegistry[widgetType](widgetElem, config, tagID);
-            this.poller.registerWidget(widget);
-        })
 
         // Handle drag and drop
         this.canvasGridStack.on('added change', function(event, items) {
@@ -89,10 +68,46 @@ class Dashboard {
                 widgetElem.widgetInstance.config["scale_y"] = item.h;
             });
         });
+    }
 
+    setupWidgets(widgetData) {
+        if(!this.canvasGridStack) {
+            console.error("Gridstack not initialized");
+            return;
+        }
+
+        this.canvasGridStack.removeAll();
+        this.poller.clear();
+
+        console.log("Widgets:", widgetData);
+
+        // Add widgets to the gridstack grid and poller
+        widgetData.forEach(wData => {
+            const palette = document.getElementById('palette');
+            const gridStackPaletteItem = palette.querySelector(`[data-type="${wData.widget_type}"]`);
+            const gridStackNewItem = gridStackPaletteItem.cloneNode(true);
+            //gridStackNewItem.title = wData.tag_description; //TODO get description of tag
+
+            this.canvasGridStack.makeWidget(gridStackNewItem, {
+                x: wData.config.position_x,
+                y: wData.config.position_y,
+                w: wData.config.scale_x,
+                h: wData.config.scale_y,
+            });
+
+            const widgetElem = gridStackNewItem.querySelector('.dashboard-widget');
+            const widgetClass = WidgetRegistry[wData.widget_type];
+            if(widgetClass) {
+                const widget = new widgetClass(widgetElem, wData.config, wData.tag);
+                this.poller.registerWidget(widget);
+            }
+            else {
+                console.error("Unknown widget type", wData.widget_type);
+            }
+        });
+        
         this.poller.start();
         this.updateSquareCells();
-
     }
 
     async toggleEdit() { //TODO toggle/on off, update poller accordingly?
@@ -107,7 +122,7 @@ class Dashboard {
             el.style.pointerEvents = 'none'; 
         });
 
-        this.poller.stop();
+        this.poller.clear();
 
         this.editButton.classList.add('hidden');
         
@@ -123,9 +138,7 @@ class Dashboard {
                 return;
             }
         }
-        
         this.selectedWidget = widgetElem;
-        //this.inspectorForm.innerHTML = ''; // Clear previous
 
         if(widgetElem) {
             widgetElem.classList.add("selected")
@@ -144,6 +157,27 @@ class Dashboard {
         const width = this.canvasGridStack.el.clientWidth;
         const cellWidth = width / this.canvasGridStack.opts.column;
         this.canvasGridStack.cellHeight(cellWidth);   // make rows match columns
+    }
+
+    async load() {
+        try {
+            document.getElementById('loading-spinner').classList.remove('hidden');
+
+            // Get widget info from server
+            const response = await fetch(`/api/dashboard-widgets/?dashboard=${this.alias}`);
+            if(!response.ok) throw new Error("Failed to load widgets");
+            
+            const widgets = await response.json();
+
+            this.setupWidgets(widgets);
+        } 
+        catch (err) {
+            console.error(err);
+            this.widgetGrid.innerHTML = `<div class="error">Error loading dashboard: ${err.message}</div>`;
+        } 
+        finally {
+            document.getElementById('loading-spinner').classList.add('hidden');
+        }
     }
 
     async save() {
