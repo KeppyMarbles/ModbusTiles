@@ -139,8 +139,8 @@ export class Inspector {
         }
 
         const allFields = [ //TODO should these actually be dictionaries where the key is the config name and the value is the field dict
+            ...widget.constructor.customFields,
             ...widget.constructor.defaultFields,
-            ...widget.constructor.customFields
         ];
 
         // Add rest of fields

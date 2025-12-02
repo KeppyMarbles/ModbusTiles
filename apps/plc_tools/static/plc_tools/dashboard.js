@@ -9,6 +9,7 @@ class Dashboard {
     constructor() {
         this.editMode = false;
         this.isDirty = false;
+        this.selectedWidget = null;
 
         this.sidebar = document.getElementById('editor-sidebar');
         this.widgetGrid = document.getElementById('dashboard-grid');
@@ -18,7 +19,7 @@ class Dashboard {
         });
         this.creatorItems = document.getElementById('palette');
         this.inspectButton = document.getElementById('inspect-button');
-        this.alias = document.getElementById('dashboard-container').dataset.alias;
+        this.alias = document.getElementById('dashboard-container').dataset.alias; // Set by Django
         this.poller = new TagPoller();
         this.inspector = new Inspector();
 
@@ -28,14 +29,21 @@ class Dashboard {
 
             const gridEl = e.target.closest('.palette-item');
 
-            if(gridEl) {
-                const widgetEl = gridEl.querySelector('.dashboard-widget');
-                if(widgetEl && widgetEl.widgetInstance) {
-                    this.selectWidget(widgetEl);
-                }
-            }
-            else if(this.selectedWidget) {
+            if(gridEl && gridEl.widgetInstance)
+                this.selectWidget(gridEl.widgetInstance);
+
+            else if(this.selectedWidget)
                 this.selectWidget(null);
+        });
+
+        // Widget deletion
+        document.addEventListener('keydown', (e) => {
+            if (this.editMode && this.selectedWidget) {
+                if (e.key === 'Delete') {
+                    e.preventDefault(); 
+                    this.canvasGridStack.removeWidget(this.selectedWidget.gridElem); //TODO how to guarantee widget class instance is deleted?
+                    this.selectWidget(null);
+                }
             }
         });
         
@@ -44,6 +52,7 @@ class Dashboard {
     }
 
     setupGridStack() {
+        // Initial settings
         this.canvasGridStack = GridStack.init({
             staticGrid: true, 
             column: 20,
@@ -58,20 +67,68 @@ class Dashboard {
         // Handle drag and drop
         this.canvasGridStack.on('added change', (event, items) => {
             items.forEach(item => {
-                const widgetElem = item.el.querySelector('.dashboard-widget');
-                if (!widgetElem.widgetInstance) {
-                    const type = item.el.dataset.type;
-                    const newWidget = new WidgetRegistry[type](widgetElem);
+                let widget = item.el.widgetInstance;
+                if (!widget) {
+                    const type = item.el.dataset.type; // Set by Django
+                    widget = new WidgetRegistry[type](item.el);
                 }
-                widgetElem.widgetInstance.config["position_x"] = item.x;
-                widgetElem.widgetInstance.config["position_y"] = item.y;
-                widgetElem.widgetInstance.config["scale_x"] = item.w;
-                widgetElem.widgetInstance.config["scale_y"] = item.h;
+                widget.config["position_x"] = item.x;
+                widget.config["position_y"] = item.y;
+                widget.config["scale_x"] = item.w;
+                widget.config["scale_y"] = item.h;
             });
             if(this.editMode) {
                 this.isDirty = true;
             }
         });
+
+        // Handle shift-dragging
+        let newWidget = null;
+
+        this.canvasGridStack.on('dragstart', (event, el) => {
+            if (event.shiftKey && el && el.widgetInstance) {
+                const config = JSON.parse(JSON.stringify(el.widgetInstance.config));
+                config["locked"] = true; 
+
+                this.canvasGridStack.batchUpdate();
+                newWidget = this.createWidget(el.dataset.type, el.widgetInstance.tag, config);
+                this.canvasGridStack.update(newWidget.gridElem, { locked: true }); //TODO this is kinda irritating... cuz widget doesn't set config immediately
+                this.canvasGridStack.commit();
+            }
+        });
+
+        this.canvasGridStack.on('dragstop', (event, el) => {
+            if(newWidget) {
+                newWidget.config["locked"] = false; //dumb
+                newWidget.applyConfig();
+            }
+        });
+
+        // Set grid 1:1 aspect ratio
+        this.updateSquareCells();
+    }
+
+    createWidget(typeName, tag, config) {
+        // Copy widget contents from the palette populated by Django
+        const palette = document.getElementById('palette');
+        const gridPaletteElem = palette.querySelector(`[data-type="${typeName}"]`);
+        const gridElem = gridPaletteElem.cloneNode(true);
+        //gridStackNewItem.title = wData.tag_description; //TODO get description of tag
+
+        // Create gridstack item
+        this.canvasGridStack.makeWidget(gridElem, {
+            x: config.position_x,
+            y: config.position_y,
+            w: config.scale_x,
+            h: config.scale_y,
+        });
+
+        // Create widget class instance
+        const widgetClass = WidgetRegistry[typeName];
+        if(widgetClass)
+            return new widgetClass(gridElem, config, tag);
+        else
+            console.error("Unknown widget type", typeName);
     }
 
     setupWidgets(widgetData) {
@@ -87,31 +144,12 @@ class Dashboard {
 
         // Add widgets to the gridstack grid and poller
         widgetData.forEach(wData => {
-            const palette = document.getElementById('palette');
-            const gridStackPaletteItem = palette.querySelector(`[data-type="${wData.widget_type}"]`);
-            const gridStackNewItem = gridStackPaletteItem.cloneNode(true);
-            //gridStackNewItem.title = wData.tag_description; //TODO get description of tag
-
-            this.canvasGridStack.makeWidget(gridStackNewItem, {
-                x: wData.config.position_x,
-                y: wData.config.position_y,
-                w: wData.config.scale_x,
-                h: wData.config.scale_y,
-            });
-
-            const widgetElem = gridStackNewItem.querySelector('.dashboard-widget');
-            const widgetClass = WidgetRegistry[wData.widget_type];
-            if(widgetClass) {
-                const widget = new widgetClass(widgetElem, wData.config, wData.tag);
-                this.poller.registerWidget(widget);
-            }
-            else {
-                console.error("Unknown widget type", wData.widget_type);
-            }
+            const widget = this.createWidget(wData.widget_type, wData.tag, wData.config);
+            this.poller.registerWidget(widget);
         });
         
         this.poller.start();
-        this.updateSquareCells();
+        
     }
 
     async toggleEdit() { //TODO toggle/on off, update poller accordingly?
@@ -134,19 +172,19 @@ class Dashboard {
         this.selectWidget(null);
     }
 
-    selectWidget(widgetElem) { //TODO add "locked" bool on all widgets? to prevent dragging/sizing
+    selectWidget(widget) { //TODO add "locked" bool on all widgets? to prevent dragging/sizing
         if(this.selectedWidget) {
-            this.selectedWidget.classList.remove("selected");
-            if(this.selectedWidget === widgetElem) {
+            this.selectedWidget.elem.classList.remove("selected");
+            if(this.selectedWidget === widget) {
                 this.selectWidget(null);
                 return;
             }
         }
-        this.selectedWidget = widgetElem;
+        this.selectedWidget = widget;
 
-        if(widgetElem) {
-            widgetElem.classList.add("selected")
-            this.inspector.inspectWidget(widgetElem.widgetInstance);
+        if(widget) {
+            widget.elem.classList.add("selected")
+            this.inspector.inspectWidget(widget);
             activateTab(this.inspectButton);
         }
         else {
@@ -160,7 +198,7 @@ class Dashboard {
     updateSquareCells() {
         const width = this.canvasGridStack.el.clientWidth;
         const cellWidth = width / this.canvasGridStack.opts.column;
-        this.canvasGridStack.cellHeight(cellWidth);   // make rows match columns
+        this.canvasGridStack.cellHeight(cellWidth); // make rows match columns
     }
 
     async load() {
@@ -173,6 +211,7 @@ class Dashboard {
             
             const widgets = await response.json();
 
+            // Set up recieved info
             this.setupWidgets(widgets);
         } 
         catch (err) {
@@ -189,20 +228,18 @@ class Dashboard {
 
         // Add widget info to payload
         this.widgetGrid.querySelectorAll('.grid-stack-item').forEach(item => {
-            const widgetEl = item.querySelector('.dashboard-widget');
-
-            if (widgetEl && widgetEl.widgetInstance) {
+            if (item.widgetInstance) {
                 widgetsPayload.push({
-                    tag: widgetEl.widgetInstance.tag || null, 
+                    tag: item.widgetInstance.tag || null, 
                     widget_type: item.dataset.type,
-                    config: widgetEl.widgetInstance.config
+                    config: item.widgetInstance.config
                 });
             }
         });
 
         console.log("Saving...", widgetsPayload);
-
         
+        // Send data to server
         if(postServer( 
             `/api/dashboards/${this.alias}/save-widgets/`, 
             widgetsPayload, 

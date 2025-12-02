@@ -5,16 +5,11 @@ class Widget {
     static allowedChannels = [];
     static allowedTypes = [];
     static defaultFields = [
-        //{ name: "position_x", type: "number", default: 0, label: "Position X" },
-        //{ name: "position_x", type: "number", default: 0, label: "Position Y" },
-        //{ name: "scale_x", type: "number", default: 1, label: "Size X" },
-        //{ name: "scale_y", type: "number", default: 1, label: "Size Y" },
-        //{ name: "tag", type: "select", default: null, label: "Control Tag"},
-    ]
+        { name: "locked", type: "bool", default: false, label: "Position Locked" },
+    ];
     static customFields = [];
 
-
-    constructor(widgetElem, config, tagID) { // unsure if the tagID should be part of config or not
+    constructor(gridElem, config, tagID) { // unsure if the tagID should be part of config or not
         if(config) {
             this.config = config;
         }
@@ -26,14 +21,20 @@ class Widget {
             });
         }
 
-        this.elem = widgetElem;
+        this.elem = gridElem.querySelector('.dashboard-widget');
         this.tag = tagID;
         this.shouldUpdate = true;
         this.updateTimeout = 500; //TODO where should these values live?
         this.valueTimeout = 5000;
-        this.alarmIndicator = widgetElem.parentNode?.querySelector(".alarm-indicator");
+        this.alarmIndicator = this.elem.parentNode?.querySelector(".alarm-indicator");
         this.showAlarm = true;
-        widgetElem.widgetInstance = this;
+        this.gridElem = gridElem;
+        gridElem.widgetInstance = this;
+
+        // Apply visual updates after construction
+        setTimeout(() => {
+            this.applyConfig();
+        }, 0);
     }
 
     async submit(value) {
@@ -72,9 +73,9 @@ class Widget {
 
     onData(data) {
         if(data.age > this.valueTimeout) 
-            this.elem.classList.add("no-connection");
+            this.elem.classList.add("is-state", "no-connection");
         else
-            this.elem.classList.remove("no-connection"); //TODO disable interactions?
+            this.elem.classList.remove("is-state", "no-connection"); //TODO disable interactions?
 
         this.onValue(data.value, data.time);
         
@@ -108,7 +109,19 @@ class Widget {
     }
 
     applyConfig() {
-        return;
+        // Handle "locked" state
+        const widgetNode = this.gridElem?.gridstackNode;
+        if(widgetNode && widgetNode.locked != this.config["locked"]) {
+            widgetNode.grid.update(widgetNode.el, { //TODO breaks if we add widgets that are locked size by default
+                locked: this.config["locked"],
+                noResize: this.config["locked"],
+                noMove: this.config["locked"],
+            })
+        }
+        if(this.config["locked"])
+            this.gridElem.classList.add("is-state", "locked");
+        else
+            this.gridElem.classList.remove("is-state", "locked");
     }
 
     onValue(val) {
@@ -158,8 +171,6 @@ class SliderWidget extends Widget {
         this.input = this.elem.querySelector(".slider-input")
         this.min_label = this.elem.querySelector(".min-label")
         this.max_label =  this.elem.querySelector(".max-label")
-
-        this.applyConfig();
         
         this.input.addEventListener("change", async () => {
             this.submit(this.input.value);
@@ -172,6 +183,7 @@ class SliderWidget extends Widget {
     }
 
     applyConfig() {
+        super.applyConfig();
         this.input.min = this.config.min_value;
         this.input.max = this.config.max_value;
         this.input.step = this.config.step;
@@ -210,11 +222,10 @@ class MeterWidget extends Widget {
         this.bar = this.elem.querySelector(".meter-bar");
         this.min_label = this.elem.querySelector(".min-label")
         this.max_label =  this.elem.querySelector(".max-label")
-        
-        this.applyConfig();
     }
 
     applyConfig() {
+        super.applyConfig();
         this.bar.min = this.config.min_value;
         this.bar.max = this.config.max_value;
         this.bar.low = this.config.low_value;
@@ -248,10 +259,10 @@ class LEDWidget extends Widget {
     constructor(widget_elem, config, tagID) {
         super(widget_elem, config, tagID);
         this.indicator = this.elem.querySelector(".indicator");
-        this.applyConfig();
     }
 
     applyConfig() {
+        super.applyConfig();
         this.indicator.style.backgroundColor = this.config.color_off; //TODO?
     }
 
@@ -271,12 +282,11 @@ class LabelWidget extends Widget { //TODO font size, formatting?
         super(widget_elem, config);
         this.text_elem = this.elem.querySelector(".label_text");
         
-        this.applyConfig();
-        
         this.showAlarm = false;
     }
 
     applyConfig() {
+        super.applyConfig();
         this.text_elem.textContent = this.config.text;
     }
 }
@@ -293,10 +303,10 @@ class BoolLabelWidget extends Widget {
     constructor(widget_elem, config, tagID) {
         super(widget_elem, config, tagID);
         this.text_elem = this.elem.querySelector(".label_text");
-        this.applyConfig();
     }
 
     applyConfig() {
+        super.applyConfig();
         this.text_elem.textContent = this.config.text_off; //TODO?
     }
 
@@ -377,6 +387,7 @@ class ChartWidget extends Widget {
     }
 
     applyConfig() {
+        super.applyConfig();
         //TODO
     }
 
