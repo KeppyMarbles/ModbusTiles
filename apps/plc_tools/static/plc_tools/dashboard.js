@@ -8,6 +8,7 @@ import { Inspector } from "./inspector.js";
 class Dashboard {
     constructor() {
         this.editMode = false;
+        this.isDirty = false;
 
         this.sidebar = document.getElementById('editor-sidebar');
         this.widgetGrid = document.getElementById('dashboard-grid');
@@ -55,7 +56,7 @@ class Dashboard {
         GridStack.setupDragIn('#palette .palette-item', { appendTo: 'body', helper: 'clone' });
 
         // Handle drag and drop
-        this.canvasGridStack.on('added change', function(event, items) {
+        this.canvasGridStack.on('added change', (event, items) => {
             items.forEach(item => {
                 const widgetElem = item.el.querySelector('.dashboard-widget');
                 if (!widgetElem.widgetInstance) {
@@ -67,6 +68,9 @@ class Dashboard {
                 widgetElem.widgetInstance.config["scale_x"] = item.w;
                 widgetElem.widgetInstance.config["scale_y"] = item.h;
             });
+            if(this.editMode) {
+                this.isDirty = true;
+            }
         });
     }
 
@@ -198,11 +202,13 @@ class Dashboard {
 
         console.log("Saving...", widgetsPayload);
 
-        postServer(
+        
+        if(postServer( 
             `/api/dashboards/${this.alias}/save-widgets/`, 
             widgetsPayload, 
             `Dashboard Saved!`
-        );
+        ))
+            this.isDirty = false;
     }
 }
 
@@ -220,6 +226,14 @@ document.querySelectorAll('.tab-buttons button').forEach(btn => {
 });
 
 var dashboard = new Dashboard();
+
 window.addEventListener('resize', () => {
     dashboard.updateSquareCells();
+});
+
+window.addEventListener("beforeunload", (event) => {
+    if (dashboard.isDirty) {
+        event.preventDefault();
+        event.returnValue = "";
+    }
 });
