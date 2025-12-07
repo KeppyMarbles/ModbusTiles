@@ -2,7 +2,9 @@ from ..models import Dashboard, DashboardWidget
 from django.shortcuts import render
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.cache import never_cache
 
+@never_cache
 def dashboard_list(request):
     from django.contrib.auth import login
     from django.contrib.auth.models import User

@@ -15,25 +15,44 @@ export function getCookie(name) {
 }
 
 export async function postServer(input, payload, successCallback) {
+    const isFormData = payload instanceof FormData;
+
+    // Headers
+    const headers = {
+        'X-CSRFToken': getCookie('csrftoken')
+    };
+
+    if (!isFormData) {
+        headers['Content-Type'] = 'application/json';
+    }
+
+    // Body
+    const body = isFormData ? payload : JSON.stringify(payload);
+
     try {
         const response = await fetch(input, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: JSON.stringify(payload)
+            headers: headers,
+            body: body
         });
 
         if (response.ok) {
-            successCallback();
+            const data = await response.json();
+            if (successCallback) successCallback(data);
         } 
         else {
-            const err = await response.json();
-            alert("Error: " + JSON.stringify(err));
+            // Try to parse error message, fallback to status text
+            let errMsg = response.statusText;
+            try {
+                const err = await response.json();
+                errMsg = JSON.stringify(err);
+            } catch (e) { /* ignore JSON parse error on 500s */ }
+            
+            alert("Error: " + errMsg);
         }
     } 
     catch (e) {
-        console.error(e);
+        console.error("Network or Logic Error:", e);
+        //alert("A network error occurred.");
     }
 }

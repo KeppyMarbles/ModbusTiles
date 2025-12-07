@@ -1,3 +1,4 @@
+import json
 from datetime import timedelta
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.generics import ListAPIView
@@ -117,17 +118,41 @@ class DashboardViewSet(ModelViewSet):
         return Dashboard.objects.filter(owner=self.request.user)
 
     @action(detail=True, methods=['post'], url_path='save-widgets')
-    def save_widgets(self, request, alias=None): #TODO have format doc for each view?
+    def save_widgets(self, request, alias=None):
         """
         POST /api/dashboards/{alias}/save-widgets/
-        Body: [ { "tag": "uuid...", "widget_type": "led", "config": {...} }, ... ]
+        Content-Type: multipart/form-data
+        Form Fields:
+            - widgets: JSON String '[{"tag":...}, ...]'
+            - preview_image: File (optional)
         """
         dashboard = self.get_object()
+
+        # 1. Handle Preview Image Upload
+        if 'preview_image' in request.FILES:
+            dashboard.preview_image = request.FILES['preview_image']
+            # We save the dashboard immediately to persist the image file
+            dashboard.save()
+
+        # 2. Extract Widgets Data
+        # When using FormData, the 'widgets' payload is a string we must parse.
+        raw_widgets = request.data.get('widgets')
         
-        # Validate
-        serializer = DashboardWidgetBulkSerializer(data=request.data, many=True)
+        # If no widgets were sent, we might just be updating the image, 
+        # but usually we expect widgets. 
+        if not raw_widgets:
+            return Response({"status": "saved", "widgets_count": 0})
+        
+        try:
+            widgets_data = json.loads(raw_widgets)
+        except json.JSONDecodeError:
+            raise ValidationError("Invalid JSON format in 'widgets' field")
+
+        # 3. Validate Widgets
+        serializer = DashboardWidgetBulkSerializer(data=widgets_data, many=True)
         serializer.is_valid(raise_exception=True)
         
+        # 4. Save Widgets (Atomic Transaction)
         try:
             with transaction.atomic():
                 # Wipe clean
@@ -138,7 +163,7 @@ class DashboardViewSet(ModelViewSet):
                 for item in serializer.validated_data:
                     new_widgets.append(DashboardWidget(
                         dashboard=dashboard,
-                        tag=item.get('tag'), # Will be a Tag object or None
+                        tag=item.get('tag'), # Serializer converts UUID -> Tag Object
                         widget_type=item['widget_type'],
                         config=item['config']
                     ))
@@ -148,10 +173,27 @@ class DashboardViewSet(ModelViewSet):
         except Exception as e:
             raise ValidationError(f"Save failed: {str(e)}")
 
-        return Response({"status": "saved", "count": len(new_widgets)})
+        return Response({
+            "status": "saved", 
+            "widgets_count": len(new_widgets),
+            "preview_updated": 'preview_image' in request.FILES
+        })
+    
+    def _get_new_alias(self):
+        base = "untitled"
+        suffix = 0
+        while True:
+            candidate = f"{base}{suffix}"
+            if not Dashboard.objects.filter(owner=self.request.user, alias=candidate).exists():
+                return candidate
+            suffix += 1
     
     def perform_create(self, serializer):
-        serializer.save(owner=self.request.user)
+        alias = serializer.validated_data.get('alias')
+        if not alias:
+            alias = self._get_new_alias()
+
+        serializer.save(owner=self.request.user, alias=alias)
 
 
 class DashboardWidgetViewSet(ModelViewSet):

@@ -5,6 +5,8 @@ import { postServer } from "./util.js";
 import { refreshData } from "./global.js";
 import { Inspector } from "./inspector.js";
 
+import { getCookie } from "./util.js";
+
 class Dashboard {
     constructor() {
         this.editMode = false;
@@ -170,16 +172,19 @@ class Dashboard {
         console.log("Widgets:", widgetData);
 
         // Add widgets to the gridstack grid and poller
-        widgetData.forEach(wData => {
-            const widget = this.createWidget(wData.widget_type, wData.tag, wData.config);
-            this.poller.registerWidget(widget);
-        });
-        
-        this.poller.start();
-        
+        if(widgetData.length === 0) {
+            this.toggleEdit();
+        }
+        else {
+            widgetData.forEach(wData => {
+                const widget = this.createWidget(wData.widget_type, wData.tag, wData.config);
+                this.poller.registerWidget(widget);
+            });
+            this.poller.start();
+        }
     }
 
-    async toggleEdit() { //TODO toggle/on off, update poller accordingly?
+    toggleEdit() { //TODO toggle/on off, update poller accordingly?
         //TODO supress warnings? (no connection, stale value indicators)
         this.editMode = true;
 
@@ -196,10 +201,13 @@ class Dashboard {
             }
         });
 
-        setTimeout(() => {
+
+        const interval = setInterval(() => {
             this.updateSquareCells();
-            //this.canvasGridStack.onResize(); 
-        }, 500); // Wait for CSS transition (0.3s) to finish
+        }, 20);
+        setTimeout(() => {
+            clearInterval(interval);
+        }, 500);
 
         this.poller.clear();
         
@@ -234,6 +242,59 @@ class Dashboard {
 
         this.canvasGridStack.cellHeight(cellWidth);
         gridEl.style.setProperty('--cell-size', `${cellWidth}px`);
+        this.canvasGridStack.onResize();
+    }
+
+    async capturePreview() {
+        const CAPTURE_WIDTH = 1300; 
+        const ASPECT_RATIO = 260 / 160; 
+        const CAPTURE_HEIGHT = CAPTURE_WIDTH / ASPECT_RATIO; // Result: 800px
+
+        // Save state
+        const originalStyle = {
+            width: this.widgetGrid.style.width,
+            height: this.widgetGrid.style.height,
+            overflow: this.widgetGrid.style.overflow,
+        };
+
+        // Screenshot mode
+        document.body.classList.add("screenshot-mode");
+        document.body.classList.remove('edit-mode');
+        this.canvasGridStack.setStatic(true); 
+        this.widgetGrid.style.width = `${CAPTURE_WIDTH}px`;
+        this.widgetGrid.style.height = `${CAPTURE_HEIGHT}px`;
+        this.widgetGrid.style.overflow = 'hidden'; // CUTS OFF any rows below the fold
+        this.updateSquareCells(); 
+        //this.canvasGridStack.onResize();
+
+        console.log(document.body.style);
+
+        try {
+            // Capture
+            const canvas = await html2canvas(this.widgetGrid, {
+                scale: 0.4, 
+                useCORS: true,
+                //backgroundColor: getComputedStyle(document.body).backgroundColor,
+                width: CAPTURE_WIDTH,
+                height: CAPTURE_HEIGHT,
+                windowWidth: CAPTURE_WIDTH,
+            });
+
+            return new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.95));
+        } 
+        finally {
+            // Restore state
+            this.widgetGrid.style.width = originalStyle.width;
+            this.widgetGrid.style.height = originalStyle.height;
+            this.widgetGrid.style.overflow = originalStyle.overflow;
+            if (this.editMode) {
+                document.body.classList.add('edit-mode');
+                this.canvasGridStack.setStatic(false);
+            }
+            this.updateSquareCells();
+            //this.canvasGridStack.onResize();
+            document.body.classList.remove("screenshot-mode");
+        }
     }
 
     async load() {
@@ -261,7 +322,7 @@ class Dashboard {
     async save() {
         const widgetsPayload = [];
 
-        // Add widget info to payload
+        // Collect widget data
         this.widgetGrid.querySelectorAll('.grid-stack-item').forEach(item => {
             if (item.widgetInstance) {
                 widgetsPayload.push({
@@ -272,13 +333,19 @@ class Dashboard {
             }
         });
 
-        console.log("Saving...", widgetsPayload);
-        
-        // Send data to server
-        postServer( `/api/dashboards/${this.alias}/save-widgets/`, widgetsPayload, () => {
+        // Get image
+        const imageBlob = await this.capturePreview();
+        const formData = new FormData();
+        formData.append('widgets', JSON.stringify(widgetsPayload));
+        if (imageBlob) {
+            formData.append('preview_image', imageBlob, 'preview.jpg');
+        }
+
+        // Send widget and image data
+        postServer(`/api/dashboards/${this.alias}/save-widgets/`, formData, (data) => {
             alert("Dashboard Saved!");
             this.isDirty = false;
-        })
+        });
     }
 }
 

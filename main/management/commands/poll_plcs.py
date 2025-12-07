@@ -48,7 +48,7 @@ class Command(BaseCommand):
         while True:
             for device in Device.objects.all():
                 try:
-                    client = self._get_connection(device)
+                    client = self._get_connection(device) #TODO need to make sure this isn't constantly blocking established devices
                 except Exception as e:
                     logger.warning(f"Error connecting to device {device}: {e}")
                     continue

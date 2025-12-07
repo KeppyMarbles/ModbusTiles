@@ -1,88 +1,36 @@
-:root {
-    --primary-color: #0056b3;
-    --primary-bg: #eef2f6;
-    --header-bg: #1a202c;
-    --sidebar-bg: #ffffff;
-    --sidebar-width: 320px;
-    --border-color: #d1d5db;
-    --grid-line-color: #cbd5e1;
-    --text-main: #333;
-    --text-muted: #666;
+/* --- Screenshot Mode --- */
+
+body.screenshot-mode,
+body.screenshot-mode * {
+    transition: none !important;
+    animation: none !important;
 }
 
-* { box-sizing: border-box; }
-
-body {
-    margin: 0;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: var(--primary-bg);
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden; /* Let inner containers scroll */
-}
-
-/* --- HEADER --- */
-.app-header {
-    height: 60px;
-    background: var(--header-bg);
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 20px;
-    flex-shrink: 0;
-    z-index: 1001;
-}
-
-.brand { display: flex; align-items: center; gap: 10px; }
-.brand h1 { font-size: 1.2rem; margin: 0; font-weight: 600; }
-.dashboard-alias { color: #a0aec0; font-weight: 400; font-size: 0.9em; }
-
-.header-controls { display: flex; align-items: center; gap: 15px; }
-
-.btn {
-    padding: 8px 16px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: background 0.2s;
-}
-.btn-primary { background: var(--primary-color); color: white; }
-.btn-primary:hover { background: #004494; }
-
-/* --- MAIN LAYOUT --- */
-.app-layout {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
-    position: relative;
-}
+/* --- Main Canvas --- */
 
 .canvas-wrapper {
     flex: 1;
-    overflow: auto; /* Canvas scrolls here */
+    overflow: auto;
     padding: 20px;
     position: relative;
     transition: margin-right 0.3s ease;
 }
 
-/* --- GRID / CANVAS --- */
 #dashboard-container {
-    min-height: 800px; /* Ensure space to drop */
+    min-height: 800px;
     min-width: 800px;
     position: relative;
 }
 
+/* --- Gridstack --- */
+
 .edit-mode #dashboard-grid {
-    /* --cell-size is calculated in JS */
     background-size: var(--cell-size, 50px) var(--cell-size, 50px);
     background-image:
         linear-gradient(to right, var(--grid-line-color) 1px, transparent 1px),
         linear-gradient(to bottom, var(--grid-line-color) 1px, transparent 1px);
     border: 1px dashed var(--primary-color);
-    background-position: -1px -1px; /* Align lines */
+    background-position: -1px -1px;
 }
 
 .grid-stack-item-content {
@@ -100,42 +48,30 @@ body {
     overflow: hidden !important;
 }
 
+.edit-mode .dashboard-widget { pointer-events: none; }
+
 .widget-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 10px;
 }
+.edit-mode .palette-item { cursor: grab; }
+.edit-mode .palette-item.is-state.locked { cursor: default; }
 
-.edit-mode .palette-item {
-  cursor: grab;
-}
+/* --- Sidebar --- */
 
-.edit-mode .palette-item.is-state.locked {
-  cursor: default;
-}
-
-.edit-mode .dashboard-widget {
-  pointer-events: none;
-}
-
-/* --- SIDEBAR --- */
 .sidebar {
     width: var(--sidebar-width);
     background: var(--sidebar-bg);
     border-left: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
-    
-    /* Animation Logic */
-    margin-right: calc(var(--sidebar-width) * -1); /* Hide offscreen right */
+    margin-right: calc(var(--sidebar-width) * -1); /* Hidden by default */
     transition: margin-right 0.3s ease;
     flex-shrink: 0;
 }
 
-/* When body has .edit-mode, slide sidebar in */
-.edit-mode .sidebar {
-    margin-right: 0;
-}
+.edit-mode .sidebar { margin-right: 0; }
 
 .sidebar-header {
     padding: 15px;
@@ -150,7 +86,8 @@ body {
     padding: 15px;
 }
 
-/* Tabs */
+/* --- Tabs --- */
+
 .tab-buttons { display: flex; border-bottom: 1px solid var(--border-color); }
 .tab-buttons button {
     flex: 1;
@@ -169,7 +106,8 @@ body {
 .tab-content { display: none; }
 .tab-content.active { display: block; animation: fadeIn 0.3s; }
 
-/* --- INSPECTOR STYLING --- */
+/* --- Inspector --- */
+
 .inspector-box {
     margin-bottom: 15px;
     padding-bottom: 15px;
@@ -183,9 +121,7 @@ body {
     margin: 10px 0 10px 0;
     font-weight: 700;
 }
-.input-group {
-    margin-bottom: 12px;
-}
+.input-group { margin-bottom: 12px; }
 .inspector-label {
     display: block;
     font-size: 0.9rem;
@@ -199,22 +135,10 @@ body {
     border-radius: 4px;
     font-size: 0.9rem;
 }
-.inspector-input.bool {
-    width: auto;
-    flex: 0 0 auto;
-    margin-left: auto;
-}
-.inspector-label.bool {
-    display: flex;
-    align-items: center;
-    width: 100%;
-}
+.inspector-input.bool { width: auto; flex: 0 0 auto; margin-left: auto; }
+.inspector-label.bool { display: flex; align-items: center; width: 100%; }
 .inspector-input:focus {
     outline: none;
     border-color: var(--primary-color);
     box-shadow: 0 0 0 2px rgba(0, 86, 179, 0.1);
 }
-
-/* --- UTILITIES --- */
-.hidden { display: none !important; }
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }

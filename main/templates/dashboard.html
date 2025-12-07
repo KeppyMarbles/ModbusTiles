@@ -1,8 +1,10 @@
 {% load static %}
-<link rel="stylesheet" href="{% static 'widgets.css' %}">
-<link rel="stylesheet" href="{% static 'styles.css' %}">
-<link href="https://cdn.jsdelivr.net/npm/gridstack@12.3.3/dist/gridstack.min.css" rel="stylesheet">
-
+<head>
+    <link rel="stylesheet" href="{% static 'global.css' %}">
+    <link rel="stylesheet" href="{% static 'widgets.css' %}">
+    <link rel="stylesheet" href="{% static 'dashboard.css' %}">
+    <link href="https://cdn.jsdelivr.net/npm/gridstack@12.3.3/dist/gridstack.min.css" rel="stylesheet">
+</head>
 <body>
     <header class="app-header">
         <div class="brand">
@@ -19,7 +21,7 @@
     <main class="app-layout">
         <div id="loading-spinner" class="spinner">Loading Dashboard...</div>
 
-        <section class="canvas-wrapper">
+        <section id="canvas-wrapper" class="canvas-wrapper">
             <div id="dashboard-container" class="dashboard-container" data-alias="{{ dashboard.alias }}">
                 <div id="dashboard-grid" class="grid-stack"></div>
             </div>

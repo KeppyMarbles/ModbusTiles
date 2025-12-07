@@ -5,3 +5,4 @@ pymodbus==3.11.3
 sqlparse==0.5.3
 tzdata==2025.2
 djangorestframework==3.16.1
+pillow==12.0.0

@@ -130,17 +130,16 @@ export class Inspector {
     }
 
     inspectWidget(widget) {
+        const widgetClass = widget.constructor;
+
         this.clear();
-        this.addTitle(widget.constructor.displayName);
+        this.addTitle(widgetClass.displayName);
 
         {
             // Create dropdown with tags that are compatible with this widget
-            const allowedTypes = widget.constructor.allowedTypes;
-            const allowedChannels = widget.constructor.allowedChannels;
-
             const compatibleTags = serverCache.tags.filter(tag => {
-                return allowedTypes.includes(tag.data_type) 
-                    && allowedChannels.includes(tag.channel);
+                return widgetClass.allowedTypes.includes(tag.data_type) 
+                    && widgetClass.allowedChannels.includes(tag.channel);
             });
             const tagOptions = compatibleTags.map(tag => ({ value: tag.external_id, label: `${tag.alias} (${tag.channel} ${tag.address})`}));
 
@@ -151,8 +150,8 @@ export class Inspector {
         }
 
         const allFields = [ //TODO should these actually be dictionaries where the key is the config name and the value is the field dict
-            ...widget.constructor.customFields,
-            ...widget.constructor.defaultFields,
+            ...widgetClass.customFields,
+            ...widgetClass.defaultFields,
         ];
 
         // Add rest of fields
@@ -232,7 +231,7 @@ export class Inspector {
                 is_active: true
             };
 
-            const ok = await postServer('/api/tags/', payload, () => {
+            const ok = await postServer('/api/tags/', payload, (data) => {
                 alert("Tag Created!");
                 refreshData();
             });
@@ -309,7 +308,7 @@ export class Inspector {
             }
             
             console.log("Submitting:", payload);
-            const ok = await postServer('/api/alarms/', payload, () => {
+            const ok = await postServer('/api/alarms/', payload, (data) => {
                 alert("Alarm Created!");
             });
         }

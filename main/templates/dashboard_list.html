@@ -1,14 +1,16 @@
-
 {% load static %}
-<link rel="stylesheet" href="{% static 'styles.css' %}">
+<head>
+    <link rel="stylesheet" href="{% static 'global.css' %}">
+    <link rel="stylesheet" href="{% static 'dashboard_list.css' %}">
+</head>
 <body>
     <header class="app-header">
         <div class="brand">
-            <h1>My Dashboards<span class="dashboard-alias">{{ user.username }}</span></h1>
+            <h1>My Dashboards<span class="dashboard-alias">  {{ user.username }}</span></h1>
         </div>
     </header>
     <main class="app-layout">
-        <div class="dashboard-grid">
+        <div class="dashboard-list">
             {% for db in dashboards %}
             <a href="{% url 'dashboard' db.alias %}" class="dashboard-card">
                 <div class="preview-box">

@@ -203,6 +203,8 @@ class ActivatedAlarmSerializer(serializers.ModelSerializer):
 
 
 class DashboardSerializer(serializers.ModelSerializer):
+    alias = serializers.CharField(required=False, allow_blank=True)
+
     class Meta:
         model = Dashboard
         fields = ["alias", "description"]

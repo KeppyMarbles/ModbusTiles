@@ -1,0 +1,67 @@
+/* --- List Page Grid --- */
+
+.dashboard-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 300px);
+    grid-auto-rows: min-content;
+    gap: 1.5rem;
+    padding: 1.5rem;
+    justify-content: start;
+    align-items: start;
+    width: 100%;
+    overflow: auto;
+}
+
+/* --- Cards --- */
+
+.dashboard-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: white;
+    padding: 1rem;
+    border-radius: 10px;
+    text-decoration: none;
+    color: inherit;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dashboard-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.preview-box {
+    width: 260px;
+    height: 160px;
+    flex-shrink: 0;
+    background: #f0f0f0;
+    border-radius: 8px;
+    overflow: hidden;
+    align-self: center;
+}
+
+.preview-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.dashboard-title { margin: 1rem 0.25rem 0.25rem; }
+.dashboard-card p { margin: 0; }
+
+/* --- Create Button  --- */
+
+#create-dashboard {
+    font-size: 1rem;
+    padding: 1rem;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    background: #e5e5e5;
+    transition: background 0.2s ease;
+    height: 100%;
+}
+
+#create-dashboard:hover { background: #d0d0d0; }

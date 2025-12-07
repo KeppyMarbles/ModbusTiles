@@ -1,4 +1,5 @@
 import uuid
+import os
 from datetime import timedelta
 from django.db import models
 from django.utils import timezone
@@ -306,7 +307,7 @@ class AlarmSubscription(models.Model):
 class Dashboard(models.Model):
     """ A user-defined space to display widgets """
 
-    alias = models.SlugField(max_length=100)
+    alias = models.SlugField(max_length=100, blank=False)
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
     description = models.TextField(blank=True)
     preview_image = models.ImageField(upload_to='dashboard_previews/', null=True, blank=True)
@@ -316,6 +317,19 @@ class Dashboard(models.Model):
 
     class Meta:
         unique_together = ("owner", "alias")
+
+    def save(self, *args, **kwargs):
+        try:
+            old = Dashboard.objects.get(pk=self.pk).preview_image
+        except Dashboard.DoesNotExist:
+            old = None
+
+        super().save(*args, **kwargs)
+
+        # Old file exists, new file is different → delete old file
+        if old and old != self.preview_image:
+            if os.path.isfile(old.path):
+                os.remove(old.path)
 
     def __str__(self):
         return f"Dashboard: {self.alias} ({self.owner.username})"
