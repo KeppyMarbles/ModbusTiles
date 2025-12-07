@@ -1,5 +1,5 @@
 """
-URL configuration for plc_monitor project.
+URL configuration for modbus_tiles project.
 
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/5.2/topics/http/urls/
@@ -20,6 +20,6 @@ from django.urls import include, path
 urlpatterns = [
     path('admin/', admin.site.urls),
     path("accounts/", include("django.contrib.auth.urls")),
-    path("api/", include("apps.plc_tools.api.urls")),
-    path("", include("apps.plc_tools.urls"))
+    path("api/", include("main.api.urls")),
+    path("", include("main.urls"))
 ]

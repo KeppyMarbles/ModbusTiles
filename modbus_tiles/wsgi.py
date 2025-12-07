@@ -1,5 +1,5 @@
 """
-WSGI config for plc_monitor project.
+WSGI config for modbus_tiles project.
 
 It exposes the WSGI callable as a module-level variable named ``application``.
 
@@ -11,6 +11,6 @@ import os
 
 from django.core.wsgi import get_wsgi_application
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'plc_monitor.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'modbus_tiles.settings')
 
 application = get_wsgi_application()

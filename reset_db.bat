@@ -3,20 +3,22 @@ echo ===============================
 echo   Django Reset DB + Migrations
 echo ===============================
 
-set APP_DIR=apps
+set APP_DIR=main
+set MIG_DIR=%APP_DIR%\migrations
 set DB_FILE=db.sqlite3
 
 echo.
-echo Deleting migration files...
+echo Cleaning migration files in %MIG_DIR% ...
 
-for /f "delims=" %%f in ('dir /ad /b /s "%APP_DIR%\migrations"') do (
-    echo Cleaning: %%f
+if not exist "%MIG_DIR%" (
+    echo ERROR: Migrations folder not found!
+    exit /b
+)
 
-    for %%m in ("%%f\*.py") do (
-        if NOT "%%~nxm"=="__init__.py" (
-            echo Deleting: %%m
-            del "%%m"
-        )
+for %%m in ("%MIG_DIR%\*.py") do (
+    if NOT "%%~nxm"=="__init__.py" (
+        echo Deleting: %%m
+        del "%%m"
     )
 )
 

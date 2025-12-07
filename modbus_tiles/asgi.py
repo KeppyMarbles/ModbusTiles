@@ -1,5 +1,5 @@
 """
-ASGI config for plc_monitor project.
+ASGI config for modbus_tiles project.
 
 It exposes the ASGI callable as a module-level variable named ``application``.
 
@@ -11,6 +11,6 @@ import os
 
 from django.core.asgi import get_asgi_application
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'plc_monitor.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'modbus_tiles.settings')
 
 application = get_asgi_application()

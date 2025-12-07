@@ -1,6 +1,6 @@
 {% load static %}
-<link rel="stylesheet" href="{% static 'plc_tools/widgets.css' %}">
-<link rel="stylesheet" href="{% static 'plc_tools/styles.css' %}">
+<link rel="stylesheet" href="{% static 'widgets.css' %}">
+<link rel="stylesheet" href="{% static 'styles.css' %}">
 <link href="https://cdn.jsdelivr.net/npm/gridstack@12.3.3/dist/gridstack.min.css" rel="stylesheet">
 
 <body>
@@ -42,7 +42,7 @@
                         {% for type in widget_types %}
                             <div class="palette-item grid-stack-item" data-type="{{ type }}">
                                 <div class="grid-stack-item-content preview-widget">
-                                    {% include "plc_tools/widgets/"|add:type|add:".html" %}
+                                    {% include "widgets/"|add:type|add:".html" %}
                                     <span class="widget-label"></span>
                                     <span class="alarm-indicator"></span>
                                 </div>
@@ -62,4 +62,4 @@
 </body>
 
 <script src="https://cdn.plot.ly/plotly-3.3.0.min.js" charset="utf-8"></script>
-<script type="module" src="{% static 'plc_tools/dashboard.js' %}"></script>
+<script type="module" src="{% static 'dashboard.js' %}"></script>
