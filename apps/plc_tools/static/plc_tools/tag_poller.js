@@ -1,7 +1,7 @@
 export class TagPoller {
     constructor() {
         this.tagMap = {}; // tag → [widgets]
-        this.connectionBanner = document.querySelector(".connection-banner")
+        this.connectionBanner = document.getElementById("connection-banner")
     }
 
     registerWidget(widget) {
@@ -49,7 +49,7 @@ export class TagPoller {
         catch (err) {
             console.error("Polling error:", err);
             this.connectionBanner.classList.remove("hidden");
-            this.stop();
+            this.clear();
         }
     }
 }

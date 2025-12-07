@@ -213,6 +213,9 @@ class AlarmMetadataView(APIView):
             "threat_levels": [
                 {"value": k, "label": v} for k, v in AlarmConfig.ThreatLevelChoices.choices
             ],
+            "operator_choices": [
+                {"value": k, "label": v} for k, v in AlarmConfig.OperatorChoices.choices
+            ],
         })
     
     

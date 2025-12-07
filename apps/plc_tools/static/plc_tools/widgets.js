@@ -1,4 +1,5 @@
 import { getCookie } from "./util.js";
+import { serverCache } from "./global.js";
 
 class Widget {
     static displayName = "Default Widget";
@@ -6,6 +7,7 @@ class Widget {
     static allowedTypes = [];
     static defaultFields = [
         { name: "locked", type: "bool", default: false, label: "Position Locked" },
+        { name: "showTagName", type: "bool", default: true, label: "Show Tag Name" },
     ];
     static customFields = [];
 
@@ -14,6 +16,7 @@ class Widget {
             this.config = config;
         }
         else {
+            // Create default config
             this.config = {};
             const allFields = [...(new.target.defaultFields), ...(new.target.customFields)];
             allFields.forEach(field => {
@@ -21,12 +24,13 @@ class Widget {
             });
         }
 
-        this.elem = gridElem.querySelector('.dashboard-widget');
         this.tag = tagID;
+        this.elem = gridElem.querySelector('.dashboard-widget');
         this.shouldUpdate = true;
         this.updateTimeout = 500; //TODO where should these values live?
         this.valueTimeout = 5000;
         this.alarmIndicator = this.elem.parentNode?.querySelector(".alarm-indicator");
+        this.label = this.elem.parentNode?.querySelector(".widget-label");
         this.showAlarm = true;
         this.gridElem = gridElem;
         gridElem.widgetInstance = this;
@@ -38,7 +42,6 @@ class Widget {
     }
 
     async submit(value) {
-        //TODO yes/no confirmation if configured?
         if(!this.tag) {
             console.error("No tag value to submit");
             return;
@@ -122,10 +125,30 @@ class Widget {
             this.gridElem.classList.add("is-state", "locked");
         else
             this.gridElem.classList.remove("is-state", "locked");
+
+        // Show tag alias
+        if(this.config["showTagName"]) {
+            this.label.classList.remove("hidden");
+            const tag = serverCache.tags.find(t => t.external_id === this.tag);
+            if(tag) {
+                this.label.textContent = tag.alias;
+                this.label.title = tag.description;
+            }
+                
+        }
+        else {
+            this.label.classList.add("hidden");
+        }
+
+        //TODO add tag name
     }
 
     onValue(val) {
         throw new Error("onValue not implemented for this widget");
+    }
+
+    clear() {
+        return;
     }
 }
 
@@ -152,6 +175,10 @@ class SwitchWidget extends Widget {
     onValue(val) {
         if(this.shouldUpdate)
             this.input.checked = val ? true : false;
+    }
+
+    clear() {
+        this.input.checked = false;
     }
 }
 
@@ -202,6 +229,10 @@ class SliderWidget extends Widget {
         if(this.shouldUpdate)
             this.input.value = val;
     }
+
+    clear() {
+        this.input.value = 0;
+    }
 }
 
 class MeterWidget extends Widget {
@@ -245,6 +276,10 @@ class MeterWidget extends Widget {
     onValue(val) {
         this.bar.value = val;
     }
+
+    clear() {
+        this.bar.value = 0;
+    }
 }
 
 class LEDWidget extends Widget {
@@ -261,14 +296,13 @@ class LEDWidget extends Widget {
         this.indicator = this.elem.querySelector(".indicator");
     }
 
-    applyConfig() {
-        super.applyConfig();
-        this.indicator.style.backgroundColor = this.config.color_off; //TODO?
-    }
-
     onValue(val) {
         this.indicator.style.backgroundColor = val ? this.config.color_on : this.config.color_off;
         //this.indicator.style.boxShadow = val ? `0 0 15px ${this.config.color_on}` : "none";
+    }
+
+    clear() {
+        this.indicator.style.backgroundColor = "";
     }
 }
 
@@ -312,6 +346,10 @@ class BoolLabelWidget extends Widget {
 
     onValue(val) {
         this.text_elem.textContent = val ? this.config.text_on : this.config.text_off;
+    }
+
+    clear() {
+        this.text_elem.textContent = this.config.text_off;
     }
 }
 

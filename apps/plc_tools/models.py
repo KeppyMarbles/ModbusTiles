@@ -76,11 +76,6 @@ class Tag(models.Model):
     )
 
     last_updated = models.DateTimeField(null=True)
-    value_changed = models.BooleanField(null=True)
-    #max_write_entries = models.PositiveIntegerField(
-    #    null=True, blank=True,
-    #    default=0
-    #)
 
     current_value = models.JSONField(null=True)
     is_active = models.BooleanField(default=True)
@@ -107,25 +102,23 @@ class Tag(models.Model):
             
     def set_value(self, new_value):
             """
-            Updates the value, manages 'last_updated', and handles history pruning.
-            Returns True if the value actually changed.
+            Updates the value, manages 'last_updated', and handles history pruning
             """
             now = timezone.now()
             
-            self.value_changed = (self.current_value != new_value)
+            value_changed = (self.current_value != new_value)
             self.current_value = new_value
             self.last_updated = now
             
-            self.save(update_fields=["current_value", "value_changed", "last_updated"])
+            self.save(update_fields=["current_value", "last_updated"])
 
             if self.max_history_entries == 0:
-                return self.value_changed
+                return value_changed
             
-            if self.value_changed: #TODO bool for saving history when not changed?
+            if value_changed: #TODO bool for saving history when not changed?
+                #TODO entry interval?
                 TagHistoryEntry.objects.create(tag=self, value=new_value, timestamp=now)
                 self._prune_history()
-
-            return self.value_changed
 
     def _prune_history(self):
         """ Keep history within limits """
@@ -189,9 +182,15 @@ class AlarmConfig(models.Model):
             HIGH  = "high", _("High")
             CRITICAL = "crit", _("Critical")
 
+    class OperatorChoices(models.TextChoices):
+            EQUALS = "equals", _("Equals")
+            GREATER_THAN  = "greater_than", _("Greater Than")
+            LESS_THAN = "less_than", _("Less Than")
+
     tag = models.ForeignKey(Tag, on_delete=models.CASCADE, related_name="alarm_configs")
     trigger_value = models.JSONField(help_text="Value that triggers this alarm")
     #trigger_sustain = models.DurationField(default=timedelta(seconds=3))
+    operator = models.TextField(default="equals", choices=OperatorChoices.choices)
     owner = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     enabled = models.BooleanField(default=True)
     
@@ -205,34 +204,36 @@ class AlarmConfig(models.Model):
     last_notified = models.DateTimeField(null=True, blank=True)
 
     def get_activation(self):
-        should_activate = (self.trigger_value == self.tag.current_value)
+        match self.operator:
+            case "equals":
+                should_activate = (self.tag.current_value == self.trigger_value)
+            case "greater_than":
+                should_activate = (self.tag.current_value > self.trigger_value)
+            case "less_than":
+                should_activate = (self.tag.current_value < self.trigger_value)
 
-        if(should_activate):
-            active_alarm, created = ActivatedAlarm.objects.get_or_create(
-                config=self,
-                is_active=True,
-            )
+        active_qs = ActivatedAlarm.objects.filter(
+            config__tag=self.tag,
+            is_active=True
+        ).select_related("config")
 
-            # Disable other alarms active for the same tag
-            stale_alarms = ActivatedAlarm.objects.filter(
-                config__tag=self.tag, 
-                is_active=True
-            ).exclude(id=active_alarm.id)
-
-            for alarm in stale_alarms: #TODO batch?
-                alarm.is_active = False
-                alarm.save(update_fields=['is_active'])
-                #TODO logging?
-
-            return active_alarm
-
-        else:
-            active_alarms = ActivatedAlarm.objects.filter(config=self, is_active=True)
-            if active_alarms.exists():
-                active_alarms.update(is_active=False)
-                #logger.info(f"All alarms cleared for tag: {tag}")
+        if not should_activate:
+            # Deactivate
+            active_qs.filter(config=self).update(is_active=False)
             return None
-        
+
+        # Only activate if it's higher priority than current
+        threat_priority = { "low": 1, "high": 2, "crit": 3, }
+        for alarm in active_qs:
+            if threat_priority[alarm.config.threat_level] > threat_priority[self.threat_level]:
+                return None
+
+        # Activate, then disable other alarms for same tag
+        active_alarm, _ = ActivatedAlarm.objects.get_or_create(config=self, is_active=True)
+        active_qs.exclude(id=active_alarm.id).update(is_active=False)
+
+        return active_alarm
+            
     @classmethod
     def check_alarms(cls):
         for alarm_config in cls.objects.all():
@@ -244,9 +245,10 @@ class AlarmConfig(models.Model):
         unique_together = ("alias", "tag")
 
     def __str__(self):
-        return f"{self.tag.alias} == {self.trigger_value} -> {self.message}"
+        signs = { "equals" : "==", "greater_than" : ">", "less_than" : "<" }
+        return f"{self.tag.alias} {signs.get(self.operator)} {self.trigger_value} -> {self.message}"
     
-    #TODO order by threat level
+    #TODO order by threat level?
     
 
 class ActivatedAlarm(models.Model):

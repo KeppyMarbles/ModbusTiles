@@ -3,39 +3,62 @@
 <link rel="stylesheet" href="{% static 'plc_tools/styles.css' %}">
 <link href="https://cdn.jsdelivr.net/npm/gridstack@12.3.3/dist/gridstack.min.css" rel="stylesheet">
 
-<body style="background-color:#e3eeff;">
-    <div id="dashboard-container" class="container" data-alias="{{ dashboard.alias }}">  
-        <div class="connection-banner hidden">⚠️ No connection</div>
-        <div>
-            <button type="button" id="edit-button" class="edit-button">Edit</button>
+<body>
+    <header class="app-header">
+        <div class="brand">
+            <span class="logo-icon">🎛️</span>
+            <h1>Dashboard  <span class="dashboard-alias">{{ dashboard.alias }}</span></h1>
         </div>
-        <div id="loading-spinner" class="spinner">Loading Dashboard...</div>
-        <div class="canvas-wrapper">
-            <div id="dashboard-grid" class="grid-stack">
+        <div class="header-controls">
+            <div class="connection-status hidden" id="connection-banner">⚠️ Offline</div>
+            <button type="button" id="edit-button" class="btn btn-primary">Edit Dashboard</button>
+            <button type="button" id="save-button" class="btn btn-primary hidden">Save Dashboard</button>
+        </div>
+    </header>
+
+    <main class="app-layout">
+        <div id="loading-spinner" class="spinner">Loading...</div>
+
+        <section class="canvas-wrapper">
+            <div id="dashboard-container" class="dashboard-container" data-alias="{{ dashboard.alias }}">
+                <div id="dashboard-grid" class="grid-stack"></div>
             </div>
-        </div>
-        <aside id="editor-sidebar" class="sidebar hidden">
+        </section>
+
+        <aside id="editor-sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <h2>Editor</h2>
+                </div>
+            
             <div class="tab-buttons">
-                <button id="add-button" class="active" data-tab="palette">Add Widget</button>
+                <button id="add-button" class="active" data-tab="palette">Widgets</button>
                 <button id="inspect-button" data-tab="tab-inspect">Properties</button>
             </div>
-            <div id="palette" class="tab-content active">
-                {% for type in widget_types %}
-                    <div class="palette-item grid-stack-item" data-type="{{ type }}">
-                        <div class="grid-stack-item-content">
-                            {% include "plc_tools/widgets/"|add:type|add:".html" %}
-                            <div>
-                                <span class="alarm-indicator"></span>
+
+            <div class="sidebar-content">
+                <div id="palette" class="tab-content active">
+                    <p class="section-label">Drag to Add</p>
+                    <div class="widget-grid">
+                        {% for type in widget_types %}
+                            <div class="palette-item grid-stack-item" data-type="{{ type }}">
+                                <div class="grid-stack-item-content preview-widget">
+                                    {% include "plc_tools/widgets/"|add:type|add:".html" %}
+                                    <span class="widget-label"></span>
+                                    <span class="alarm-indicator"></span>
+                                </div>
                             </div>
-                        </div>
+                        {% endfor %}
                     </div>
-                {% endfor %}
-            </div>
-            <div id="tab-inspect" class="tab-content">
-                <div id="inspector-form"></div> 
+                </div>
+
+                <div id="tab-inspect" class="tab-content">
+                    <div id="inspector-form">
+                        <p class="empty-state">Select a widget to edit properties</p>
+                    </div> 
+                </div>
             </div>
         </aside>
-    </div>
+    </main>
 </body>
 
 <script src="https://cdn.plot.ly/plotly-3.3.0.min.js" charset="utf-8"></script>

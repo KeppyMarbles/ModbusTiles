@@ -21,15 +21,15 @@ export class Inspector {
     addSection(title) {
         const box = document.createElement('div');
         box.className = "inspector-box";
-        box.innerText = title;
+        box.innerText = title ? title : "";
         this.container.appendChild(box);
         return box;
     }
 
     addButton(title, callback, section) {
         const btn = document.createElement('button');
-        btn.innerText = title;
-        btn.style.marginTop = "10px";
+        btn.innerText = title ? title : "";
+        btn.classList.add("btn");
         btn.onclick = callback;
         if(!section)
             section = this.container;
@@ -44,24 +44,30 @@ export class Inspector {
         label.innerText = def.label || def.name;
         label.className = "inspector-label";
 
-        let input = document.createElement('input');
-        input.value = currentValue;
-        input.type = 'text';
+        let input = null;
+
+        if(def.type === "select")
+            input = document.createElement("select");
+        else {
+            input = document.createElement("input");
+            input.value = currentValue;
+        }
+        input.classList.add("inspector-input");
 
         // Function used to get this field's current value
-        let getValue = () => {return input.value};
+        let getValue = () => {return null};
 
         // Add input based on value type
         switch (def.type) {
             case "bool":
                 input.type = 'checkbox';
                 input.checked = currentValue;
-                getValue = () => {return input.checked};
+                input.classList.add("bool");
+                label.classList.add("bool");
+                getValue = () => { return input.checked };
                 break;
             
             case "select":
-                input = document.createElement('select');
-
                 const defaultOpt = document.createElement('option');
                 defaultOpt.text = "Select";
                 input.appendChild(defaultOpt);
@@ -76,30 +82,35 @@ export class Inspector {
                         input.appendChild(el);
                     });
                 }
-                getValue = () => {return input.value};
+                getValue = () => { return input.value };
                 break;
 
             case "color":
+                getValue = () => {return input.value};
                 input.type = "color";
                 break;
 
             case "int":
-                getValue = () => {return parseInt(input.value)};
+                getValue = () => { return parseInt(input.value) };
                 input.type = "number";
                 break;
             
             case "float":
-                getValue = () => {return parseFloat(input.value)};
+                getValue = () => { return parseFloat(input.value) };
                 input.type = "number";
                 break;
 
             case "number":
-                getValue = () => {return input.value === "" ? 0 : Number(input.value)};
+                getValue = () => { return input.value === "" ? 0 : Number(input.value) };
                 input.type = "number";
                 break;
-        }
-        input.className = "inspector-input";
 
+            default:
+                getValue = () => {return input.value};
+                input.type = 'text';
+                break;
+        }
+        
         // On value change callback
         if (onChange) {
             input.addEventListener('change', (e) => {
@@ -135,6 +146,7 @@ export class Inspector {
 
             this.createField({label: "Control Tag", type: "select", options: tagOptions }, widget.tag, (newVal) => {
                 widget.tag = newVal;
+                widget.applyConfig();
             });
         }
 
@@ -150,17 +162,19 @@ export class Inspector {
                 widget.applyConfig(); // Visual update
             });
         });
+
+        //TODO add preview value?
     }
 
-    inspectGlobal() {
+    inspectGlobal() { //TODO dashboard settings like name, column count, background color, etc? Might need inspectDashboard method
         this.clear();
-        this.addTitle("Creator");
         this._formCreateTag();
         this._formCreateAlarm();
     }
 
     _formCreateTag() { //TODO i wonder if the options map should be a function, standardized in the API
-        const tagSection = this.addSection("Create New Tag");
+        this.addTitle("New Tag");
+        const tagSection = this.addSection();
         const alias = this.createField({ label: "Tag Name", type: "text" }, "", null, tagSection);
 
         const deviceOptions = serverCache.devices.map(d => ({ value: d.alias, label: d.alias }));
@@ -200,11 +214,13 @@ export class Inspector {
 
         //const readAmount = this.createField({label: "Read Amount", type: "int"}, 1, null, tagSection)
         const maxHistory = this.createField({ label: "Max History", type: "int" }, 0, null, tagSection)
+        const description = this.createField({ label: "Description (optional)", type: "text" }, "", null, tagSection)
 
         // Post values to server
         const tagSubmit = async () => {
             const payload = {
                 alias: alias.getValue(),
+                description: description.getValue(),
                 device: device.getValue(),
                 address: address.getValue(),
                 channel: channel.getValue(),
@@ -224,36 +240,55 @@ export class Inspector {
     }
 
     _formCreateAlarm() {
-        const alarmSection = this.addSection("Create New Alarm");
+        this.addTitle("New Alarm");
+        const alarmSection = this.addSection();
         const alias = this.createField({ label: "Alarm Name", type: "text" }, "", null, alarmSection);
 
-        // Dynamic trigger value field - update according to tag type
+        // Dynamic trigger value and operator field - update according to tag type
         const triggerContainer = document.createElement('div'); 
-        let getTriggerValue = () => null; 
+        const operatorContainer = document.createElement('div');
+        let getTriggerValue = () => null;
+        let getOperatorValue = () => null;
 
         const onTagChanged = (value) => {
             triggerContainer.innerHTML = ''; 
+            operatorContainer.innerHTML = '';
+
+            if(value === null)
+                return;
+
             const tag = serverCache.tags.find(t => t.external_id === value);
             if(!tag) {
                 console.error("Couldn't get tag info for alarm");
                 return;
             }
 
+            // Show choices for trigger operator
+            let operatorChoices = serverCache.alarmOptions.operator_choices;
+            if(tag.data_type === "bool") 
+                operatorChoices = operatorChoices.filter(t => {return t.value === "equals"});
+
             // Create an input with the same value type as the selected tag
             let fieldType = "text";
-            if(tag.data_type === "bool") fieldType = "bool";
-            else if(["int16", "uint16", "int32", "uint32", "int64"].includes(tag.data_type)) fieldType = "int";
-            else if(["float32", "float64"].includes(tag.data_type)) fieldType = "number";
+            if(tag.data_type === "bool") 
+                fieldType = "bool";
+            else if(["int16", "uint16", "int32", "uint32", "int64"].includes(tag.data_type)) 
+                fieldType = "int";
+            else if(["float32", "float64"].includes(tag.data_type)) 
+                fieldType = "number";
 
-            const newField = this.createField({ label: "Trigger Value", type: fieldType }, "", null, triggerContainer);
-
-            getTriggerValue = newField.getValue;
+            const newOperatorField = this.createField({ label: "Operator", type: "select", options: operatorChoices }, "equals", null, operatorContainer);
+            const newTriggerField = this.createField({ label: "Trigger Value", type: fieldType }, "", null, triggerContainer);
+            
+            getOperatorValue = newOperatorField.getValue;
+            getTriggerValue = newTriggerField.getValue;
         }
 
         const tagOptions = serverCache.tags.map(tag => ({ value: tag.external_id, label: `${tag.alias} (${tag.channel} ${tag.address})`})); //TODO function?
         const tag = this.createField({ label: "Control Tag", type: "select", options: tagOptions }, "", onTagChanged, alarmSection);
         //onTagChanged()
 
+        alarmSection.appendChild(operatorContainer);
         alarmSection.appendChild(triggerContainer);
 
         const threatLevelOptions = serverCache.alarmOptions.threat_levels.map(a => ({ value: a.value, label: a.label }));
@@ -267,6 +302,7 @@ export class Inspector {
                 alias: alias.getValue(),
                 tag: tag.getValue(),
                 threat_level: threatLevel.getValue(),
+                operator: getOperatorValue(), // Use latest getValue
                 trigger_value: getTriggerValue(), // Use latest getValue
                 message: message.getValue(),
             }

@@ -68,7 +68,6 @@ class TagDetailSerializer(serializers.ModelSerializer):
             "address",
             "device",
             "last_updated",
-            "value_changed",
             "current_value",
         ]
 
@@ -82,6 +81,7 @@ class TagDropdownSerializer(serializers.ModelSerializer):
             "channel",
             "data_type",
             "address",
+            "description",
         ]
 
 
@@ -172,6 +172,7 @@ class AlarmConfigCreateSerializer(serializers.ModelSerializer):
             "tag",
             "threat_level",
             "trigger_value",
+            "operator",
             "message",
         ]
 
