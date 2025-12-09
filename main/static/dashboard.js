@@ -5,8 +5,6 @@ import { postServer } from "./util.js";
 import { refreshData } from "./global.js";
 import { Inspector } from "./inspector.js";
 
-import { getCookie } from "./util.js";
-
 class Dashboard {
     constructor() {
         this.editMode = false;
@@ -214,7 +212,7 @@ class Dashboard {
         this.selectWidget(null);
     }
 
-    selectWidget(widget) { //TODO highlight the whole grid elem
+    selectWidget(widget) {
         if(this.selectedWidget) {
             this.selectedWidget.gridElem.classList.remove("selected");
             if(this.selectedWidget === widget) {
@@ -234,7 +232,7 @@ class Dashboard {
         }
     }
 
-    updateSquareCells() { //TODO we need a minimum scale so widgets don't vanish
+    updateSquareCells() {
         const gridEl = this.canvasGridStack.el;
         const width = gridEl.clientWidth;
         const columns = this.canvasGridStack.opts.column; 

@@ -8,16 +8,18 @@
             <h1>ModbusTiles<span class="dashboard-alias"></span></h1>
         </div>
     </header>
-    <form method="POST" class="user-form">
-        {% csrf_token %}
-        <p class="form-title">Log in or Sign Up</p>
-        <input type="text" class="form-input" name="username" placeholder="Username"><br>
-        <input type="password" class="form-input" name="password" placeholder="Password"><br>
+    <main>
+        <form method="POST" class="user-form">
+            {% csrf_token %}
+            <p class="form-title">Log in or Sign Up</p>
+            <input type="text" class="form-input" name="username" placeholder="Username"><br>
+            <input type="password" class="form-input" name="password" placeholder="Password"><br>
 
-        <button type="submit" class="form-button">Login</button>
+            <button type="submit" class="form-button">Login</button>
 
-        {% if form.errors %}
-            <p style="color: red;">Invalid username or password</p>
-        {% endif %}
-    </form>
+            {% if form.errors %}
+                <p style="color: red;">Invalid username or password</p>
+            {% endif %}
+        </form>
+    </main>
 </body>
