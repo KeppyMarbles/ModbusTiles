@@ -93,8 +93,8 @@ class TagAlarmSerializer(serializers.Serializer):
 class TagValueSerializer(serializers.ModelSerializer):
     id = serializers.UUIDField(source='external_id', read_only=True)
 
-    value = serializers.SerializerMethodField()
-    time = serializers.SerializerMethodField()
+    value = serializers.JSONField(source='current_value', read_only=True)
+    time = serializers.DateTimeField(source='last_updated', read_only=True)
     age = serializers.SerializerMethodField()
     alarm = serializers.SerializerMethodField()
 
@@ -102,24 +102,20 @@ class TagValueSerializer(serializers.ModelSerializer):
         model = Tag
         fields = ["id", "value", "time", "age", "alarm"]
 
-    def get_value(self, obj):
-        return obj.current_value
-
-    def get_time(self, obj):
-        return obj.last_updated
-
-    def get_age(self, obj):
+    def get_age(self, obj: Tag):
         if(obj.last_updated is None):
             return "Infinity"
         else:
             return (timezone.now() - obj.last_updated).total_seconds() * 1000 #TODO just send the server time with the multi tag response?
 
-    def get_alarm(self, obj): #TODO not sure if this should be the active alarm or the alarm config
-        alarm_config = self.context.get("alarm_map", {}).get(obj.id)
-        if not alarm_config:
-            return None
-        return TagAlarmSerializer(alarm_config).data
-    
+    def get_alarm(self, obj: Tag):
+        alarm: ActivatedAlarm = self.context.get("alarm_map", {}).get(obj.id)
+        if alarm:
+            return {
+                "message": alarm.config.message,
+                "threat_level": alarm.config.threat_level,
+            }
+        return None
 
 class TagWriteRequestSerializer(serializers.ModelSerializer):
     tag = serializers.SlugRelatedField(
@@ -132,7 +128,7 @@ class TagWriteRequestSerializer(serializers.ModelSerializer):
         fields = ['tag', 'value', 'timestamp', 'processed']
         read_only_fields = ['timestamp', 'processed']
     
-    def validate_tag(self, tag):
+    def validate_tag(self, tag: Tag):
         user = self.context['request'].user
         if tag.owner != user and not user.is_staff:
              raise serializers.ValidationError("You do not have permission to write to this tag.")

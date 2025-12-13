@@ -30,8 +30,8 @@ export class TagListener {
             // main.consumers.tag_update
             if (payload.type === "tag_update") {
                 const updates = payload.data;
-                Object.keys(updates).forEach(tagId => {
-                    this.updateWidget(tagId, updates[tagId]);
+                updates.forEach(update => {
+                    this.onUpdate(update);
                 });
             }
         };
@@ -54,8 +54,8 @@ export class TagListener {
 
             const response = await req.json();
             console.log(response);
-            response.forEach(data => {
-                this.updateWidget(data.id, data);
+            response.forEach(update => {
+                this.onUpdate(update);
             })
 
         } 
@@ -77,8 +77,9 @@ export class TagListener {
         }));
     }
 
-    updateWidget(tagId, update) {
-        const tagWidgets = this.tagMap[tagId];
+    onUpdate(update) {
+        console.log(update)
+        const tagWidgets = this.tagMap[update.id];
         if(!tagWidgets)
             return;
 

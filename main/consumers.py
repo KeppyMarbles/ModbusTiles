@@ -35,10 +35,7 @@ class DashboardConsumer(AsyncWebsocketConsumer):
         all_updates = event["updates"]
         
         # Send updates for this user's subscription
-        relevant_updates = {
-            str(k): v for k, v in all_updates.items() 
-            if str(k) in self.subscribed_tags
-        }
+        relevant_updates = [u for u in all_updates if u["id"] in self.subscribed_tags]
 
         if relevant_updates:
             await self.send(text_data=json.dumps({

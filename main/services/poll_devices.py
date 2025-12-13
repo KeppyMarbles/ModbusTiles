@@ -9,7 +9,9 @@ from asgiref.sync import sync_to_async
 from pymodbus.client import AsyncModbusTcpClient, AsyncModbusUdpClient
 from pymodbus.client.base import ModbusBaseClient
 from channels.layers import get_channel_layer
-from ..models import Device, Tag, TagWriteRequest
+from ..models import Device, Tag, TagWriteRequest, AlarmConfig, ActivatedAlarm
+from ..api.serializers import TagValueSerializer
+from .notify_alarms import send_alarm_notifications #TODO use
 
 @dataclass
 class ReadBlock:
@@ -17,12 +19,16 @@ class ReadBlock:
     length: int
     tags: list[Tag]
 
+@dataclass
+class PollContext:
+    updated_tags: list[Tag]
+    read_tags: list[Tag]
+
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 channel_layer = get_channel_layer()
 clients: dict[str, ModbusBaseClient] = {}
-updates = {}
 
 async def poll_devices():
     """ Gather tag data and process write requests at a steady rate """
@@ -37,6 +43,24 @@ async def poll_devices():
         """ Closes old connections in the sync thread to prevent staleness """
         close_old_connections()
 
+    @sync_to_async
+    def update_tags(context: PollContext):
+        connection.ensure_connection()
+
+        Tag.objects.bulk_update(context.read_tags, ['last_updated'])
+        Tag.objects.bulk_update(context.updated_tags, ['current_value'])
+        Tag.bulk_create_history(context.updated_tags)
+
+        AlarmConfig.update_alarms(context.updated_tags)
+    
+    @sync_to_async
+    def get_tag_data(context: PollContext):
+        serialized = TagValueSerializer(
+            context.updated_tags, many=True, 
+            context={"alarm_map": ActivatedAlarm.get_tag_map(context.updated_tags)}
+        )
+        return serialized.data
+    
     logger.info("Starting Async Poller...")
     
     while True:
@@ -44,16 +68,19 @@ async def poll_devices():
         await close_loop_connections()
 
         devices = await get_active_devices()
-        updates.clear()
+        context = PollContext(updated_tags=[], read_tags=[])
         
         # Process devices concurrently
-        tasks = [_poll_device(d) for d in devices]
+        tasks = [_poll_device(d, context) for d in devices]
         await asyncio.gather(*tasks)
+        await update_tags(context)
 
+        # Send data to the websocket using the tag serializer
+        tag_data = await get_tag_data(context)
         await channel_layer.group_send(
             "poller_broadcast", {
                 "type": "tag_update",
-                "updates": updates.copy()
+                "updates": tag_data
             }
         )
 
@@ -63,15 +90,8 @@ async def poll_devices():
         await asyncio.sleep(sleep_time)
 
 
-async def _poll_device(device: Device):
+async def _poll_device(device: Device, context: PollContext):
     """ Process read and writes for a device """
-
-    @sync_to_async
-    def bulk_save_tags(tags):
-        # Only update the tags that actually changed
-        #dirty_tags = [t for t in tags if t.tracker.has_changed('current_value')] if hasattr(tags[0], 'tracker') else tags
-        connection.ensure_connection()
-        Tag.objects.bulk_update(tags, ['current_value', 'last_updated'])
 
     try:
         client = await _get_client(device) #TODO stop trying if it fails too often?
@@ -84,9 +104,7 @@ async def _poll_device(device: Device):
     tags: list[Tag] = [t for t in device.tags.all() if t.is_active]
 
     for block in _build_read_blocks(tags):
-        await _process_block(block, client)
-
-    await bulk_save_tags(tags)
+        await _process_block(block, client, context)
 
 
 async def _get_client(device: Device) -> ModbusBaseClient | None:
@@ -159,7 +177,7 @@ def _build_read_blocks(tags: list[Tag]) -> list[ReadBlock]:
     return blocks
 
 
-async def _process_block(block: ReadBlock, client: ModbusBaseClient):
+async def _process_block(block: ReadBlock, client: ModbusBaseClient, context: PollContext):
     """ Read the given data from the device connection and update associated tags """
 
     # Get register data for this block
@@ -207,23 +225,17 @@ async def _process_block(block: ReadBlock, client: ModbusBaseClient):
 
             # Update tag
             if tag.current_value != values:
-                updates[tag.external_id] = { #TODO tag method?
-                    "value": values,
-                    "time" : str(timezone.now()), #TODO does this work?
-                    "alarm" : None, #TODO
-                    "age" : 0, #TODO
-                }
-
-            tag.current_value = values #TODO
+                tag.current_value = values #TODO
+                context.updated_tags.append(tag)
+            
             tag.last_updated = timezone.now()
-
-            #TODO need to bring back history entries
+            context.read_tags.append(tag)
 
         except Exception as e:
             logger.error(f"Error processing tag {tag.alias}: {e}")
 
 
-async def _process_writes(client, device):
+async def _process_writes(client, device: Device):
     """ Queries all PLC write requests and attempts to fullfill them """
 
     @sync_to_async

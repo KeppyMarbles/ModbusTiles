@@ -11,12 +11,13 @@ from .serializers import TagDetailSerializer, TagDropdownSerializer, TagCreateSe
 from .serializers import AlarmConfigSerializer, AlarmConfigDropdownSerializer, AlarmConfigCreateSerializer, ActivatedAlarmSerializer
 from .serializers import DashboardDropdownSerializer, DashboardSerializer, DashboardWidgetSerializer, DashboardWidgetBulkSerializer
 from .serializers import DeviceSerializer, DeviceDropdownSerializer
-from ..models import DashboardWidget, Dashboard, Tag, Device, AlarmConfig, TagWriteRequest, TagHistoryEntry
+from ..models import DashboardWidget, Dashboard, Tag, Device, AlarmConfig, ActivatedAlarm, TagWriteRequest, TagHistoryEntry
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from django.utils import timezone
 from django.db import transaction
 
 #TODO should the metadata views all be one class?
+#TODO better docstrings
 
 class DeviceViewSet(ModelViewSet):
     queryset = Device.objects.all()
@@ -122,13 +123,6 @@ class DashboardViewSet(ModelViewSet):
 
     @action(detail=True, methods=['post'], url_path='save-widgets')
     def save_widgets(self, request, alias=None):
-        """
-        POST /api/dashboards/{alias}/save-widgets/
-        Content-Type: multipart/form-data
-        Form Fields:
-            - widgets: JSON String '[{"tag":...}, ...]'
-            - preview_image: File (optional)
-        """
         dashboard = self.get_object()
 
         # Get preview image
@@ -271,10 +265,8 @@ class TagMultiValueView(APIView):
         ids = request.query_params.get("tags", "").split(",")
         tags = list(Tag.objects.filter(external_id__in=ids))
 
-        alarm_map = Tag.get_alarm_map(tags)
-
         serialized = TagValueSerializer(
-            tags, many=True, context={"alarm_map": alarm_map}
+            tags, many=True, context={"alarm_map": ActivatedAlarm.get_tag_map(tags)}
         )
 
         return Response(serialized.data)
@@ -296,8 +288,6 @@ class TagHistoryView(ListAPIView):
         # Filter by Time
         seconds = int(self.request.query_params.get('seconds', 60))
         cutoff = timezone.now() - timedelta(seconds=seconds)
-        print(cutoff)
         qs = qs.filter(timestamp__gte=cutoff)
-        print(qs)
         
         return qs

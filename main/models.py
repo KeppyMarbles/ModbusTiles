@@ -5,6 +5,7 @@ from django.db import models
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
+from typing import Self
 
 User = get_user_model()
 
@@ -100,50 +101,46 @@ class Tag(models.Model):
                 return ceil(self.read_amount / 2)
             case _:
                 raise Exception("Could not determine read count of data type", self.data_type)
-            
-    def set_value(self, new_value):
-            """
-            Updates the value, manages 'last_updated', and handles history pruning
-            """
-            now = timezone.now()
-            
-            value_changed = (self.current_value != new_value)
-            self.current_value = new_value
-            self.last_updated = now
-            
-            self.save(update_fields=["current_value", "last_updated"])
 
-            if self.max_history_entries == 0:
-                return value_changed
-            
-            if value_changed: #TODO bool for saving history when not changed?
-                #TODO entry interval?
-                TagHistoryEntry.objects.create(tag=self, value=new_value, timestamp=now)
-                self._prune_history()
+    @classmethod
+    def bulk_create_history(cls: Self, tags: list[Self]):
+        """ Log the values for the given tags """
+        entries = []
+        now = timezone.now()
 
-    def _prune_history(self):
-        """ Keep history within limits """
-        if self.max_history_entries < 0:
-            return
+        for tag in tags:
+            if tag.max_history_entries == 0 or tag.current_value is None:
+                continue
 
-        ids_to_keep = (
-            TagHistoryEntry.objects.filter(tag=self)
-            .order_by('-timestamp')
-            .values_list('id', flat=True)[:self.max_history_entries]
-        )
+            entries.append(TagHistoryEntry( #TODO value change delta? (amount must be changed this much to save entry)
+                tag=tag, 
+                value=tag.current_value, 
+                timestamp=now
+            ))
         
-        # Delete everything not in keep list
-        TagHistoryEntry.objects.filter(tag=self).exclude(id__in=ids_to_keep).delete()
+        if entries:
+            TagHistoryEntry.objects.bulk_create(entries)
 
-    @staticmethod
-    def get_alarm_map(tags):
-        alarms = (
-            ActivatedAlarm.objects.filter(
-                config__tag__in=tags, is_active=True
-            ).select_related("config", "config__tag")
-        )
-        return {a.config.tag_id: a.config for a in alarms}
+    @classmethod
+    def bulk_prune_history(cls: Self):
+        """ Keep history entries within limits """
 
+        for tag in cls.objects.filter(max_history_entries__gt=0):
+            cutoff_id_qs = (
+                TagHistoryEntry.objects.filter(tag=tag)
+                .order_by('-timestamp', '-id')
+                .values_list('id', flat=True)
+            )
+
+            # Delete everything with lower ID than the cutoff entry
+            if tag.max_history_entries < len(cutoff_id_qs):
+                cutoff_id = cutoff_id_qs[tag.max_history_entries]
+                
+                TagHistoryEntry.objects.filter(
+                    tag=tag, 
+                    id__lte=cutoff_id
+                ).delete()
+    
     def __str__(self):
         return f"{self.alias} [{self.channel}:{self.address}]"
 
@@ -179,14 +176,20 @@ class AlarmConfig(models.Model):
     """ Maps a specific Tag value to a human-readable alarm """
 
     class ThreatLevelChoices(models.TextChoices):
-            LOW = "low", _("Low")
-            HIGH  = "high", _("High")
-            CRITICAL = "crit", _("Critical")
+        LOW = "low", _("Low")
+        HIGH  = "high", _("High")
+        CRITICAL = "crit", _("Critical")
 
     class OperatorChoices(models.TextChoices):
-            EQUALS = "equals", _("Equals")
-            GREATER_THAN  = "greater_than", _("Greater Than")
-            LESS_THAN = "less_than", _("Less Than")
+        EQUALS = "equals", _("Equals")
+        GREATER_THAN  = "greater_than", _("Greater Than")
+        LESS_THAN = "less_than", _("Less Than")
+    
+    ALARM_PRIORITY = {
+        ThreatLevelChoices.LOW: 1,
+        ThreatLevelChoices.HIGH: 2,
+        ThreatLevelChoices.CRITICAL: 3,
+    }
 
     tag = models.ForeignKey(Tag, on_delete=models.CASCADE, related_name="alarm_configs")
     trigger_value = models.JSONField(help_text="Value that triggers this alarm")
@@ -204,49 +207,77 @@ class AlarmConfig(models.Model):
     notification_cooldown = models.DurationField(default=timedelta(minutes=1), help_text="Don't resend email for this long") #TODO should this be part of subscription instead?
     last_notified = models.DateTimeField(null=True, blank=True)
 
-    def get_activation(self):
-        match self.operator:
-            case "equals":
-                should_activate = (self.tag.current_value == self.trigger_value)
-            case "greater_than":
-                should_activate = (self.tag.current_value > self.trigger_value)
-            case "less_than":
-                should_activate = (self.tag.current_value < self.trigger_value)
-
-        active_qs = ActivatedAlarm.objects.filter(
-            config__tag=self.tag,
-            is_active=True
-        ).select_related("config")
-
-        if not should_activate:
-            # Deactivate
-            active_qs.filter(config=self).update(is_active=False)
-            return None
-
-        # Only activate if it's higher priority than current
-        threat_priority = { "low": 1, "high": 2, "crit": 3, }
-        for alarm in active_qs:
-            if threat_priority[alarm.config.threat_level] > threat_priority[self.threat_level]:
-                return None
-
-        # Activate, then disable other alarms for same tag
-        active_alarm, _ = ActivatedAlarm.objects.get_or_create(config=self, is_active=True)
-        active_qs.exclude(id=active_alarm.id).update(is_active=False)
-
-        return active_alarm
-            
     @classmethod
-    def check_alarms(cls):
-        for alarm_config in cls.objects.all():
-            activated = alarm_config.get_activation()
-            if(activated):
-                activated.handle_notifications()
+    def update_alarms(cls, tags: list[Tag]):
+        """ Activate or deactivate alarms for the given tags """
+
+        if not tags:
+            return
+        
+        # Active alarms for affected tags only
+        active_map = ActivatedAlarm.get_tag_map(tags)
+
+        # Alarm configs for affected tags
+        configs_by_tag: dict[int, list[AlarmConfig]] = {}
+        for config in cls.objects.filter(enabled=True, tag__in=tags):
+            configs_by_tag.setdefault(config.tag_id, []).append(config)
+
+        deactivate = []
+        activate = []
+
+        for tag in tags:
+            configs = configs_by_tag.get(tag.id, [])
+            if not configs:
+                continue
+            
+            triggered = [
+                c for c in configs
+                if c.is_activation(tag.current_value)
+            ]
+
+            winning = max(
+                triggered,
+                key=lambda c: cls.ALARM_PRIORITY[c.threat_level],
+                default=None,
+            )
+
+            current = active_map.get(tag.id)
+
+            if current and (not winning or current.config_id != winning.id):
+                # Deactivate current alarm for this tag
+                current.is_active = False
+                deactivate.append(current)
+
+            if winning and (not current or current.config_id != winning.id):
+                # Activate the alarm
+                activate.append(ActivatedAlarm(config=winning, is_active=True))
+
+        ActivatedAlarm.objects.bulk_update(deactivate, ["is_active"])
+        ActivatedAlarm.objects.bulk_create(activate)
+
+    def is_activation(self, value):
+        try:
+            match self.operator:
+                case self.OperatorChoices.EQUALS:
+                    return (value == self.trigger_value)
+                case self.OperatorChoices.GREATER_THAN:
+                    return (value > self.trigger_value)
+                case self.OperatorChoices.LESS_THAN:
+                    return (value < self.trigger_value)
+                case _:
+                    return False
+        except TypeError:
+            return False
 
     class Meta: #TODO shouldn't we prevent multiple alarms for the same value?
         unique_together = ("alias", "tag")
 
     def __str__(self):
-        signs = { "equals" : "==", "greater_than" : ">", "less_than" : "<" }
+        signs = { 
+            self.OperatorChoices.EQUALS : "==", 
+            self.OperatorChoices.GREATER_THAN : ">", 
+            self.OperatorChoices.LESS_THAN : "<" 
+        }
         return f"{self.tag.alias} {signs.get(self.operator)} {self.trigger_value} -> {self.message}"
     
     #TODO order by threat level?
@@ -269,23 +300,17 @@ class ActivatedAlarm(models.Model):
             models.Index(fields=["config", "-timestamp"]),
         ]
 
+    @classmethod
+    def get_tag_map(cls: Self, tags: list[Tag]) -> dict[int, Self]:
+        return { 
+            a.config.tag_id: a
+            for a in cls.objects
+                .filter(is_active=True, config__tag__in=tags)
+                .select_related("config")
+        }
+
     def should_notify(self):
         return (self.config.last_notified is None) or (timezone.now() - self.config.last_notified > self.config.notification_cooldown)
-
-    def handle_notifications(self):
-        if not self.should_notify():
-            return
-        #TODO batch multiple alarms into one email?
-        subs = AlarmSubscription.objects.filter(
-                    alarm_config=self.config, 
-                    email_enabled=True
-                ).select_related('user')
-        
-        recipients = [sub.user.email for sub in subs if sub.user.email] #TODO maybe return this and handle messaging elsewhere?
-        print(f"Sending Email to {recipients}: {self.config.message}") #TODO logging?
-
-        self.config.last_notified = timezone.now()
-        self.config.save(update_fields=['last_notified'])
 
     def __str__(self):
         return f"ALARM: {self.config.tag.alias} - {self.config.message} (Level {self.config.threat_level})"

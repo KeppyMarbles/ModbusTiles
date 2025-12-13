@@ -11,8 +11,9 @@ class Widget {
     ];
     static customFields = [];
 
-    constructor(gridElem, config, tagID) { // unsure if the tagID should be part of config or not
+    constructor(gridElem, config, tagID) { // unsure if the tagID should be part of config or not        
         // Apply defaults
+        if(!config) config = {};
         const allFields = [...(new.target.defaultFields), ...(new.target.customFields)];
         allFields.forEach(field => {
             if(config[field.name] === undefined)
