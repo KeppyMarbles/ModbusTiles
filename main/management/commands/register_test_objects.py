@@ -1,3 +1,4 @@
+from datetime import timedelta
 from django.core.management.base import BaseCommand, CommandError
 from ...models import Device, Tag, Dashboard, DashboardWidget, AlarmConfig, AlarmSubscription
 from django.contrib.auth import get_user_model
@@ -78,7 +79,8 @@ class Command(BaseCommand):
             alias=f"chart tag",
             channel=Tag.ChannelChoices.INPUT_REGISTER,
             data_type=Tag.DataTypeChoices.FLOAT32,
-            max_history_entries=128,
+            history_retention=timedelta(seconds=60),
+            history_interval=timedelta(seconds=3),
             address=32,
             description="A float tag for testing the chart",
         )

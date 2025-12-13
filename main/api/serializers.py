@@ -1,6 +1,26 @@
+from datetime import timedelta
 from rest_framework import serializers
-from ..models import Device, Tag, AlarmConfig, ActivatedAlarm, AlarmSubscription, Dashboard, DashboardWidget, TagWriteRequest
 from django.utils import timezone
+from ..models import Device, Tag, AlarmConfig, ActivatedAlarm, AlarmSubscription, Dashboard, DashboardWidget, TagWriteRequest
+
+
+class DurationSecondsField(serializers.IntegerField):
+    def to_internal_value(self, data):
+        if data is None:
+            return None
+
+        seconds = super().to_internal_value(data)
+        if seconds < 0:
+            raise serializers.ValidationError("Duration must be >= 0 seconds")
+
+        return timedelta(seconds=seconds)
+
+    def to_representation(self, value: timedelta):
+        if value is None:
+            return None
+
+        return int(value.total_seconds())
+    
 
 class DeviceSerializer(serializers.ModelSerializer):
     class Meta:
@@ -26,6 +46,16 @@ class TagCreateSerializer(serializers.ModelSerializer):
         queryset=Device.objects.all()
     )
 
+    history_retention = DurationSecondsField(
+        required=False,
+        allow_null=True
+    )
+
+    history_interval = DurationSecondsField(
+        required=False,
+        allow_null=True
+    )
+
     class Meta:
         model = Tag
         fields = [
@@ -38,7 +68,8 @@ class TagCreateSerializer(serializers.ModelSerializer):
             "data_type",
             "address",
             "read_amount",
-            "max_history_entries",
+            "history_retention",
+            "history_interval",
             "is_active",
         ]
         extra_kwargs = {
@@ -52,7 +83,8 @@ class TagUpdateSerializer(serializers.ModelSerializer):
         fields = [
             "alias",
             "description",
-            "max_history_entries",
+            "history_retention",
+            "history_interval",
             "is_active",
         ]
 

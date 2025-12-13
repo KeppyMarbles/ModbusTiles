@@ -275,19 +275,17 @@ class TagMultiValueView(APIView):
 class TagHistoryView(ListAPIView):
     serializer_class = TagHistoryEntrySerializer
     permission_classes = [IsAuthenticated]
-    
+
     def get_queryset(self):
-        qs = TagHistoryEntry.objects.all().order_by('timestamp')
-        
-        # Filter by Tags
-        tag_param = self.request.query_params.get('tags')
-        if tag_param:
-            ids = tag_param.split(',')
-            qs = qs.filter(tag__external_id__in=ids)
-            
-        # Filter by Time
-        seconds = int(self.request.query_params.get('seconds', 60))
-        cutoff = timezone.now() - timedelta(seconds=seconds)
-        qs = qs.filter(timestamp__gte=cutoff)
-        
+        qs = TagHistoryEntry.objects.order_by("timestamp")
+
+        tags = self.request.query_params.get("tags")
+        if tags:
+            qs = qs.filter(tag__external_id__in=tags.split(","))
+
+        seconds = self.request.query_params.get("seconds")
+        if seconds is not None:
+            cutoff = timezone.now() - timedelta(seconds=int(seconds))
+            qs = qs.filter(timestamp__gte=cutoff)
+
         return qs

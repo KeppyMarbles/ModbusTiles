@@ -212,7 +212,8 @@ export class Inspector {
         //const dataTypeOptions = serverCache.tagOptions.data_types.map(o => ({ value: o.value, label: o.label }));
 
         //const readAmount = this.createField({label: "Read Amount", type: "int"}, 1, null, tagSection)
-        const maxHistory = this.createField({ label: "Max History", type: "int" }, 0, null, tagSection)
+        const historyRetention = this.createField({ label: "History Retention (Seconds)", type: "int" }, 0, null, tagSection)
+        const historyInterval = this.createField({ label: "History Write Interval (Seconds)", type: "int" }, 1, null, tagSection)
         const description = this.createField({ label: "Description (optional)", type: "text" }, "", null, tagSection)
 
         // Post values to server
@@ -227,7 +228,8 @@ export class Inspector {
                 unit_id: 1,
                 //read_amount: readAmount.getValue(),
                 read_amount: 1,
-                max_history_entries: maxHistory.getValue(),
+                history_retention: historyRetention.getValue(),
+                history_interval: historyInterval.getValue(),
                 is_active: true
             };
 

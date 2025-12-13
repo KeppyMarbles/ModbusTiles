@@ -5,10 +5,10 @@ from dataclasses import dataclass
 from collections import defaultdict
 from django.utils import timezone
 from django.db import connection, close_old_connections
-from asgiref.sync import sync_to_async
 from pymodbus.client import AsyncModbusTcpClient, AsyncModbusUdpClient
 from pymodbus.client.base import ModbusBaseClient
 from channels.layers import get_channel_layer
+from channels.db import database_sync_to_async
 from ..models import Device, Tag, TagWriteRequest, AlarmConfig, ActivatedAlarm
 from ..api.serializers import TagValueSerializer
 from .notify_alarms import send_alarm_notifications #TODO use
@@ -33,18 +33,13 @@ clients: dict[str, ModbusBaseClient] = {}
 async def poll_devices():
     """ Gather tag data and process write requests at a steady rate """
 
-    @sync_to_async
+    @database_sync_to_async
     def get_active_devices() -> list[Device]:
         """ Get devices enabled in the DB with prefetched tags """
         return list(Device.objects.filter(is_active=True).prefetch_related('tags'))
-    
-    @sync_to_async
-    def close_loop_connections():
-        """ Closes old connections in the sync thread to prevent staleness """
-        close_old_connections()
 
-    @sync_to_async
-    def update_tags(context: PollContext):
+    @database_sync_to_async
+    def update_tags(context: PollContext): #TODO make sure this doesn't randomly crash
         connection.ensure_connection()
 
         Tag.objects.bulk_update(context.read_tags, ['last_updated'])
@@ -53,7 +48,7 @@ async def poll_devices():
 
         AlarmConfig.update_alarms(context.updated_tags)
     
-    @sync_to_async
+    @database_sync_to_async
     def get_tag_data(context: PollContext):
         serialized = TagValueSerializer(
             context.updated_tags, many=True, 
@@ -65,7 +60,6 @@ async def poll_devices():
     
     while True:
         start_time = time.monotonic()
-        await close_loop_connections()
 
         devices = await get_active_devices()
         context = PollContext(updated_tags=[], read_tags=[])
@@ -238,18 +232,18 @@ async def _process_block(block: ReadBlock, client: ModbusBaseClient, context: Po
 async def _process_writes(client, device: Device):
     """ Queries all PLC write requests and attempts to fullfill them """
 
-    @sync_to_async
-    def get_pending_writes(device):
+    @database_sync_to_async
+    def get_pending_writes(device: Device):
         return list(
             TagWriteRequest.objects
             .filter(processed=False, tag__device=device)
             .select_related("tag__device")
         )
     
-    @sync_to_async
-    def mark_write_processed(req: TagWriteRequest):
-        req.processed = True
-        req.save()
+    @database_sync_to_async
+    def save_requests(requests: list[TagWriteRequest]):
+        connection.ensure_connection()
+        TagWriteRequest.objects.bulk_update(requests, ['processed'])
 
     writes = await get_pending_writes(device)
 
@@ -260,10 +254,12 @@ async def _process_writes(client, device: Device):
             logger.info(f"Processed write request for tag {req.tag}")
 
         except Exception as e:
-            logger.error(f"Write failed for {req.tag}: {e}")
+            logger.error(f"Write failed for {req.tag}: {e}") #TODO mark write status as failed
 
         # Mark as done
-        await mark_write_processed(req)
+        req.processed = True
+
+    await save_requests(writes)
         
 
 async def _write_value(client: ModbusBaseClient, tag: Tag, values):

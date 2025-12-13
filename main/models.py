@@ -72,10 +72,9 @@ class Tag(models.Model):
 
     read_amount = models.PositiveIntegerField(default=1)
 
-    max_history_entries = models.PositiveIntegerField(
-        help_text="Keep at most N recent entries; -1 = unlimited",
-        default=0
-    )
+    last_history_at = models.DateTimeField(null=True, blank=True)
+    history_interval = models.DurationField(default=timedelta(seconds=1))
+    history_retention = models.DurationField(default=timedelta(seconds=0))
 
     last_updated = models.DateTimeField(null=True)
 
@@ -105,41 +104,28 @@ class Tag(models.Model):
     @classmethod
     def bulk_create_history(cls: Self, tags: list[Self]):
         """ Log the values for the given tags """
-        entries = []
+
+        entries: list[TagHistoryEntry] = []
         now = timezone.now()
 
         for tag in tags:
-            if tag.max_history_entries == 0 or tag.current_value is None:
+            if tag.history_retention.total_seconds() <= 0:
+                continue
+
+            if tag.last_history_at and now - tag.last_history_at < tag.history_interval:
                 continue
 
             entries.append(TagHistoryEntry( #TODO value change delta? (amount must be changed this much to save entry)
                 tag=tag, 
-                value=tag.current_value, 
+                value=tag.current_value,
                 timestamp=now
             ))
+
+            tag.last_history_at = now
         
         if entries:
             TagHistoryEntry.objects.bulk_create(entries)
-
-    @classmethod
-    def bulk_prune_history(cls: Self):
-        """ Keep history entries within limits """
-
-        for tag in cls.objects.filter(max_history_entries__gt=0):
-            cutoff_id_qs = (
-                TagHistoryEntry.objects.filter(tag=tag)
-                .order_by('-timestamp', '-id')
-                .values_list('id', flat=True)
-            )
-
-            # Delete everything with lower ID than the cutoff entry
-            if tag.max_history_entries < len(cutoff_id_qs):
-                cutoff_id = cutoff_id_qs[tag.max_history_entries]
-                
-                TagHistoryEntry.objects.filter(
-                    tag=tag, 
-                    id__lte=cutoff_id
-                ).delete()
+            cls.objects.bulk_update([entry.tag for entry in entries], ['last_history_at'])
     
     def __str__(self):
         return f"{self.alias} [{self.channel}:{self.address}]"

@@ -78,7 +78,6 @@ export class TagListener {
     }
 
     onUpdate(update) {
-        console.log(update)
         const tagWidgets = this.tagMap[update.id];
         if(!tagWidgets)
             return;
