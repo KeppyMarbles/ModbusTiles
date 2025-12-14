@@ -38,7 +38,9 @@ export async function postServer(input, payload, successCallback) {
 
         if (response.ok) {
             const data = await response.json();
-            if (successCallback) successCallback(data);
+            if (successCallback) 
+                successCallback(data);
+            return true;
         } 
         else {
             // Try to parse error message, fallback to status text
@@ -55,4 +57,5 @@ export async function postServer(input, payload, successCallback) {
         console.error("Network or Logic Error:", e);
         //alert("A network error occurred.");
     }
+    return false;
 }

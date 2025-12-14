@@ -352,9 +352,9 @@ class DashboardWidget(models.Model):
     class WidgetTypeChoices(models.TextChoices):
         LED = "led", _("LED Indicator")
         BOOL_LABEL = "bool_label", _("Boolean Label")
-        VALUE = "val", _("Numeric Value")
+        #VALUE = "val", _("Numeric Value")
         LINE_CHART = "chart", _("Time-Series Chart")
-        BUTTON = "button", _("Button")
+        #BUTTON = "button", _("Button")
         LABEL = "label", _("Text Label")
         SWITCH = "switch", _("Switch")
         METER = "meter", _("Meter")

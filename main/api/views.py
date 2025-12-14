@@ -121,14 +121,25 @@ class DashboardViewSet(ModelViewSet):
         # Only see owned dashboards
         return Dashboard.objects.filter(owner=self.request.user)
 
-    @action(detail=True, methods=['post'], url_path='save-widgets')
-    def save_widgets(self, request, alias=None):
-        dashboard = self.get_object()
+    @action(detail=True, methods=['post'], url_path='save-data')
+    def save_data(self, request, alias=None):
+        dashboard: Dashboard = self.get_object()
+
+        # Get meta
+        meta_serializer = DashboardSerializer(
+            dashboard, 
+            data=request.data,
+            partial=True, 
+            context={'request': request}
+        )
+
+        meta_serializer.is_valid(raise_exception=True)
+        dashboard = meta_serializer.save()
 
         # Get preview image
         if 'preview_image' in request.FILES:
             dashboard.preview_image = request.FILES['preview_image']
-            dashboard.save()
+            dashboard.save(update_fields=['preview_image'])
 
         # Get widget data
         raw_widgets = request.data.get('widgets')

@@ -28,9 +28,7 @@ def dashboard_view(request, alias):
         owner=request.user
     )
 
-    widget_types = ["switch", "slider", "meter", "led", "label", "bool_label", "chart"] #TODO read from a file or infer from widgets/ html folder?
-
     return render(request, "dashboard.html", {
         "dashboard": dashboard,
-        "widget_types": widget_types,
+        "widget_types": [choice.value for choice in DashboardWidget.WidgetTypeChoices],
     })

@@ -2,8 +2,8 @@ import { serverCache, refreshData } from "./global.js";
 import { postServer } from "./util.js";
 
 export class Inspector {
-    constructor() {
-        this.container = document.getElementById('inspector-form');
+    constructor(container) {
+        this.container = container;
     }
 
     clear() {
@@ -155,7 +155,7 @@ export class Inspector {
         ];
 
         // Add rest of fields
-        allFields.forEach(field => { 
+        allFields.forEach(field => { //TODO different section for default vs custom field?
             this.createField(field, widget.config[field.name], (newVal) => {
                 widget.config[field.name] = newVal;
                 widget.applyConfig(); // Visual update
@@ -165,7 +165,17 @@ export class Inspector {
         //TODO add preview value?
     }
 
-    inspectGlobal() { //TODO dashboard settings like name, column count, background color, etc? Might need inspectDashboard method
+    inspectDashboard(dashboard) { 
+        this.clear();
+        const title = this.addTitle(dashboard.alias);
+        const dashboardSection = this.addSection();
+
+        this.createField({label: "Dashboard Name", type: "text"}, dashboard.newAlias, (value) => {dashboard.newAlias = value;}, dashboardSection);
+        this.createField({label: "Description", type: "text"}, dashboard.description, (value) => {dashboard.description = value;}, dashboardSection);
+        // todo columns, background color
+    }
+
+    inspectGlobal() {
         this.clear();
         this._formCreateTag();
         this._formCreateAlarm();

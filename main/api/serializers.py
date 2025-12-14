@@ -232,10 +232,11 @@ class ActivatedAlarmSerializer(serializers.ModelSerializer):
 
 class DashboardSerializer(serializers.ModelSerializer):
     alias = serializers.CharField(required=False, allow_blank=True)
+    owner = serializers.HiddenField(default=serializers.CurrentUserDefault())
 
     class Meta:
         model = Dashboard
-        fields = ["alias", "description"]
+        fields = ["alias", "description", "owner"]
 
 
 class DashboardWidgetSerializer(serializers.ModelSerializer):

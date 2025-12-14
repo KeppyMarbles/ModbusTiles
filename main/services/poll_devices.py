@@ -39,7 +39,7 @@ async def poll_devices():
         return list(Device.objects.filter(is_active=True).prefetch_related('tags'))
 
     @database_sync_to_async
-    def update_tags(context: PollContext): #TODO make sure this doesn't randomly crash
+    def update_tags(context: PollContext):
         connection.ensure_connection()
 
         Tag.objects.bulk_update(context.read_tags, ['last_updated'])

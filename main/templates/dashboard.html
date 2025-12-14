@@ -11,7 +11,7 @@
             <h1>
                 <a href="{% url 'dashboards' %}" class="breadcrumb-link">Dashboards</a>
                 <span class="separator">/</span>
-                <span class="dashboard-alias">{{ dashboard.alias }}</span>
+                <span id="dashboard-alias" class="dashboard-alias" title="{{ dashboard.description }}">{{ dashboard.alias }}</span>
             </h1>
         </div>
         <div class="header-controls">
@@ -25,7 +25,7 @@
         <div id="loading-spinner" class="spinner">Loading Dashboard...</div>
 
         <section id="canvas-wrapper" class="canvas-wrapper">
-            <div id="dashboard-container" class="dashboard-container" data-alias="{{ dashboard.alias }}">
+            <div id="dashboard-container" class="dashboard-container" data-alias="{{ dashboard.alias }}" data-description="{{ dashboard.description }}">
                 <div id="dashboard-grid" class="grid-stack"></div>
             </div>
         </section>
@@ -38,6 +38,7 @@
             <div class="tab-buttons">
                 <button id="add-button" class="active" data-tab="palette">Widgets</button>
                 <button id="inspect-button" data-tab="tab-inspect">Properties</button>
+                <button id="tag-button" data-tab="tab-tag">Tags</button>
             </div>
 
             <div class="sidebar-content">
@@ -55,11 +56,11 @@
                         {% endfor %}
                     </div>
                 </div>
-
                 <div id="tab-inspect" class="tab-content">
-                    <div id="inspector-form">
-                        <p class="empty-state">Select a widget to edit properties</p>
-                    </div> 
+                    <div id="inspector-form"></div> 
+                </div>
+                <div id="tab-tag" class="tab-content">
+                    <div id="tag-form"></div> 
                 </div>
             </div>
         </aside>

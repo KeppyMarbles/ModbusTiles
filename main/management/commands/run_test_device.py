@@ -18,7 +18,12 @@ logger = logging.getLogger(__name__)
 class Command(BaseCommand):
     help = 'Runs a Modbus TCP simulator that animates read-only tags from the DB'
 
+    def add_arguments(self, parser):
+        parser.add_argument("--port", type=int)
+
     def handle(self, *args, **options):
+        port = options["port"]
+
         # Create Modbus Server
         store = ModbusDeviceContext(
             di=ModbusSequentialDataBlock(0, [0] * 1024), # Discrete Inputs
@@ -33,10 +38,10 @@ class Command(BaseCommand):
         sim_thread.daemon = True
         sim_thread.start()
 
-        self.stdout.write(self.style.SUCCESS("--> Starting Dynamic PLC Simulator on 0.0.0.0:502"))
+        self.stdout.write(self.style.SUCCESS(f"--> Starting Dynamic PLC Simulator on 0.0.0.0:{port}"))
         
         # Start the server
-        StartTcpServer(context=context, address=("0.0.0.0", 502))
+        StartTcpServer(context=context, address=("0.0.0.0", port))
 
     def simulation_loop(self, context: ModbusServerContext):
         """ Background thread that updates tag values """

@@ -17,10 +17,17 @@ class Dashboard {
         this.saveButton = document.getElementById('save-button');
         this.creatorItems = document.getElementById('palette');
         this.inspectButton = document.getElementById('inspect-button');
+        this.tagButton = document.getElementById('tag-button');
+        this.aliasElem = document.getElementById('dashboard-alias');
+        //TODO maybe have a metadata dict which contains all the stuff?
         this.alias = document.getElementById('dashboard-container').dataset.alias; // Set by Django
-
+        this.description = document.getElementById('dashboard-container').dataset.description;
+        
         this.listener = new TagListener();
-        this.inspector = new Inspector();
+        this.inspector = new Inspector(document.getElementById('inspector-form'));
+        this.newAlias = this.alias;
+        this.tagForm = new Inspector(document.getElementById('tag-form'));
+        this.tagForm.inspectGlobal();
 
         // Widget selection
         this.widgetGrid.addEventListener('click', (e) => {
@@ -228,7 +235,7 @@ class Dashboard {
             activateTab(this.inspectButton);
         }
         else {
-            this.inspector.inspectGlobal();
+            this.inspector.inspectDashboard(this);
         }
     }
 
@@ -318,9 +325,15 @@ class Dashboard {
     }
 
     async save() {
-        const widgetsPayload = [];
+        // Send meta
 
-        // Collect widget data
+        const formData = new FormData();
+
+        formData.append('alias', this.newAlias);
+        formData.append('description', this.description);
+
+        // Add widget data
+        const widgetsPayload = [];
         this.widgetGrid.querySelectorAll('.grid-stack-item').forEach(item => {
             if (item.widgetInstance) {
                 widgetsPayload.push({
@@ -330,19 +343,22 @@ class Dashboard {
                 });
             }
         });
-
-        // Get image
-        const imageBlob = await this.capturePreview();
-        const formData = new FormData();
+        
         formData.append('widgets', JSON.stringify(widgetsPayload));
+
+        // Get image data
+        const imageBlob = await this.capturePreview();
         if (imageBlob) {
             formData.append('preview_image', imageBlob, 'preview.jpg');
         }
 
-        // Send widget and image data
-        postServer(`/api/dashboards/${this.alias}/save-widgets/`, formData, (data) => {
-            alert("Dashboard Saved!");
+        postServer(`/api/dashboards/${this.alias}/save-data/`, formData, (data) => {
             this.isDirty = false;
+            this.alias = this.newAlias;
+            this.aliasElem.innerText = this.newAlias;
+            this.aliasElem.title = this.description;
+            history.pushState({}, "", `/dashboard/${this.newAlias}/`);
+            alert("Dashboard Saved!");
         });
     }
 }
