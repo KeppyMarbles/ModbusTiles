@@ -22,7 +22,7 @@ class Dashboard {
         //TODO maybe have a metadata dict which contains all the stuff?
         this.alias = document.getElementById('dashboard-container').dataset.alias; // Set by Django
         this.description = document.getElementById('dashboard-container').dataset.description;
-        
+
         this.listener = new TagListener();
         this.inspector = new Inspector(document.getElementById('inspector-form'));
         this.newAlias = this.alias;
@@ -271,8 +271,6 @@ class Dashboard {
         this.widgetGrid.style.overflow = 'hidden';
         this.updateSquareCells(); 
         //this.canvasGridStack.onResize();
-
-        console.log(document.body.style);
 
         try {
             // Capture

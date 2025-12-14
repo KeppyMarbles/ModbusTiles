@@ -10,11 +10,13 @@ class Widget {
         { name: "showTagName", type: "bool", default: true, label: "Show Tag Name" },
     ];
     static customFields = [];
+    dynamicFields = [];
+    dataType = null;
 
     constructor(gridElem, config, tagID) { // unsure if the tagID should be part of config or not        
         // Apply defaults
         if(!config) config = {};
-        const allFields = [...(new.target.defaultFields), ...(new.target.customFields)];
+        const allFields = [...(new.target.defaultFields), ...(new.target.customFields), ...(this.dynamicFields)];
         allFields.forEach(field => {
             if(config[field.name] === undefined)
                 config[field.name] = field.default;
@@ -227,6 +229,74 @@ class SliderWidget extends Widget {
 
     clear() {
         this.input.value = 0;
+    }
+}
+
+class ButtonWidget extends Widget {
+    static displayName = "Slider";
+    static allowedChannels = ["coil", "hr"];
+    static allowedTypes = ["bool", "int16", "uint16", "int32", "uint32", "int64", "uint64", "float32", "float64", "string"];
+    static customFields = [
+        { name: "button_text", type: "text", default: "Button Text", label: "Button Text" },
+    ]
+    dynamicFields = [
+        { name: "submit_value", default: "", label: "Submit Value" }
+    ]
+
+    constructor(widget_elem, config, tagID) {
+        super(widget_elem, config, tagID);
+        this.button = this.elem.querySelector(".form-button");
+
+        this.button.addEventListener("click", async () => {
+            this.submit(this.config.submit_value);
+        });
+        this.showAlarm = false;
+    }
+
+    applyConfig() {
+        super.applyConfig();
+        this.button.innerText = this.config.button_text;
+    }
+
+    onValue(val) {
+        return;
+    }
+}
+
+class DropdownWidget extends Widget {
+    static displayName = "Dropdown";
+    static allowedChannels = ["hr"];
+    static allowedTypes = ["int16", "uint16", "int32", "uint32", "int64", "uint64", "float32", "float64"];
+    static customFields = [
+        { name: "dropdown_choices", type: "enum", default: [], label: "Dropdown Choices" },
+    ]
+
+    constructor(widget_elem, config, tagID) {
+        super(widget_elem, config, tagID);
+        this.select = this.elem.querySelector(".form-input"); //TODO?
+
+        this.select.addEventListener("change", async () => {
+            this.submit(this.select.value);
+        });
+        this.showAlarm = false;
+    }
+
+    applyConfig() {
+        this.select.options.length = 0;
+        this.config.dropdown_choices.forEach(choice => {
+            const opt = document.createElement('option');
+            opt.value = choice.value;
+            opt.label = choice.label;
+            this.select.appendChild(opt);
+        });
+    }
+
+    onValue(val) {
+        this.select.value = val;
+    }
+
+    clear() {
+        this.select.value = "";
     }
 }
 
@@ -456,4 +526,6 @@ export const WidgetRegistry = {
     "label" : LabelWidget,
     "bool_label" : BoolLabelWidget,
     "chart": ChartWidget,
+    "button" : ButtonWidget,
+    "dropdown" : DropdownWidget,
 };

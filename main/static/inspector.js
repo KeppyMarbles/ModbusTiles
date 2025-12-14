@@ -6,6 +6,17 @@ export class Inspector {
         this.container = container;
     }
 
+    static getFieldType(dataType) {
+        if(dataType === "bool") 
+            return "bool";
+        else if(["int16", "uint16", "int32", "uint32", "int64"].includes(dataType)) 
+            return "int";
+        else if(["float32", "float64"].includes(dataType)) 
+            return "number";
+        else
+            return "text";
+    }
+
     clear() {
         this.container.innerHTML = '';
     }
@@ -36,7 +47,7 @@ export class Inspector {
         section.appendChild(btn);
     }
 
-    createField(def, currentValue, onChange, section) {
+    createField(def, currentValue, onChange, section) { // TODO add uint, restrict float input for int fields?
         const wrapper = document.createElement('div');
         wrapper.className = "input-group";
 
@@ -50,7 +61,7 @@ export class Inspector {
             input = document.createElement("select");
         else {
             input = document.createElement("input");
-            input.value = currentValue;
+            input.value = currentValue; //TODO check type compatibility?
         }
         input.classList.add("form-input");
 
@@ -83,6 +94,80 @@ export class Inspector {
                     });
                 }
                 getValue = () => { return input.value };
+                break;
+
+            case "enum":
+                input = document.createElement('div');
+                const rows = document.createElement('div');
+
+                // Get choices from the form
+                getValue = () => {
+                    const real_kvs = [];
+                    Array.from(rows.children).forEach(row => {
+                        real_kvs.push({
+                            label: row.key_input.value,
+                            value: row.value_input.value
+                        });
+                    });
+                    return real_kvs;
+                }
+
+                // Create row for label, value, minus button
+                const createKv = (k, v) => { //TODO fix spacing/styles
+                    const row = document.createElement('div');
+                    row.style.display = "flex";
+                    
+                    // Label input
+                    const key_input = document.createElement("input");
+                    key_input.type = "text";
+                    key_input.value = k;
+                    key_input.placeholder = "Name";
+                    key_input.classList.add("form-input");
+                    key_input.addEventListener("change", () => { onChange(getValue()) })
+                    row.appendChild(key_input);
+
+                    // Value input
+                    const value_input = document.createElement("input");
+                    value_input.type = "number";
+                    value_input.value = v;
+                    value_input.placeholder = "Value";
+                    value_input.classList.add("form-input");
+                    value_input.addEventListener("change", () => { onChange(getValue()) })
+                    row.appendChild(value_input);
+
+                    // Save inputs with the row
+                    row.value_input = value_input;
+                    row.key_input = key_input;
+
+                    const sub_button = document.createElement("button");
+                    sub_button.innerText = "-";
+                    sub_button.classList.add("form-input");
+                    sub_button.addEventListener("click", () => {
+                        row.remove();
+                        onChange(getValue());
+                    })
+                    row.appendChild(sub_button);
+
+                    rows.appendChild(row);
+                }
+
+                // Add saved choices
+                currentValue.forEach(real_kv => {
+                    createKv(real_kv.label, real_kv.value);
+                });
+
+                input.appendChild(rows);
+
+                // Add plus button
+                const add_button = document.createElement("button");
+                add_button.innerText = "+";
+                add_button.classList.add("form-input");
+                add_button.addEventListener("click", () => {
+                    createKv("", "");
+                    onChange(getValue());
+                });
+                input.appendChild(add_button);
+
                 break;
 
             case "color":
@@ -135,6 +220,34 @@ export class Inspector {
         this.clear();
         this.addTitle(widgetClass.displayName);
 
+        const createConfigField = (field, section) => {
+            this.createField(field, widget.config[field.name], (newVal) => {
+                widget.config[field.name] = newVal;
+                widget.applyConfig(); // Visual update
+            }, section);
+        }
+
+
+        const dynamicFieldContainer = document.createElement('div');
+
+        const createDynamicFields = (tagID) => {
+            if(!tagID || widget.dynamicFields.length === 0)
+                return;
+
+            const tag = serverCache.tags.find(t => t.external_id === tagID);
+            if(!tag) {
+                console.error("Couldn't get tag for dynamic field")
+                return;
+            }
+
+            const newFieldType = Inspector.getFieldType(tag.data_type);
+            dynamicFieldContainer.innerHTML = "";
+            widget.dynamicFields.forEach(field => {
+                field["type"] = newFieldType;
+                createConfigField(field, dynamicFieldContainer);
+            });
+        }
+
         {
             // Create dropdown with tags that are compatible with this widget
             const compatibleTags = serverCache.tags.filter(tag => {
@@ -146,21 +259,19 @@ export class Inspector {
             this.createField({label: "Control Tag", type: "select", options: tagOptions }, widget.tag, (newVal) => {
                 widget.tag = newVal;
                 widget.applyConfig();
+                createDynamicFields(newVal);
             });
         }
 
-        const allFields = [ //TODO should these actually be dictionaries where the key is the config name and the value is the field dict
-            ...widgetClass.customFields,
-            ...widgetClass.defaultFields,
-        ];
-
         // Add rest of fields
-        allFields.forEach(field => { //TODO different section for default vs custom field?
-            this.createField(field, widget.config[field.name], (newVal) => {
-                widget.config[field.name] = newVal;
-                widget.applyConfig(); // Visual update
-            });
-        });
+        const customFieldsSection = this.addSection();
+        widgetClass.customFields.forEach(field => { createConfigField(field, customFieldsSection) });
+
+        createDynamicFields(widget.tag);
+        customFieldsSection.appendChild(dynamicFieldContainer);
+
+        const defaultFieldsSection = this.addSection();
+        widgetClass.defaultFields.forEach(field => { createConfigField(field, defaultFieldsSection) });
 
         //TODO add preview value?
     }
@@ -281,13 +392,7 @@ export class Inspector {
                 operatorChoices = operatorChoices.filter(t => {return t.value === "equals"});
 
             // Create an input with the same value type as the selected tag
-            let fieldType = "text";
-            if(tag.data_type === "bool") 
-                fieldType = "bool";
-            else if(["int16", "uint16", "int32", "uint32", "int64"].includes(tag.data_type)) 
-                fieldType = "int";
-            else if(["float32", "float64"].includes(tag.data_type)) 
-                fieldType = "number";
+            fieldType = Inspector.getFieldType(tag.data_type);
 
             const newOperatorField = this.createField({ label: "Operator", type: "select", options: operatorChoices }, "equals", null, operatorContainer);
             const newTriggerField = this.createField({ label: "Trigger Value", type: fieldType }, "", null, triggerContainer);

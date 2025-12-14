@@ -354,16 +354,17 @@ class DashboardWidget(models.Model):
         BOOL_LABEL = "bool_label", _("Boolean Label")
         #VALUE = "val", _("Numeric Value")
         LINE_CHART = "chart", _("Time-Series Chart")
-        #BUTTON = "button", _("Button")
+        BUTTON = "button", _("Button")
         LABEL = "label", _("Text Label")
         SWITCH = "switch", _("Switch")
         METER = "meter", _("Meter")
         SLIDER = "slider", _("Slider")
+        DROPDOWN = "dropdown", ("Dropdown")
         #("gauge", "Gauge"),
 
     dashboard = models.ForeignKey(Dashboard, on_delete=models.CASCADE, related_name="widgets")
 
-    widget_type = models.TextField(choices=WidgetTypeChoices.choices) #TODO still need this?
+    widget_type = models.TextField(choices=WidgetTypeChoices.choices)
 
     tag = models.ForeignKey(Tag, null=True, blank=True, on_delete=models.SET_NULL, related_name="widgets")
     external_id = models.UUIDField(default=uuid.uuid4, unique=True)
