@@ -81,13 +81,14 @@ export class Inspector {
             case "select":
                 const defaultOpt = document.createElement('option');
                 defaultOpt.text = "Select";
+                defaultOpt.value = "";
                 input.appendChild(defaultOpt);
 
                 if (def.options) {
                     def.options.forEach(opt => {
                         const el = document.createElement('option');
                         el.value = opt.value;
-                        el.innerText = opt.label;
+                        el.text = opt.label;
                         if(opt.value === currentValue)
                             el.selected = true;
                         input.appendChild(el);
@@ -220,6 +221,7 @@ export class Inspector {
         this.clear();
         this.addTitle(widgetClass.displayName);
 
+        // Helper to widget config related fields
         const createConfigField = (field, section) => {
             this.createField(field, widget.config[field.name], (newVal) => {
                 widget.config[field.name] = newVal;
@@ -227,53 +229,56 @@ export class Inspector {
             }, section);
         }
 
-
+        const tagSection = this.addSection();
         const dynamicFieldContainer = document.createElement('div');
 
         const createDynamicFields = (tagID) => {
+            dynamicFieldContainer.innerHTML = "";
+
             if(!tagID || widget.dynamicFields.length === 0)
                 return;
 
-            const tag = serverCache.tags.find(t => t.external_id === tagID);
+            const tag = serverCache.tags.find(t => t.external_id === tagID); //TODO streamline this process?
             if(!tag) {
                 console.error("Couldn't get tag for dynamic field")
                 return;
             }
-
+            
+            // Add new inputs
             const newFieldType = Inspector.getFieldType(tag.data_type);
-            dynamicFieldContainer.innerHTML = "";
+            
             widget.dynamicFields.forEach(field => {
                 field["type"] = newFieldType;
                 createConfigField(field, dynamicFieldContainer);
             });
         }
 
-        {
-            // Create dropdown with tags that are compatible with this widget
-            const compatibleTags = serverCache.tags.filter(tag => {
-                return widgetClass.allowedTypes.includes(tag.data_type) 
-                    && widgetClass.allowedChannels.includes(tag.channel);
-            });
-            const tagOptions = compatibleTags.map(tag => ({ value: tag.external_id, label: `${tag.alias} (${tag.channel} ${tag.address})`}));
+        // Create dropdown with tags that are compatible with this widget
+        const compatibleTags = serverCache.tags.filter(tag => {
+            return widgetClass.allowedTypes.includes(tag.data_type) 
+                && widgetClass.allowedChannels.includes(tag.channel);
+        });
+        const tagOptions = compatibleTags.map(tag => ({ value: tag.external_id, label: `${tag.alias} (${tag.channel} ${tag.address})`}));
 
-            this.createField({label: "Control Tag", type: "select", options: tagOptions }, widget.tag, (newVal) => {
-                widget.tag = newVal;
-                widget.applyConfig();
-                createDynamicFields(newVal);
-            });
-        }
+        this.createField({label: "Control Tag", type: "select", options: tagOptions }, widget.tag, (newVal) => {
+            widget.tag = newVal;
+            widget.applyConfig();
+            createDynamicFields(newVal); // Update the dynamic fields
+        }, tagSection);
+
+        
+        // Add dynamic fields (form input changes with tag type)
+        createDynamicFields(widget.tag);
+        tagSection.appendChild(dynamicFieldContainer);
 
         // Add rest of fields
         const customFieldsSection = this.addSection();
         widgetClass.customFields.forEach(field => { createConfigField(field, customFieldsSection) });
 
-        createDynamicFields(widget.tag);
-        customFieldsSection.appendChild(dynamicFieldContainer);
-
         const defaultFieldsSection = this.addSection();
         widgetClass.defaultFields.forEach(field => { createConfigField(field, defaultFieldsSection) });
 
-        //TODO add preview value?
+        //TODO add placeholder values?
     }
 
     inspectDashboard(dashboard) { 
@@ -281,9 +286,19 @@ export class Inspector {
         const title = this.addTitle(dashboard.alias);
         const dashboardSection = this.addSection();
 
-        this.createField({label: "Dashboard Name", type: "text"}, dashboard.newAlias, (value) => {dashboard.newAlias = value;}, dashboardSection);
-        this.createField({label: "Description", type: "text"}, dashboard.description, (value) => {dashboard.description = value;}, dashboardSection);
+        this.createField({ label: "Dashboard Name", type: "text" }, dashboard.newAlias, (value) => {dashboard.newAlias = value}, dashboardSection);
+        this.createField({ label: "Description", type: "text" }, dashboard.description, (value) => {dashboard.description = value}, dashboardSection);
+
         // todo columns, background color
+
+        const ioSection = this.addSection();
+        this.addButton("Import", () => {
+            
+        }, ioSection);
+        this.addButton("Export", () => {
+            
+        }, ioSection);
+        
     }
 
     inspectGlobal() {

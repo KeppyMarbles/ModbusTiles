@@ -352,6 +352,8 @@ class DashboardWidget(models.Model):
     class WidgetTypeChoices(models.TextChoices):
         LED = "led", _("LED Indicator")
         BOOL_LABEL = "bool_label", _("Boolean Label")
+        MULTI_LABEL = "multi_label", _("Multi-Value Label")
+        NUMBER_LABEL = "number_label", _("Number Label")
         #VALUE = "val", _("Numeric Value")
         LINE_CHART = "chart", _("Time-Series Chart")
         BUTTON = "button", _("Button")
