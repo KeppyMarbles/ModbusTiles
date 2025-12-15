@@ -19,6 +19,7 @@ class Dashboard {
         this.inspectButton = document.getElementById('inspect-button');
         this.tagButton = document.getElementById('tag-button');
         this.aliasElem = document.getElementById('dashboard-alias');
+        this.fileInput = document.getElementById('importFile');
         //TODO maybe have a metadata dict which contains all the stuff?
         this.alias = document.getElementById('dashboard-container').dataset.alias; // Set by Django
         this.description = document.getElementById('dashboard-container').dataset.description;
@@ -59,6 +60,14 @@ class Dashboard {
         });
         this.saveButton.addEventListener('click', () => {
             this.save();
+        });
+
+        // Import file
+        this.fileInput.addEventListener("change", async (e) => {
+            const file = e.target.files[0];
+            if(file)
+                await this.importFile(file);
+            this.fileInput.value = "";
         });
 
         // Window events
@@ -176,21 +185,17 @@ class Dashboard {
 
         console.log("Widgets:", widgetData);
 
-        // Add widgets to the gridstack grid and listener
-        if(widgetData.length === 0) {
-            this.toggleEdit();
-        }
-        else {
-            widgetData.forEach(wData => {
-                const widget = this.createWidget(wData.widget_type, wData.tag, wData.config);
-                this.listener.registerWidget(widget);
-            });
-            await this.listener.connect();
-        }
+        // Add widgets to the gridstack grid
+        widgetData.forEach(wData => {
+            this.createWidget(wData.widget_type, wData.tag, wData.config);
+        });
     }
 
     toggleEdit() { //TODO toggle/on off, update poller accordingly?
         //TODO supress warnings? (no connection, stale value indicators)
+        if(this.editMode)
+            return;
+
         this.editMode = true;
 
         document.body.classList.add('edit-mode');
@@ -199,13 +204,10 @@ class Dashboard {
         
         this.canvasGridStack.setStatic(false); // Enable Drag/Drop
 
-        this.widgetGrid.querySelectorAll('.grid-stack-item').forEach(item => {
-            if (item.widgetInstance) {
-                item.widgetInstance.clear();
-                item.widgetInstance.setAlarm(null); //TODO add to clear()?
-            }
+        this._getWidgets().forEach(widget => {
+            widget.clear();
+            widget.setAlarm(null); //TODO add to clear()?
         });
-
 
         const interval = setInterval(() => {
             this.updateSquareCells();
@@ -312,6 +314,16 @@ class Dashboard {
 
             // Set up recieved info
             await this.setupWidgets(widgets);
+
+            if(widgets.length === 0) {
+                this.toggleEdit();
+            }
+            else {
+                this._getWidgets().forEach(widget => {
+                    this.listener.registerWidget(widget);
+                });
+                await this.listener.connect();
+            }
         } 
         catch (err) {
             console.error(err);
@@ -324,25 +336,13 @@ class Dashboard {
 
     async save() {
         // Send meta
-
         const formData = new FormData();
 
         formData.append('alias', this.newAlias);
         formData.append('description', this.description);
 
         // Add widget data
-        const widgetsPayload = [];
-        this.widgetGrid.querySelectorAll('.grid-stack-item').forEach(item => {
-            if (item.widgetInstance) {
-                widgetsPayload.push({
-                    tag: item.widgetInstance.tag || null, 
-                    widget_type: item.dataset.type,
-                    config: item.widgetInstance.config
-                });
-            }
-        });
-        
-        formData.append('widgets', JSON.stringify(widgetsPayload));
+        formData.append('widgets', JSON.stringify(this._getWidgetData()));
 
         // Get image data
         const imageBlob = await this.capturePreview();
@@ -358,6 +358,55 @@ class Dashboard {
             history.pushState({}, "", `/dashboard/${this.newAlias}/`);
             alert("Dashboard Saved!");
         });
+    }
+
+    exportFile() {
+        try {
+            const widgets = this._getWidgetData();
+            const exportData = {
+                alias: this.alias,
+                widgets: widgets,
+            };
+            const json = JSON.stringify(exportData, null, 2);
+            const blob = new Blob([json], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `${this.alias}-config.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        } 
+        catch (err) {
+            alert("Error exporting configuration: " + err.message);
+        }
+    }
+
+    async importFile(file) {
+        try {
+            const text = await file.text();
+            const config = JSON.parse(text);
+            const confirm = window.confirm(`Replace ${this._getWidgets().length} widgets with ${config.widgets.length} new widgets?`)
+            if(confirm)
+                this.setupWidgets(config.widgets);
+        } 
+        catch (err) {
+            alert("Error importing configuration: " + err.message);
+        }
+    }
+
+    _getWidgets() {
+        return Array.from(this.widgetGrid.querySelectorAll('.grid-stack-item'))
+        .map(item => item.widgetInstance)
+        .filter(Boolean);
+    }
+
+    _getWidgetData() {
+        return this._getWidgets().map(widget => ({
+            tag: widget.tag ?? null,
+            widget_type: widget.gridElem.dataset.type,
+            config: widget.config
+        }));
     }
 }
 
@@ -377,3 +426,4 @@ document.querySelectorAll('.tab-buttons button').forEach(btn => {
 await refreshData();
 
 var dashboard = new Dashboard();
+

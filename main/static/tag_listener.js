@@ -53,7 +53,6 @@ export class TagListener {
             if (!req.ok) throw new Error("Batch fetch failed");
 
             const response = await req.json();
-            console.log(response);
             response.forEach(update => {
                 this.onUpdate(update);
             })

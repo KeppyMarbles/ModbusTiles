@@ -290,15 +290,15 @@ export class Inspector {
         this.createField({ label: "Description", type: "text" }, dashboard.description, (value) => {dashboard.description = value}, dashboardSection);
 
         // todo columns, background color
-
         const ioSection = this.addSection();
+
         this.addButton("Import", () => {
-            
+            dashboard.fileInput.click();
         }, ioSection);
+
         this.addButton("Export", () => {
-            
+            dashboard.exportFile();
         }, ioSection);
-        
     }
 
     inspectGlobal() {

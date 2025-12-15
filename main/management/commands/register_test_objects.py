@@ -128,6 +128,7 @@ class Command(BaseCommand):
                     "scale_y" : 1,
                     "text_on": "On",
                     "text_off": "Off",
+                    "showTagName" : False,
                 }
             ))
             widgets.append(DashboardWidget(
@@ -139,8 +140,24 @@ class Command(BaseCommand):
                     "position_y": 3,
                     "scale_x" : 1,
                     "scale_y" : 1,
+                    "showTagName" : False,
                 }
             ))
+
+        widgets.append(DashboardWidget(
+            dashboard=dashboard,
+            tag=coil_tags[0],
+            widget_type=DashboardWidget.WidgetTypeChoices.BUTTON,
+            config = {
+                "position_x": 0,
+                "position_y": 4,
+                "scale_x" : 2,
+                "scale_y" : 1,
+                "submit_value" : True,
+                "confirmation" : True,
+                "button_text" : "Test Button",
+            }
+        ))
 
         # ---------- Test Discrete Inputs ----------
 
@@ -181,6 +198,7 @@ class Command(BaseCommand):
                     "scale_y" : 1,
                     "text_on": "On",
                     "text_off": "Off",
+                    "showTagName" : False,
                 }
             ))
 
@@ -208,6 +226,9 @@ class Command(BaseCommand):
                     "position_y": i+1,
                     "scale_x" : 5,
                     "scale_y" : 1,
+                    "low_value" : 3,
+                    "high_value" : 7,
+                    "optimum_value" : 10,
                 }
             ))
 
@@ -222,6 +243,20 @@ class Command(BaseCommand):
                 "scale_y" : 3,
             }
         ))
+        widgets.append(DashboardWidget(
+            dashboard=dashboard,
+            tag=chart_tag,
+            widget_type=DashboardWidget.WidgetTypeChoices.NUMBER_LABEL,
+            config = {
+                "position_x": 9,
+                "position_y": 8,
+                "scale_x" : 2,
+                "scale_y" : 1,
+                "precision" : 2,
+                "prefix" : "Value: ",
+            }
+        ))
+
 
         # ---------- Test Holding Registers ----------
 
@@ -247,6 +282,10 @@ class Command(BaseCommand):
                     "position_y": 2*i+1,
                     "scale_x" : 5,
                     "scale_y" : 1,
+                    "low_value" : 3,
+                    "high_value" : 7,
+                    "optimum_value" : 10,
+                    "show_value" : True,
                 }
             ))
             widgets.append(DashboardWidget(
@@ -258,8 +297,43 @@ class Command(BaseCommand):
                     "position_y": 2*i+2,
                     "scale_x" : 5,
                     "scale_y" : 1,
+                    "showTagName" : False,
                 }
             ))
+
+        widgets.append(DashboardWidget(
+            dashboard=dashboard,
+            tag=hr_tags[-1],
+            widget_type=DashboardWidget.WidgetTypeChoices.DROPDOWN,
+            config = {
+                "position_x": 15,
+                "position_y": 9,
+                "scale_x" : 2,
+                "scale_y" : 1,
+                "dropdown_choices" : [
+                    {"label" : "First Value", "value": 0 },
+                    {"label" : "Second Value", "value": 1 },
+                    {"label" : "Third Value", "value": 2 },
+                ]
+            }
+        ))
+
+        widgets.append(DashboardWidget(
+            dashboard=dashboard,
+            tag=hr_tags[-1],
+            widget_type=DashboardWidget.WidgetTypeChoices.MULTI_LABEL,
+            config = {
+                "position_x": 17,
+                "position_y": 9,
+                "scale_x" : 2,
+                "scale_y" : 1,
+                "label_values" : [
+                    {"label" : "First Value", "value": 0 },
+                    {"label" : "Second Value", "value": 1 },
+                    {"label" : "Third Value", "value": 2 },
+                ]
+            }
+        ))
 
         DashboardWidget.objects.bulk_create(widgets)
 

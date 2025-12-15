@@ -44,7 +44,7 @@ class Widget {
             return false;
         }
 
-        if(this.config.confirmation && !window.confirm(this.getConfirmMessage(value))) { //TODO don't block chart values
+        if(this.config.confirmation && !window.confirm(this.getConfirmMessage(value))) {
             return false;
         }
 
