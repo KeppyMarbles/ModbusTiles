@@ -4,6 +4,7 @@ import { GridStack } from 'https://cdn.jsdelivr.net/npm/gridstack@12.3.3/+esm'
 import { postServer } from "./util.js";
 import { refreshData } from "./global.js";
 import { Inspector } from "./inspector.js";
+import { serverCache } from "./global.js";
 
 class Dashboard {
     constructor() {
@@ -22,14 +23,22 @@ class Dashboard {
         this.fileInput = document.getElementById('importFile');
         //TODO maybe have a metadata dict which contains all the stuff?
         this.alias = document.getElementById('dashboard-container').dataset.alias; // Set by Django
+        this.newAlias = this.alias; //TODO? used for keeping the desired new name before saving
         this.description = document.getElementById('dashboard-container').dataset.description;
+        const columnCount = parseInt(document.getElementById('dashboard-container').dataset.columns);
 
         this.listener = new TagListener();
         this.inspector = new Inspector(document.getElementById('inspector-form'));
-        this.newAlias = this.alias;
         this.tagForm = new Inspector(document.getElementById('tag-form'));
         this.tagForm.inspectGlobal();
+                
+        // Init
+        this._setupEvents();
+        this._setupGridStack(columnCount);
+        this.load();
+    }
 
+    _setupEvents() {
         // Widget selection
         this.widgetGrid.addEventListener('click', (e) => {
             if(!this.editMode) return;
@@ -81,17 +90,13 @@ class Dashboard {
                 event.returnValue = "";
             }
         });
-                
-        // Init
-        this.setupGridStack();
-        this.load();
     }
 
-    setupGridStack() {
+    _setupGridStack(columnCount) {
         // Initial settings
         this.canvasGridStack = GridStack.init({
             staticGrid: true, 
-            column: 20,
+            column: columnCount,
             minRow: 10,
             cellHeight: '100',
             margin: 5,
@@ -145,6 +150,24 @@ class Dashboard {
         this.updateSquareCells();
     }
 
+    async setupWidgets(widgetData) {
+        if(!this.canvasGridStack) {
+            console.error("Gridstack not initialized");
+            return;
+        }
+
+        this.canvasGridStack.removeAll();
+        this.listener.clear();
+
+        console.log("Widgets:", widgetData);
+
+        // Add widgets to the gridstack grid
+        widgetData.forEach(wData => {
+            const tag = serverCache.tags.find(t => t.external_id === wData.tag); //TODO O(1)?
+            this.createWidget(wData.widget_type, tag, wData.config);
+        });
+    }
+
     createWidget(typeName, tag, config) {
         // Copy widget contents from the palette populated by Django
         const palette = document.getElementById('palette');
@@ -172,23 +195,6 @@ class Dashboard {
             console.error("Unknown widget type", typeName);
             return null;
         }
-    }
-
-    async setupWidgets(widgetData) {
-        if(!this.canvasGridStack) {
-            console.error("Gridstack not initialized");
-            return;
-        }
-
-        this.canvasGridStack.removeAll();
-        this.listener.clear();
-
-        console.log("Widgets:", widgetData);
-
-        // Add widgets to the gridstack grid
-        widgetData.forEach(wData => {
-            this.createWidget(wData.widget_type, wData.tag, wData.config);
-        });
     }
 
     toggleEdit() { //TODO toggle/on off, update poller accordingly?
@@ -250,6 +256,11 @@ class Dashboard {
         this.canvasGridStack.cellHeight(cellWidth);
         gridEl.style.setProperty('--cell-size', `${cellWidth}px`);
         this.canvasGridStack.onResize();
+    }
+
+    setColumnCount(val) {
+        this.canvasGridStack.column(val);
+        this.updateSquareCells();
     }
 
     async capturePreview() {
@@ -335,14 +346,16 @@ class Dashboard {
     }
 
     async save() {
-        // Send meta
+        
         const formData = new FormData();
 
-        formData.append('alias', this.newAlias);
-        formData.append('description', this.description);
+        // Add meta
+        const meta = this._getMeta();
 
-        // Add widget data
-        formData.append('widgets', JSON.stringify(this._getWidgetData()));
+        formData.append('alias', this.newAlias);
+        formData.append('description', meta.description);
+        formData.append('column_count', meta.columns);
+        formData.append('widgets', JSON.stringify(meta.widgets));
 
         // Get image data
         const imageBlob = await this.capturePreview();
@@ -362,12 +375,7 @@ class Dashboard {
 
     exportFile() {
         try {
-            const widgets = this._getWidgetData();
-            const exportData = {
-                alias: this.alias,
-                widgets: widgets,
-            };
-            const json = JSON.stringify(exportData, null, 2);
+            const json = JSON.stringify(this._getMeta(), null, 2);
             const blob = new Blob([json], { type: "application/json" });
             const url = URL.createObjectURL(blob);
 
@@ -386,27 +394,34 @@ class Dashboard {
         try {
             const text = await file.text();
             const config = JSON.parse(text);
-            const confirm = window.confirm(`Replace ${this._getWidgets().length} widgets with ${config.widgets.length} new widgets?`)
-            if(confirm)
+            const confirm = window.confirm(`Replace all widgets with ${config.widgets.length} new widgets?`)
+            if(confirm) {
+                this.setColumnCount(config.columns);
                 this.setupWidgets(config.widgets);
+            }
         } 
         catch (err) {
             alert("Error importing configuration: " + err.message);
         }
     }
 
-    _getWidgets() {
-        return Array.from(this.widgetGrid.querySelectorAll('.grid-stack-item'))
-        .map(item => item.widgetInstance)
-        .filter(Boolean);
+    _getMeta() {
+        return {
+            alias: this.alias,
+            description: this.description,
+            columns: this.canvasGridStack.getColumn(),
+            widgets: this._getWidgets().map(widget => ({
+                tag: widget.tag?.external_id || null,
+                widget_type: widget.gridElem.dataset.type,
+                config: widget.config
+            }))
+        };
     }
 
-    _getWidgetData() {
-        return this._getWidgets().map(widget => ({
-            tag: widget.tag ?? null,
-            widget_type: widget.gridElem.dataset.type,
-            config: widget.config
-        }));
+    _getWidgets() {
+        return Array.from(this.widgetGrid.querySelectorAll('.grid-stack-item'))
+            .map(item => item.widgetInstance)
+            .filter(Boolean);
     }
 }
 
@@ -426,4 +441,3 @@ document.querySelectorAll('.tab-buttons button').forEach(btn => {
 await refreshData();
 
 var dashboard = new Dashboard();
-

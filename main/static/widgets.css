@@ -136,6 +136,8 @@ input:checked + .switch_slider:before {
     align-items: center;
     width: 100%;
     height: 100%;
+    padding-left: 10px;
+    padding-right: 10px;
 }
 
 .meter-row {
@@ -178,7 +180,7 @@ input:checked + .switch_slider:before {
     overflow: hidden; 
 }
 .dashboard-widget .label_text {
-    font-size: clamp(12px, 50cqmin, 200px);
+    font-size: 40cqmin;
     
     line-height: 1.1;
     text-align: center;
@@ -186,4 +188,9 @@ input:checked + .switch_slider:before {
     
     word-wrap: break-word;
     white-space: pre-wrap;
+}
+
+.dashboard-widget {
+    min-width: 20px;
+    min-height: 20px;
 }

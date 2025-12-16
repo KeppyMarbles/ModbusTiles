@@ -232,17 +232,11 @@ export class Inspector {
         const tagSection = this.addSection();
         const dynamicFieldContainer = document.createElement('div');
 
-        const createDynamicFields = (tagID) => {
+        const createDynamicFields = (tag) => {
             dynamicFieldContainer.innerHTML = "";
 
-            if(!tagID || widget.dynamicFields.length === 0)
+            if(!tag || widget.dynamicFields.length === 0)
                 return;
-
-            const tag = serverCache.tags.find(t => t.external_id === tagID); //TODO streamline this process?
-            if(!tag) {
-                console.error("Couldn't get tag for dynamic field")
-                return;
-            }
             
             // Add new inputs
             const newFieldType = Inspector.getFieldType(tag.data_type);
@@ -258,14 +252,13 @@ export class Inspector {
             return widgetClass.allowedTypes.includes(tag.data_type) 
                 && widgetClass.allowedChannels.includes(tag.channel);
         });
-        const tagOptions = compatibleTags.map(tag => ({ value: tag.external_id, label: `${tag.alias} (${tag.channel} ${tag.address})`}));
+        const tagOptions = compatibleTags.map(tag => ({ value: tag, label: `${tag.alias} (${tag.channel} ${tag.address})`}));
 
         this.createField({label: "Control Tag", type: "select", options: tagOptions }, widget.tag, (newVal) => {
             widget.tag = newVal;
             widget.applyConfig();
             createDynamicFields(newVal); // Update the dynamic fields
         }, tagSection);
-
         
         // Add dynamic fields (form input changes with tag type)
         createDynamicFields(widget.tag);
@@ -289,7 +282,12 @@ export class Inspector {
         this.createField({ label: "Dashboard Name", type: "text" }, dashboard.newAlias, (value) => {dashboard.newAlias = value}, dashboardSection);
         this.createField({ label: "Description", type: "text" }, dashboard.description, (value) => {dashboard.description = value}, dashboardSection);
 
-        // todo columns, background color
+        const dashboardPropertiesSection = this.addSection();
+
+        this.createField({ label: "Columns", type: "int" }, dashboard.canvasGridStack.getColumn(), (value) => {
+            dashboard.setColumnCount(value);
+        }, dashboardPropertiesSection);
+
         const ioSection = this.addSection();
 
         this.addButton("Import", () => {
@@ -388,18 +386,12 @@ export class Inspector {
         let getTriggerValue = () => null;
         let getOperatorValue = () => null;
 
-        const onTagChanged = (value) => {
+        const onTagChanged = (tag) => {
             triggerContainer.innerHTML = ''; 
             operatorContainer.innerHTML = '';
 
-            if(value === null)
+            if(tag === null)
                 return;
-
-            const tag = serverCache.tags.find(t => t.external_id === value);
-            if(!tag) {
-                console.error("Couldn't get tag info for alarm");
-                return;
-            }
 
             // Show choices for trigger operator
             let operatorChoices = serverCache.alarmOptions.operator_choices;

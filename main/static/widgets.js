@@ -13,7 +13,7 @@ class Widget {
     dynamicFields = [];
     dataType = null;
 
-    constructor(gridElem, config, tagID) { // unsure if the tagID should be part of config or not        
+    constructor(gridElem, config, tag) { // unsure if the tagID should be part of config or not        
         // Apply defaults
         if(!config) config = {};
         const allFields = [...(new.target.defaultFields), ...(new.target.customFields), ...(this.dynamicFields)];
@@ -23,7 +23,7 @@ class Widget {
         });
         this.config = config;
 
-        this.tag = tagID;
+        this.tag = tag;
         this.elem = gridElem.querySelector('.dashboard-widget');
         this.valueTimeout = 5000;
         this.alarmIndicator = this.elem.parentNode?.querySelector(".alarm-indicator");
@@ -55,7 +55,7 @@ class Widget {
                 "X-CSRFToken": getCookie("csrftoken")
             },
             body: JSON.stringify({ 
-                tag: this.tag,
+                tag: this.tag.external_id,
                 value: value,
             })
         });
@@ -122,24 +122,21 @@ class Widget {
         else
             this.gridElem.classList.remove("is-state", "locked");
 
-        if(this.tag)
-            this.tagData = serverCache.tags.find(t => t.external_id === this.tag); //TODO not sure about this
-
         // Show tag alias
         if(this.config.showTagName) {
             this.label.classList.remove("hidden");
-            this.label.textContent = this.tagData ? this.tagData.alias : "No Tag";
-            this.label.title = this.tagData ? this.tagData.description : "";
+            this.label.textContent = this.tag ? this.tag.alias : "No Tag";
+            this.label.title = this.tag ? this.tag.description : "";
         }
         else {
             this.label.classList.add("hidden");
         }
 
-        this.elem.title = this.tagData ? this.tagData.alias : "";
+        this.elem.title = this.tag ? this.tag.alias : "";
     }
 
     getConfirmMessage(val) {
-        return `Change ${this.tagData.alias} to ${val}?`
+        return `Change ${this.tag.alias} to ${val}?`
     }
 
     onValue(val) {
@@ -223,7 +220,7 @@ class SwitchWidget extends Widget {
     }
 
     getConfirmMessage(val) {
-        return `Switch ${this.tagData.alias} to ${val ? "ON" : "OFF"} position?`;
+        return `Switch ${this.tag.alias} to ${val ? "ON" : "OFF"} position?`;
     }
 
     onValue(val) {
@@ -323,7 +320,7 @@ class DropdownWidget extends Widget {
     }
 
     getConfirmMessage(val) {
-        return `Change ${this.tagData.alias} to ${this.select.label}?`;
+        return `Change ${this.tag.alias} to ${this.select.label}?`;
     }
 
     onValue(val) {
@@ -544,7 +541,7 @@ class ChartWidget extends Widget {
 
     async initChart() {
         try {
-            const response = await fetch(`/api/history/?tags=${this.tag}&seconds=${this.historyDurationSeconds}`);
+            const response = await fetch(`/api/history/?tags=${this.tag.external_id}&seconds=${this.historyDurationSeconds}`);
             if (!response.ok) throw new Error("History fetch failed");
 
             const data = await response.json();

@@ -236,7 +236,7 @@ class DashboardSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Dashboard
-        fields = ["alias", "description", "owner"]
+        fields = ["alias", "description", "column_count", "owner"]
 
 
 class DashboardWidgetSerializer(serializers.ModelSerializer):

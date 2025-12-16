@@ -25,7 +25,7 @@
         <div id="loading-spinner" class="spinner">Loading Dashboard...</div>
 
         <section id="canvas-wrapper" class="canvas-wrapper">
-            <div id="dashboard-container" class="dashboard-container" data-alias="{{ dashboard.alias }}" data-description="{{ dashboard.description }}">
+            <div id="dashboard-container" class="dashboard-container" data-alias="{{ dashboard.alias }}" data-description="{{ dashboard.description }}" data-columns="{{ dashboard.column_count }}">
                 <div id="dashboard-grid" class="grid-stack"></div>
             </div>
         </section>
@@ -66,7 +66,7 @@
         </aside>
     </main>
 </body>
-<input id="importFile" class="hidden" type="file" accept=".json">
+<input id="importFile" class="hidden" type="file" accept=".json"></input>
 <script src="https://cdn.plot.ly/plotly-3.3.0.min.js" charset="utf-8"></script>
 <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 <script type="module" src="{% static 'dashboard.js' %}"></script>

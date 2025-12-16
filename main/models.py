@@ -322,6 +322,7 @@ class Dashboard(models.Model):
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
     description = models.TextField(blank=True)
     preview_image = models.ImageField(upload_to='dashboard_previews/', null=True, blank=True)
+    column_count = models.PositiveSmallIntegerField(default=20) #TODO use small integer field more often?
     #external_id = models.UUIDField(default=uuid.uuid4, unique=True)
     #TODO permitted users?
     #created_at = models.DateTimeField(auto_now_add=True)

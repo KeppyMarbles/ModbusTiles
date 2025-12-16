@@ -7,8 +7,8 @@ export class TagListener {
 
     registerWidget(widget) {
         if (!widget.tag) return;
-        if (!this.tagMap[widget.tag]) this.tagMap[widget.tag] = [];
-        this.tagMap[widget.tag].push(widget);
+        this.tagMap[widget.tag.external_id] ??= [];
+        this.tagMap[widget.tag.external_id].push(widget);
     }
 
     async connect() {
