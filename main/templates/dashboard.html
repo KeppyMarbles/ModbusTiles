@@ -46,13 +46,7 @@
                     <p class="section-label">Drag to Add</p>
                     <div class="widget-grid">
                         {% for type in widget_types %}
-                            <div class="palette-item grid-stack-item" data-type="{{ type }}">
-                                <div class="grid-stack-item-content preview-widget">
-                                    {% include "widgets/"|add:type|add:".html" %}
-                                    <span class="widget-label"></span>
-                                    <span class="alarm-indicator"></span>
-                                </div>
-                            </div>
+                            {% include "widgets/"|add:type.value|add:".html" %}
                         {% endfor %}
                     </div>
                 </div>

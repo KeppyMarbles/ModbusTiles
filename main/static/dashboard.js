@@ -58,7 +58,6 @@ class Dashboard {
                 if (e.key === 'Delete') {
                     e.preventDefault(); 
                     this.canvasGridStack.removeWidget(this.selectedWidget.gridElem); //TODO how to guarantee widget class instance is deleted?
-                    this.selectWidget(null);
                 }
             }
         });
@@ -103,6 +102,7 @@ class Dashboard {
             float: true,
             acceptWidgets: true,
             dragIn: '.palette-item',
+            //removable: "#editor-sidebar",
         });
         GridStack.setupDragIn('#palette .palette-item', { appendTo: 'body', helper: 'clone' });
 
@@ -144,6 +144,16 @@ class Dashboard {
                 newWidget.config["locked"] = false; //dumb
                 newWidget.applyConfig();
             }
+        });
+
+        // Handle delete
+        this.canvasGridStack.on('removed', (event, items) => {
+            items.forEach(item => {
+                if(item.el.widgetInstance == this.selectedWidget) {
+                    console.log("unselecting")
+                    this.selectWidget(null);
+                }
+            });
         });
 
         // Set grid 1:1 aspect ratio
@@ -231,11 +241,11 @@ class Dashboard {
             this.listener.connect();
         }
 
-        const interval = setInterval(() => {
+        const animInterval = setInterval(() => {
             this.updateSquareCells();
         }, 13);
         setTimeout(() => {
-            clearInterval(interval);
+            clearInterval(animInterval);
         }, 500);
     }
 

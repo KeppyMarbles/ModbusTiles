@@ -38,6 +38,8 @@ body.screenshot-mode * {
     padding: 1px;
     display: flex;
     flex-direction: column;
+    flex-grow: 1;
+    min-width: 0;
     align-items: center;
     justify-content: center;
     gap: 1px;
@@ -49,14 +51,6 @@ body.screenshot-mode * {
 }
 
 .edit-mode .dashboard-widget { pointer-events: none; }
-
-.widget-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-}
-.edit-mode .palette-item { cursor: grab; }
-.edit-mode .palette-item.is-state.locked { cursor: default; }
 
 /* --- Sidebar --- */
 
@@ -85,6 +79,24 @@ body.screenshot-mode * {
     overflow-y: auto;
     padding: 15px;
 }
+
+.widget-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+.palette-item {
+    display: flex;
+}
+.edit-mode .palette-item { cursor: grab; }
+.edit-mode .palette-item.is-state.locked { cursor: default; }
+
+#palette .size-1w { width: 50px; }
+#palette .size-2w { width: 100px; }
+#palette .size-3w { width: 150px; }
+#palette .size-1h { height: 50px; }
+#palette .size-2h { height: 100px; }
+#palette .size-3h { height: 150px; }
 
 /* --- Tabs --- */
 

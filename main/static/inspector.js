@@ -254,7 +254,7 @@ export class Inspector {
         });
         const tagOptions = compatibleTags.map(tag => ({ value: tag.external_id, label: `${tag.alias} (${tag.channel} ${tag.address})`}));
         
-        this.createField({label: "Control Tag", type: "select", options: tagOptions }, widget.tag.external_id, (newVal) => {
+        this.createField({label: "Control Tag", type: "select", options: tagOptions }, widget.tag?.external_id, (newVal) => {
             widget.tag = compatibleTags.find(tag => tag.external_id === newVal);
             widget.applyConfig();
             createDynamicFields(newVal); // Update the dynamic fields

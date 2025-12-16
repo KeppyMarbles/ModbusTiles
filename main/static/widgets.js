@@ -28,7 +28,6 @@ class Widget {
         this.valueTimeout = 5000;
         this.alarmIndicator = this.elem.parentNode?.querySelector(".alarm-indicator");
         this.label = this.elem.parentNode?.querySelector(".widget-label");
-        this.showAlarm = true;
         this.gridElem = gridElem;
         gridElem.widgetInstance = this;
 
@@ -77,12 +76,14 @@ class Widget {
             this.elem.classList.remove("is-state", "no-connection"); //TODO disable interactions?
 
         this.onValue(data.value, data.time);
-        
-        if(this.showAlarm)
-            this.setAlarm(data.alarm);
+
+        this.setAlarm(data.alarm);
     }
 
     setAlarm(alarm) {
+        if(!this.alarmIndicator)
+            return;
+
         this.elem.classList.remove("threat-high");
         
         if(alarm) {
@@ -133,6 +134,11 @@ class Widget {
         }
 
         this.elem.title = this.tag ? this.tag.alias : "";
+
+        if(this.text_elem) { //TODO
+            const amt = this.text_elem.textContent.length;
+            this.text_elem.style.fontSize = `${120 / Math.sqrt(amt)}cqmin`
+        }
     }
 
     getConfirmMessage(val) {
@@ -160,7 +166,6 @@ class LabelWidget extends Widget { //TODO font size, formatting?
         super(widget_elem, config);
         this.text_elem = this.elem.querySelector(".label_text");
         
-        this.showAlarm = false;
         this.config.showTagName = false; //TODO don't show control tag label
     }
 
@@ -216,7 +221,6 @@ class SwitchWidget extends Widget {
             if(!submitted)
                 this.input.checked = !this.input.checked;
         });
-        this.showAlarm = false;
     }
 
     getConfirmMessage(val) {
@@ -277,7 +281,6 @@ class ButtonWidget extends Widget {
         this.button.addEventListener("click", async () => {
             this.submit(this.config.submit_value);
         });
-        this.showAlarm = false;
     }
 
     applyConfig() {
@@ -306,7 +309,6 @@ class DropdownWidget extends Widget {
         this.select.addEventListener("change", async () => {
             this.submit(this.select.value);
         });
-        this.showAlarm = false;
     }
 
     applyConfig() {
@@ -369,7 +371,6 @@ class SliderWidget extends Widget {
             this.shouldUpdate = false;
             this._updateDisplayValue();
         })
-        this.showAlarm = false;
     }
 
     applyConfig() {
@@ -533,7 +534,6 @@ class ChartWidget extends Widget {
     constructor(widget_elem, config, tagID) {
         super(widget_elem, config, tagID);
         this.chartDiv = this.elem.querySelector(".chart-container");
-        this.showAlarm = false;
 
         this.historyDurationSeconds = this.config.history_seconds;
         //this.maxPoints = this.config.max_points || 1000;

@@ -36,6 +36,11 @@
     z-index: 20;
 }
 
+.dashboard-widget {
+    min-width: 20px;
+    min-height: 20px;
+}
+
 /* --- Alarms --- */
 
 .threat-high {
@@ -175,14 +180,15 @@ input:checked + .switch_slider:before {
     flex-direction: column;
     justify-content: center;
     align-items: center;
+    flex-grow: 1;
     
     padding: 2px;
     overflow: hidden; 
 }
 .dashboard-widget .label_text {
-    font-size: 40cqmin;
+    /* font-size: 40cqmin; */
     
-    line-height: 1.1;
+    line-height: 1;
     text-align: center;
     width: 100%;
     
@@ -190,7 +196,10 @@ input:checked + .switch_slider:before {
     white-space: pre-wrap;
 }
 
-.dashboard-widget {
-    min-width: 20px;
-    min-height: 20px;
+/* --- Chart --- */
+
+.dashboard-widget.chart,
+.chart-container {
+    width: 100%; 
+    height: 100%;
 }

@@ -30,5 +30,5 @@ def dashboard_view(request, alias):
 
     return render(request, "dashboard.html", {
         "dashboard": dashboard,
-        "widget_types": [choice.value for choice in DashboardWidget.WidgetTypeChoices],
+        "widget_types": [choice for choice in DashboardWidget.WidgetTypeChoices],
     })
