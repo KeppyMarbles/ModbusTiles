@@ -15,7 +15,7 @@ class Dashboard {
         this.sidebar = document.getElementById('editor-sidebar');
         this.widgetGrid = document.getElementById('dashboard-grid');
         this.editButton = document.getElementById('edit-button');
-        this.saveButton = document.getElementById('save-button');
+        this.viewButton = document.getElementById('view-button');
         this.creatorItems = document.getElementById('palette');
         this.inspectButton = document.getElementById('inspect-button');
         this.tagButton = document.getElementById('tag-button');
@@ -65,10 +65,10 @@ class Dashboard {
 
         // Buttons
         this.editButton.addEventListener('click', () => {
-            this.toggleEdit();
+            this.toggleEdit(true);
         });
-        this.saveButton.addEventListener('click', () => {
-            this.save();
+        this.viewButton.addEventListener('click', () => {
+            this.toggleEdit(false);
         });
 
         // Import file
@@ -197,34 +197,46 @@ class Dashboard {
         }
     }
 
-    toggleEdit() { //TODO toggle/on off, update poller accordingly?
+    toggleEdit(flag) {
         //TODO supress warnings? (no connection, stale value indicators)
-        if(this.editMode)
+        if(flag === this.editMode)
             return;
 
-        this.editMode = true;
+        this.editMode = flag;
+        this.listener.clear();
+        this.selectWidget(null);
 
-        document.body.classList.add('edit-mode');
-        this.saveButton.classList.remove('hidden');
-        this.editButton.classList.add('hidden');
-        
-        this.canvasGridStack.setStatic(false); // Enable Drag/Drop
+        if(this.editMode) {
+            document.body.classList.add('edit-mode');
+            this.viewButton.classList.remove('hidden');
+            this.editButton.classList.add('hidden');
+            
+            this.canvasGridStack.setStatic(false); // Enable Drag/Drop
 
-        this._getWidgets().forEach(widget => {
-            widget.clear();
-            widget.setAlarm(null); //TODO add to clear()?
-        });
+            this._getWidgets().forEach(widget => {
+                widget.clear();
+                widget.setAlarm(null); //TODO add to clear()?
+            });
+        }
+        else {
+            document.body.classList.remove('edit-mode');
+            this.viewButton.classList.add('hidden');
+            this.editButton.classList.remove('hidden');
+
+            this.canvasGridStack.setStatic(true);
+
+            this._getWidgets().forEach(widget => {
+                this.listener.registerWidget(widget);
+            });
+            this.listener.connect();
+        }
 
         const interval = setInterval(() => {
             this.updateSquareCells();
-        }, 20);
+        }, 13);
         setTimeout(() => {
             clearInterval(interval);
         }, 500);
-
-        this.listener.clear();
-        
-        this.selectWidget(null);
     }
 
     selectWidget(widget) {

@@ -521,7 +521,7 @@ class NumberLabelWidget extends Widget {
     }
 }
 
-class ChartWidget extends Widget {
+class ChartWidget extends Widget { 
     static displayName = "History Chart";
     static allowedChannels = ["hr", "ir"]; //TODO support boolean values
     static allowedTypes = ["int16", "uint16", "int32", "uint32", "int64", "uint64", "float32", "float64"];
@@ -595,7 +595,10 @@ class ChartWidget extends Widget {
         //TODO
     }
 
-    onValue(val, time) {
+    onValue(val, time) { 
+        if(this.paused) //TODO add pause button 
+            return;
+
         if(this.initialized) {
             const updateTime = new Date(time);
             const timeStr = updateTime.toISOString();

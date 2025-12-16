@@ -252,10 +252,10 @@ export class Inspector {
             return widgetClass.allowedTypes.includes(tag.data_type) 
                 && widgetClass.allowedChannels.includes(tag.channel);
         });
-        const tagOptions = compatibleTags.map(tag => ({ value: tag, label: `${tag.alias} (${tag.channel} ${tag.address})`}));
-
-        this.createField({label: "Control Tag", type: "select", options: tagOptions }, widget.tag, (newVal) => {
-            widget.tag = newVal;
+        const tagOptions = compatibleTags.map(tag => ({ value: tag.external_id, label: `${tag.alias} (${tag.channel} ${tag.address})`}));
+        
+        this.createField({label: "Control Tag", type: "select", options: tagOptions }, widget.tag.external_id, (newVal) => {
+            widget.tag = compatibleTags.find(tag => tag.external_id === newVal);
             widget.applyConfig();
             createDynamicFields(newVal); // Update the dynamic fields
         }, tagSection);
@@ -287,6 +287,12 @@ export class Inspector {
         this.createField({ label: "Columns", type: "int" }, dashboard.canvasGridStack.getColumn(), (value) => {
             dashboard.setColumnCount(value);
         }, dashboardPropertiesSection);
+
+        const saveSection = this.addSection();
+
+        this.addButton("Save Dashboard", () => {
+            dashboard.save();
+        }, saveSection);
 
         const ioSection = this.addSection();
 
