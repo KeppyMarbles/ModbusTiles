@@ -577,6 +577,7 @@ class ChartWidget extends Widget {
         super(widget_elem, config, tagID);
         this.chartDiv = this.elem.querySelector(".chart-container");
         this.pauseButton = this.elem.querySelector(".form-button");
+        this.textColor = getComputedStyle(document.body).getPropertyValue('--text-main');
         this.realData = false;
         this.initPreview();
 
@@ -690,28 +691,26 @@ class ChartWidget extends Widget {
     }
 
     _getLayout() {
-        const textColor = getComputedStyle(document.body).getPropertyValue('--text-main');
         const gridColor = this.config.show_grid ? 'rgba(128, 128, 128, 0.2)' : 'rgba(0,0,0,0)';
 
         return {
             title: {
                 text: this.config.title,
-                font: { color: textColor }
+                font: { color: this.textColor }
             },
             autosize: true,
             margin: { l: 40, r: 10, b: 30, t: 40, pad: 4 },
             xaxis: {
-                //type: isHist ? 'linear' : 'date',
                 type: 'date',
                 gridcolor: gridColor,
-                linecolor: textColor,
-                tickfont: { color: textColor }
+                linecolor: this.textColor,
+                tickfont: { color: this.textColor }
             },
             yaxis: {
                 autorange: true,
                 gridcolor: gridColor,
-                linecolor: textColor,
-                tickfont: { color: textColor }
+                linecolor: this.textColor,
+                tickfont: { color: this.textColor }
             },
             paper_bgcolor: 'rgba(0,0,0,0)',
             plot_bgcolor: 'rgba(0,0,0,0)',
@@ -748,6 +747,100 @@ class ChartWidget extends Widget {
     }
 }
 
+class GaugeWidget extends Widget {
+    static displayName = "Radial Gauge";
+    static allowedChannels = ["hr", "ir"];
+    static allowedTypes = ["int16", "uint16", "int32", "uint32", "float32", "float64"];
+    
+    static customFields = [
+        { name: "title", type: "text", default: "", label: "Title" },
+        { name: "min_value", type: "number", default: 0, label: "Min Value" },
+        { name: "max_value", type: "number", default: 100, label: "Max Value" },
+        { name: "warning_threshold", type: "number", default: 75, label: "Warning Start" },
+        { name: "critical_threshold", type: "number", default: 90, label: "Critical Start" },
+        { name: "prefix", type: "text", default: "", label: "Value Prefix" },
+        { name: "suffix", type: "text", default: "", label: "Value Suffix" },
+    ];
+
+    constructor(widget_elem, config, tagID) {
+        super(widget_elem, config, tagID);
+        this.chartDiv = this.elem.querySelector(".chart-container");
+        this.textColor = getComputedStyle(document.body).getPropertyValue('--text-main');
+
+        this.currentValue = this.config.min_value;
+
+        this.resizeObserver = new ResizeObserver(() => {
+            Plotly.Plots.resize(this.chartDiv);
+        });
+        this.resizeObserver.observe(this.elem);
+
+        this.chartDiv.innerText = "";
+    }
+
+    applyConfig() {
+        super.applyConfig();
+        // Redraw with new ranges/colors
+        this.draw(this.currentValue);
+    }
+
+    onValue(val) {
+        this.currentValue = val;
+        this.draw(val);
+    }
+
+    draw(val) {
+        const config = { responsive: true, displayModeBar: false };
+        Plotly.react(this.chartDiv, [this._getTrace(val)], this._getLayout(), config);
+    }
+
+    clear() {
+        this.onValue(0);
+    }
+
+    _getTrace(val) {
+        return {
+            type: "indicator",
+            mode: "gauge+number",
+            value: val,
+            number: { 
+                prefix: this.config.prefix,
+                suffix: this.config.suffix,
+                font: { color: this.textColor, size: 20 }
+            },
+            gauge: {
+                axis: { 
+                    range: [this.config.min_value, this.config.max_value],
+                    tickwidth: 1, 
+                    tickcolor: this.textColor 
+                },
+                bar: { color: "darkblue" }, // TODO more customizations here?
+                bgcolor: "rgba(0,0,0,0)",
+                borderwidth: 2,
+                bordercolor: "gray",
+                steps: [
+                    { range: [this.config.min_value, this.config.warning_threshold], color: "#2ecc71" },
+                    { range: [this.config.warning_threshold, this.config.critical_threshold], color: "#f1c40f" },
+                    { range: [this.config.critical_threshold, this.config.max_value], color: "#e74c3c" }
+                ],
+                threshold: {
+                    line: { color: "red", width: 4 },
+                    thickness: 0.75,
+                    value: this.config.critical_threshold
+                }
+            }
+        };
+    }
+
+    _getLayout() {
+        return {
+            title: { text: this.config.title, font: { size: 16, color: this.textColor } },
+            margin: { t: 40, b: 0, l: 30, r: 30 },
+            paper_bgcolor: "rgba(0,0,0,0)",
+            font: { color: this.textColor }
+        };
+    }
+}
+
 export const WidgetRegistry = {
     "switch": SwitchWidget,
     "slider": SliderWidget,
@@ -760,4 +853,5 @@ export const WidgetRegistry = {
     "chart": ChartWidget,
     "button" : ButtonWidget,
     "dropdown" : DropdownWidget,
+    "gauge" : GaugeWidget,
 };

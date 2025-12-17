@@ -362,8 +362,8 @@ class DashboardWidget(models.Model):
         SWITCH = "switch", _("Switch")
         METER = "meter", _("Meter")
         SLIDER = "slider", _("Slider")
-        DROPDOWN = "dropdown", ("Dropdown")
-        #("gauge", "Gauge"),
+        DROPDOWN = "dropdown", _("Dropdown")
+        GAUGE = "gauge", _("Radial Gauge")
 
     dashboard = models.ForeignKey(Dashboard, on_delete=models.CASCADE, related_name="widgets")
 

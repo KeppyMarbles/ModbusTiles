@@ -246,10 +246,26 @@ class Command(BaseCommand):
         widgets.append(DashboardWidget(
             dashboard=dashboard,
             tag=chart_tag,
-            widget_type=DashboardWidget.WidgetTypeChoices.NUMBER_LABEL,
+            widget_type=DashboardWidget.WidgetTypeChoices.GAUGE,
             config = {
                 "position_x": 9,
                 "position_y": 8,
+                "scale_x" : 5,
+                "scale_y" : 3,
+                "title" : "A gauge",
+                "min_value" : 0,
+                "max_value" : 10,
+                "warning_threshold" : 7.5,
+                "critical_threshold" : 9,
+            }
+        ))
+        widgets.append(DashboardWidget(
+            dashboard=dashboard,
+            tag=chart_tag,
+            widget_type=DashboardWidget.WidgetTypeChoices.NUMBER_LABEL,
+            config = {
+                "position_x": 9,
+                "position_y": 11,
                 "scale_x" : 2,
                 "scale_y" : 1,
                 "precision" : 2,
