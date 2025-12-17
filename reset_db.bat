@@ -6,7 +6,6 @@ echo ===============================
 set APP_DIR=main
 set MIG_DIR=%APP_DIR%\migrations
 set PREVIEW_DIR=.media\dashboard_previews
-set DB_FILE=db.sqlite3
 
 REM ---------- Clear DB ----------
 echo.
@@ -25,8 +24,11 @@ for %%m in ("%MIG_DIR%\*.py") do (
 )
 
 echo.
-echo Deleting database file: %DB_FILE%
-if exist %DB_FILE% del %DB_FILE%
+echo Deleting database files...
+
+if exist db.sqlite3 del db.sqlite3
+if exist db.sqlite3-wal del db.sqlite3-wal
+if exist db.sqlite3-shm del db.sqlite3-shm
 
 REM ---------- Clear Media ----------
 echo.
