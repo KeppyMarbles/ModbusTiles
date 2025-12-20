@@ -30,6 +30,8 @@ logger = logging.getLogger(__name__)
 channel_layer = get_channel_layer()
 clients: dict[str, ModbusBaseClient] = {}
 
+POLL_DURATION = 0.25
+INFO_DURATION = 30
 
 async def poll_devices():
     """ Gather tag data and process write requests at a steady rate """
@@ -57,7 +59,26 @@ async def poll_devices():
         )
         return serialized.data
     
+    async def log_duration(): #TODO more logging info?
+        """ Notify if we're keeping up with the target frequency """
+        nonlocal total_duration, iteration_count
+        while True:
+            if iteration_count > 0:
+                avg = total_duration / iteration_count
+                amt = (avg / POLL_DURATION)*100
+                msg = f"Average poll duration: {avg:.3f}s ({amt:.2f}%)"
+                if avg > POLL_DURATION:
+                    logger.warning(msg)
+                else:
+                    logger.info(msg)
+
+            total_duration = iteration_count = 0
+            await asyncio.sleep(INFO_DURATION)
+
     logger.info("Starting Async Poller...")
+
+    total_duration = iteration_count = 0
+    asyncio.create_task(log_duration())
     
     while True:
         start_time = time.monotonic()
@@ -81,7 +102,11 @@ async def poll_devices():
 
         # Sleep
         elapsed = time.monotonic() - start_time
-        sleep_time = max(0, 0.25 - elapsed)
+        sleep_time = max(0, POLL_DURATION - elapsed)
+
+        total_duration += elapsed
+        iteration_count += 1
+
         await asyncio.sleep(sleep_time)
 
 
@@ -247,6 +272,9 @@ async def _process_writes(client, device: Device):
         TagWriteRequest.objects.bulk_update(requests, ['processed'])
 
     writes = await get_pending_writes(device)
+
+    if not writes:
+        return
 
     for req in writes:
         # Try to actually write the requested value

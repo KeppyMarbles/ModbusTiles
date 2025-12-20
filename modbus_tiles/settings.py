@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+from uvicorn.logging import DefaultFormatter
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -78,22 +79,26 @@ WSGI_APPLICATION = 'modbus_tiles.wsgi.application'
 ASGI_APPLICATION = 'modbus_tiles.asgi.application'
 
 LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'simple': {
-            'format': '%(asctime)s - %(levelname)s - %(name)s - %(message)s',
+    "version": 1,
+    "disable_existing_loggers": False,
+
+    "formatters": {
+        "uvicorn": {
+            "()": DefaultFormatter,
+            "fmt": "%(levelprefix)s %(message)s",
         },
     },
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'formatter': 'simple',
+
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "uvicorn",
         },
     },
-    'root': {  # root logger
-        'handlers': ['console'],
-        'level': 'INFO',
+
+    "root": {
+        "handlers": ["console"],
+        "level": "INFO",
     },
 }
 
