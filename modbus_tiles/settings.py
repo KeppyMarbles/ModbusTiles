@@ -77,6 +77,26 @@ CHANNEL_LAYERS = {
 WSGI_APPLICATION = 'modbus_tiles.wsgi.application'
 ASGI_APPLICATION = 'modbus_tiles.asgi.application'
 
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'simple': {
+            'format': '%(asctime)s - %(levelname)s - %(name)s - %(message)s',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+    },
+    'root': {  # root logger
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+}
+
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 

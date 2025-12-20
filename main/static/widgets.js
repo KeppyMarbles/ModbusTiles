@@ -10,13 +10,13 @@ class Widget {
         { name: "showTagName", type: "bool", default: true, label: "Show Tag Name" },
     ];
     static customFields = [];
-    dynamicFields = [];
+    tagTypedFields = [];
     dataType = null;
 
-    constructor(gridElem, config, tag) { // unsure if the tagID should be part of config or not        
+    constructor(gridElem, config, tag) {      
         // Apply defaults
         if(!config) config = {};
-        const allFields = [...(new.target.defaultFields), ...(new.target.customFields), ...(this.dynamicFields)];
+        const allFields = [...(new.target.defaultFields), ...(new.target.customFields), ...(this.tagTypedFields)];
         allFields.forEach(field => {
             if(config[field.name] === undefined)
                 config[field.name] = field.default;
@@ -287,7 +287,7 @@ class ButtonWidget extends Widget {
         { name: "button_text", type: "text", default: "Button Text", label: "Button Text" },
         { name: "confirmation", type: "bool", default: false, label: "Prompt Confirmation" },
     ]
-    dynamicFields = [
+    tagTypedFields = [
         { name: "submit_value", default: "", label: "Submit Value" }
     ]
 
@@ -365,7 +365,7 @@ class SliderWidget extends Widget {
         { name: "confirmation", type: "bool", default: false, label: "Prompt Confirmation" },
 
     ]
-    dynamicFields = [
+    tagTypedFields = [
         { name: "step", default: 1, label: "Step"}, //TODO default not working?
     ]
 
@@ -582,8 +582,13 @@ class ChartWidget extends Widget {
         this.initPreview();
 
         // Size chart to gridstack elem
+        let resizeTimeout;
+
         this.resizeObserver = new ResizeObserver(() => {
-            Plotly.Plots.resize(this.chartDiv);
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                Plotly.Plots.resize(this.chartDiv);
+            }, 100); // adjust delay
         });
         this.resizeObserver.observe(this.elem);
 
@@ -769,9 +774,14 @@ class GaugeWidget extends Widget {
 
         this.currentValue = this.config.min_value;
 
+        let resizeTimeout;
         this.resizeObserver = new ResizeObserver(() => {
-            Plotly.Plots.resize(this.chartDiv);
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                Plotly.Plots.resize(this.chartDiv);
+            }, 100); // adjust delay
         });
+
         this.resizeObserver.observe(this.elem);
 
         this.chartDiv.innerText = "";

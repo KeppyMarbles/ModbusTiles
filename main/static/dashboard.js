@@ -432,7 +432,7 @@ class Dashboard {
             alias: this.alias,
             description: this.description,
             columns: this.canvasGridStack.getColumn(),
-            widgets: this._getWidgets().map(widget => ({
+            widgets: this._getWidgets().map(widget => ({ //TODO widget method or nah?
                 tag: widget.tag?.external_id || null,
                 widget_type: widget.gridElem.dataset.type,
                 config: widget.config

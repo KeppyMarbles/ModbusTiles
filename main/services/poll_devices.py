@@ -13,6 +13,7 @@ from ..models import Device, Tag, TagWriteRequest, AlarmConfig, ActivatedAlarm
 from ..api.serializers import TagValueSerializer
 from .notify_alarms import send_alarm_notifications #TODO use
 
+
 @dataclass
 class ReadBlock:
     start: int
@@ -25,10 +26,10 @@ class PollContext:
     read_tags: list[Tag]
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 channel_layer = get_channel_layer()
 clients: dict[str, ModbusBaseClient] = {}
+
 
 async def poll_devices():
     """ Gather tag data and process write requests at a steady rate """

@@ -230,20 +230,20 @@ export class Inspector {
         }
 
         const tagSection = this.addSection();
-        const dynamicFieldContainer = document.createElement('div');
+        const tagTypedFieldsContainer = document.createElement('div');
 
-        const createDynamicFields = (tag) => {
-            dynamicFieldContainer.innerHTML = "";
+        const createTagTypedFields = (tag) => {
+            tagTypedFieldsContainer.innerHTML = "";
 
-            if(!tag || widget.dynamicFields.length === 0)
+            if(!tag || widget.tagTypedFields.length === 0)
                 return;
             
             // Add new inputs
             const newFieldType = Inspector.getFieldType(tag.data_type);
             
-            widget.dynamicFields.forEach(field => {
+            widget.tagTypedFields.forEach(field => {
                 field["type"] = newFieldType;
-                createConfigField(field, dynamicFieldContainer);
+                createConfigField(field, tagTypedFieldsContainer);
             });
         }
 
@@ -257,12 +257,12 @@ export class Inspector {
         this.createField({label: "Control Tag", type: "select", options: tagOptions }, widget.tag?.external_id, (newVal) => {
             widget.tag = compatibleTags.find(tag => tag.external_id === newVal);
             widget.applyConfig();
-            createDynamicFields(newVal); // Update the dynamic fields
+            createTagTypedFields(newVal); // Update the tag based fields
         }, tagSection);
         
-        // Add dynamic fields (form input changes with tag type)
-        createDynamicFields(widget.tag);
-        tagSection.appendChild(dynamicFieldContainer);
+        // Add tag-dependent fields
+        createTagTypedFields(widget.tag);
+        tagSection.appendChild(tagTypedFieldsContainer);
 
         // Add rest of fields
         const customFieldsSection = this.addSection();
