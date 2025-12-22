@@ -55,12 +55,12 @@ export class Inspector {
     createField(def, currentValue, onChange, section) { // TODO add uint, restrict float input for int fields?
         const wrapper = document.createElement('div');
         wrapper.className = "input-group";
-        if(def.description)
-            wrapper.title = def.description;
 
         const label = document.createElement('label');
         label.innerText = def.label || def.name;
         label.className = "form-label";
+        if(def.description)
+            label.title = def.description;
 
         let input = null;
 
@@ -328,7 +328,7 @@ export class Inspector {
 
         const locationSection = this.addSection();
         const deviceOptions = serverCache.devices.map(d => ({ value: d.alias, label: d.alias }));
-        const device = this.createField({ label: "Device", type: "select", options: deviceOptions}, "", null, locationSection);
+        const device = this.createField({ label: "Device", type: "select", options: deviceOptions }, "", null, locationSection);
         const bitIndex = this.createField({ label: "Bit Index (0-15)", type: "int" }, 0, null, locationSection);
 
         // Dynamic data type field - update according to channel type
@@ -365,13 +365,21 @@ export class Inspector {
         const channel = this.createField({ label: "Channel", type: "select", options: channelOptions }, "", onChannelChanged, locationSection);
         onChannelChanged() // Add data type field
         locationSection.appendChild(dataTypeContainer);
-        const address = this.createField({ label: "Address", type: "int" }, 0, null, locationSection);
+        const address = this.createField({ label: "Address", type: "int", 
+                description: "The starting address of the value to read or write. 0-indexed." }, 
+            0, null, locationSection);
         locationSection.appendChild(bitIndex.wrapper); // Move bit index field
 
         //const readAmount = this.createField({label: "Read Amount", type: "int"}, 1, null, tagSection)
         const historySection = this.addSection();
-        const historyRetention = this.createField({ label: "History Retention (Seconds)", type: "int" }, 0, null, historySection)
-        const historyInterval = this.createField({ label: "History Write Interval (Seconds)", type: "int" }, 1, null, historySection)
+        const historyRetention = this.createField({ label: "History Retention (Seconds)", type: "int", 
+                description: "The maximum age of this tag's history entries. Use 0 for no history" },
+            0, null, historySection
+        );
+        const historyInterval = this.createField({ label: "History Write Interval (Seconds)", type: "int", 
+                description: "How long the server should wait before creating a new history entry. Use 0 for highest detail"}, 
+            1, null, historySection
+        );
         
         // Post values to server
         const tagSubmit = async () => {
@@ -428,8 +436,11 @@ export class Inspector {
             // Create an input with the same value type as the selected tag
             const fieldType = Inspector.getFieldType(tag.data_type);
 
-            const newOperatorField = this.createField({ label: "Operator", type: "select", options: operatorChoices }, "equals", null, operatorContainer);
-            const newTriggerField = this.createField({ label: "Trigger Value", type: fieldType }, "", null, triggerContainer);
+            const newOperatorField = this.createField({ label: "Operator", type: "select", options: operatorChoices}, "equals", null, operatorContainer);
+            const newTriggerField = this.createField({ label: "Trigger Value", type: fieldType, 
+                    description: "The value to compare with for triggering the alarm" }, 
+                "", null, triggerContainer
+            );
             
             getOperatorValue = newOperatorField.getValue;
             getTriggerValue = newTriggerField.getValue;
@@ -445,7 +456,10 @@ export class Inspector {
         const threatLevelOptions = serverCache.alarmOptions.threat_levels.map(a => ({ value: a.value, label: a.label }));
         const threatLevel = this.createField({ label: "Threat Level", type: "select", options: threatLevelOptions }, "", null, alarmSection);
 
-        const message = this.createField({ label: "Message", type: "text" }, "", null, alarmSection);
+        const message = this.createField({ label: "Message", type: "text", 
+                description: "The message to send to subscribers when the alarm activates" }, 
+            "", null, alarmSection
+        );
 
         // Post values to server
         const alarmSubmit = async () => {

@@ -177,8 +177,12 @@ class BoolLabelWidget extends Widget {
     static allowedChannels = ["coil", "di", "hr", "ir"];
     static allowedTypes = ["bool"];
     static customFields = [
-        { name: "text_on", type: "text", default: "On", label: "On Text" },
-        { name: "text_off", type: "text", default: "Off", label: "Off Text" },
+        { name: "text_on", type: "text", default: "On", label: "On Text", 
+            description: "Text to display when the value is true." 
+        },
+        { name: "text_off", type: "text", default: "Off", label: "Off Text",
+            description: "Text to display when the value is false." 
+        },
     ]
 
     constructor(widget_elem, config, tagID) {
@@ -238,8 +242,12 @@ class LEDWidget extends Widget {
     static allowedChannels = ["coil", "di", "hr", "ir"];
     static allowedTypes = ["bool"];
     static customFields = [
-        { name: "color_on", type: "color", default: "#00FF00", label: "On Color" },
-        { name: "color_off", type: "color", default: "#FF0000", label: "Off Color" },
+        { name: "color_on", type: "color", default: "#00FF00", label: "On Color",
+            description: "Color to display when the value is true." 
+        },
+        { name: "color_off", type: "color", default: "#FF0000", label: "Off Color",
+            description: "Color to display when the value is false." 
+        },
     ]
     
     constructor(widget_elem, config, tagID) {
@@ -268,7 +276,9 @@ class ButtonWidget extends Widget {
         { name: "confirmation", type: "bool", default: false, label: "Prompt Confirmation" },
     ]
     static tagTypedFields = [
-        { name: "submit_value", default: "", label: "Submit Value" }
+        { name: "submit_value", default: "", label: "Submit Value",
+            description: "The value to write to the tag when clicked."
+        }
     ]
 
     constructor(widget_elem, config, tagID) {
@@ -413,9 +423,15 @@ class MeterWidget extends Widget {
     static customFields = [
         { name: "min_value", type: "number", default: 0, label: "Minimum Value" },
         { name: "max_value", type: "number", default: 10, label: "Maximum Value" },
-        { name: "low_value", type: "number", default: 0, label: "Low Value" },
-        { name: "high_value", type: "number", default: 0, label: "High Value" },
-        { name: "optimum_value", type: "number", default: 0, label: "Optimum Value" },
+        { name: "low_value", type: "number", default: 0, label: "Low Value",
+            description: "Minimum value considered low."
+        },
+        { name: "high_value", type: "number", default: 0, label: "High Value",
+            description: "Minimum value considered high."
+        },
+        { name: "optimum_value", type: "number", default: 0, label: "Optimum Value",
+            description: "The best value."
+        },
         { name: "prefix", type: "text", default: "", label: "Value Prefix" },
         { name: "suffix", type: "text", default: "", label: "Value Suffix" },
         { name: "display_range", type: "bool", default: true, label: "Show Range"},
@@ -532,7 +548,9 @@ class ChartWidget extends Widget {
     static allowedTypes = ["int16", "uint16", "int32", "uint32", "int64", "uint64", "float32", "float64"];
     static customFields = [
         { name: "title", type: "text", default: "Tag History", label: "Title" },
-        { name: "history_seconds", type: "number", default: 60, label: "History Length (s)" },
+        { name: "history_seconds", type: "number", default: 60, label: "History Length (s)",
+            description: "The amount of time that the chart should display.",
+        },
         { name: "chart_type", type: "select", default: "line", label: "Chart Type",
             options: [
                 { value: "line", label: "Line Chart" },
@@ -734,8 +752,12 @@ class GaugeWidget extends Widget {
         { name: "title", type: "text", default: "", label: "Title" },
         { name: "min_value", type: "number", default: 0, label: "Min Value" },
         { name: "max_value", type: "number", default: 100, label: "Max Value" },
-        { name: "warning_threshold", type: "number", default: 75, label: "Warning Start" },
-        { name: "critical_threshold", type: "number", default: 90, label: "Critical Start" },
+        { name: "warning_threshold", type: "number", default: 75, label: "Warning Start",
+            description: "Minimum value of warning color. Purely visual."
+        },
+        { name: "critical_threshold", type: "number", default: 90, label: "Critical Start",
+            description: "Minimum value of critical color. Purely visual."
+        },
         { name: "prefix", type: "text", default: "", label: "Value Prefix" },
         { name: "suffix", type: "text", default: "", label: "Value Suffix" },
     ];
