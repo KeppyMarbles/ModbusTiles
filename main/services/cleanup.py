@@ -9,12 +9,10 @@ from ..models import TagHistoryEntry, Tag, TagWriteRequest, ActivatedAlarm
 logger = logging.getLogger(__name__)
 
 
-async def loop_cleanup():
+async def loop_cleanup(interval=60):
     @database_sync_to_async
     def _prune_history_entries():
         prune_history_entries()
-
-    LOOP_SECONDS = 60
 
     logger.info("Starting DB cleanup loop...")
 
@@ -24,7 +22,7 @@ async def loop_cleanup():
         await _prune_history_entries()
 
         elapsed = time.monotonic() - start_time
-        sleep_time = max(0, LOOP_SECONDS - elapsed)
+        sleep_time = max(0, interval - elapsed)
 
         await asyncio.sleep(sleep_time)
 

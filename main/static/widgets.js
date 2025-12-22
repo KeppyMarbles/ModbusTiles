@@ -1,5 +1,4 @@
-import { getCookie } from "./util.js";
-import { serverCache } from "./global.js";
+import { postServer } from "./util.js";
 
 class Widget {
     static displayName = "Default Widget";
@@ -10,13 +9,12 @@ class Widget {
         { name: "showTagName", type: "bool", default: true, label: "Show Tag Name" },
     ];
     static customFields = [];
-    tagTypedFields = [];
-    dataType = null;
+    static tagTypedFields = [];
 
     constructor(gridElem, config, tag) {      
         // Apply defaults
         if(!config) config = {};
-        const allFields = [...(new.target.defaultFields), ...(new.target.customFields), ...(this.tagTypedFields)];
+        const allFields = [...(new.target.defaultFields), ...(new.target.customFields), ...(new.target.tagTypedFields)];
         allFields.forEach(field => {
             if(config[field.name] === undefined)
                 config[field.name] = field.default;
@@ -47,26 +45,7 @@ class Widget {
             return false;
         }
 
-        const response = await fetch(`/api/write-requests/`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-CSRFToken": getCookie("csrftoken")
-            },
-            body: JSON.stringify({ 
-                tag: this.tag.external_id,
-                value: value,
-            })
-        });
-
-        const result = await response.json();
-
-        if (result.error) {
-            alert("Failed to write value: " + result.error);
-            return false;
-        }
-
-        return true;
+        return await postServer(`/api/write-requests/`, { tag: this.tag.external_id, value: value });
     }
 
     onData(data) {
@@ -124,15 +103,16 @@ class Widget {
             this.gridElem.classList.remove("is-state", "locked");
 
         // Show tag alias
-        if(this.config.showTagName) {
-            this.label.classList.remove("hidden");
-            this.label.textContent = this.tag ? this.tag.alias : "No Tag";
-            this.label.title = this.tag ? this.tag.description : "";
+        if(this.label) {
+            if(this.config.showTagName) {
+                this.label.classList.remove("hidden");
+                this.label.textContent = this.tag ? this.tag.alias : "No Tag";
+                this.label.title = this.tag ? this.tag.description : "";
+            }
+            else {
+                this.label.classList.add("hidden");
+            }
         }
-        else {
-            this.label.classList.add("hidden");
-        }
-
         this.elem.title = this.tag ? this.tag.alias : "";
     }
 
@@ -194,7 +174,7 @@ class LabelWidget extends Widget { //TODO font size, formatting?
 
 class BoolLabelWidget extends Widget {
     static displayName = "Boolean Label";
-    static allowedChannels = ["coil", "di"];
+    static allowedChannels = ["coil", "di", "hr", "ir"];
     static allowedTypes = ["bool"];
     static customFields = [
         { name: "text_on", type: "text", default: "On", label: "On Text" },
@@ -224,7 +204,7 @@ class BoolLabelWidget extends Widget {
 
 class SwitchWidget extends Widget {
     static displayName = "Switch";
-    static allowedChannels = ["coil"];
+    static allowedChannels = ["coil", "hr"];
     static allowedTypes = ["bool"];
     static customFields = [
         { name: "confirmation", type: "bool", default: false, label: "Prompt Confirmation" },
@@ -255,7 +235,7 @@ class SwitchWidget extends Widget {
 
 class LEDWidget extends Widget {
     static displayName = "Light";
-    static allowedChannels = ["coil", "di"];
+    static allowedChannels = ["coil", "di", "hr", "ir"];
     static allowedTypes = ["bool"];
     static customFields = [
         { name: "color_on", type: "color", default: "#00FF00", label: "On Color" },
@@ -287,7 +267,7 @@ class ButtonWidget extends Widget {
         { name: "button_text", type: "text", default: "Button Text", label: "Button Text" },
         { name: "confirmation", type: "bool", default: false, label: "Prompt Confirmation" },
     ]
-    tagTypedFields = [
+    static tagTypedFields = [
         { name: "submit_value", default: "", label: "Submit Value" }
     ]
 
@@ -363,9 +343,8 @@ class SliderWidget extends Widget {
         { name: "display_range", type: "bool", default: true, label: "Show Range" },
         { name: "display_value", type: "bool", default: false, label: "Show Value" },
         { name: "confirmation", type: "bool", default: false, label: "Prompt Confirmation" },
-
     ]
-    tagTypedFields = [
+    static tagTypedFields = [
         { name: "step", default: 1, label: "Step"}, //TODO default not working?
     ]
 
@@ -581,16 +560,9 @@ class ChartWidget extends Widget {
         this.realData = false;
         this.initPreview();
 
-        // Size chart to gridstack elem
-        let resizeTimeout;
-
-        this.resizeObserver = new ResizeObserver(() => {
-            clearTimeout(resizeTimeout);
-            resizeTimeout = setTimeout(() => {
-                Plotly.Plots.resize(this.chartDiv);
-            }, 100); // adjust delay
-        });
-        this.resizeObserver.observe(this.elem);
+        this.resizeObserver = throttledResizeObserver(this.elem, () => {
+            Plotly.Plots.resize(this.chartDiv);
+        }, 100);
 
         this.pauseButton.addEventListener("click", () => {
             this.togglePaused();
@@ -626,7 +598,8 @@ class ChartWidget extends Widget {
         try {
             // Fetch real history data
             const response = await fetch(`/api/history/?tags=${this.tag.external_id}&seconds=${this.config.history_seconds}`);
-            if (!response.ok) throw new Error("History fetch failed");
+            if (!response.ok) 
+                throw new Error("History fetch failed");
 
             const data = await response.json();
             const timestamps = data.map(e => e.timestamp);
@@ -774,15 +747,9 @@ class GaugeWidget extends Widget {
 
         this.currentValue = this.config.min_value;
 
-        let resizeTimeout;
-        this.resizeObserver = new ResizeObserver(() => {
-            clearTimeout(resizeTimeout);
-            resizeTimeout = setTimeout(() => {
-                Plotly.Plots.resize(this.chartDiv);
-            }, 100); // adjust delay
-        });
-
-        this.resizeObserver.observe(this.elem);
+        this.resizeObserver = throttledResizeObserver(this.elem, () => {
+            Plotly.Plots.resize(this.chartDiv);
+        }, 100);
 
         this.chartDiv.innerText = "";
     }
@@ -849,6 +816,16 @@ class GaugeWidget extends Widget {
             font: { color: this.textColor }
         };
     }
+}
+
+function throttledResizeObserver(elem, cb, time) {
+    let resizeTimeout;
+    const resizeObserver = new ResizeObserver(() => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(cb, time);
+    });
+    resizeObserver.observe(elem);
+    return resizeObserver;
 }
 
 export const WidgetRegistry = {

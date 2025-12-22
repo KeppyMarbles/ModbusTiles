@@ -67,6 +67,7 @@ class TagCreateSerializer(serializers.ModelSerializer):
             "channel",
             "data_type",
             "address",
+            "bit_index",
             "read_amount",
             "history_retention",
             "history_interval",
@@ -75,6 +76,19 @@ class TagCreateSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             "owner": {"read_only": True},
         }
+
+    def validate(self, attrs):
+        data_type = attrs.get("data_type")
+        bit_index = attrs.get("bit_index")
+
+        if bit_index is not None:
+            if data_type != Tag.DataTypeChoices.BOOL:
+                raise serializers.ValidationError("Bit index is only valid for Boolean tags")
+
+            if not 0 <= bit_index <= 15:
+                raise serializers.ValidationError("Bit index must be between 0 and 15")
+
+        return attrs
 
 
 class TagUpdateSerializer(serializers.ModelSerializer):
@@ -113,6 +127,7 @@ class TagDropdownSerializer(serializers.ModelSerializer):
             "channel",
             "data_type",
             "address",
+            "bit_index",
             "description",
         ]
 
@@ -163,7 +178,7 @@ class TagWriteRequestSerializer(serializers.ModelSerializer):
     def validate_tag(self, tag: Tag):
         user = self.context['request'].user
         if tag.owner != user and not user.is_staff:
-             raise serializers.ValidationError("You do not have permission to write to this tag.")
+             raise serializers.ValidationError("You do not have permission to write to this tag.") #TODO?
 
         if tag.channel in [Tag.ChannelChoices.DISCRETE_INPUT, Tag.ChannelChoices.INPUT_REGISTER]:
             raise serializers.ValidationError("This tag type is Read-Only.")

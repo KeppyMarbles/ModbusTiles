@@ -69,6 +69,7 @@ class Tag(models.Model):
     data_type = models.TextField(choices=DataTypeChoices.choices)
 
     address = models.PositiveIntegerField(default=0)
+    bit_index = models.PositiveSmallIntegerField(blank=True, null=True)
 
     read_amount = models.PositiveIntegerField(default=1)
 
@@ -84,7 +85,7 @@ class Tag(models.Model):
     #created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ("device", "channel", "address", "unit_id")
+        unique_together = ("device", "channel", "address", "unit_id", "bit_index")
 
     def get_read_count(self):
         from math import ceil
@@ -128,7 +129,9 @@ class Tag(models.Model):
             cls.objects.bulk_update([entry.tag for entry in entries], ['last_history_at'])
     
     def __str__(self):
-        return f"{self.alias} [{self.channel}:{self.address}]"
+        bit = f":{self.bit_index}" if self.bit_index is not None else ""
+        location = f"{self.channel}:{self.address}{bit}"
+        return f"{self.alias} [{location}]"
 
 
 class TagHistoryEntry(models.Model):
@@ -271,13 +274,11 @@ class AlarmConfig(models.Model):
 
 class ActivatedAlarm(models.Model):
     """ Represents an alarm that was or is currently activated """
-    
+
     config = models.ForeignKey(AlarmConfig, on_delete=models.CASCADE)
     timestamp = models.DateTimeField(auto_now_add=True)
     
     is_active = models.BooleanField(default=False)
-
-    #TODO max history entries?
 
     class Meta:
         unique_together = ('config', 'timestamp')

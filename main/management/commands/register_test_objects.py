@@ -33,6 +33,7 @@ class Command(BaseCommand):
         di_tags = []
         hr_tags = []
         ir_tags = []
+        bitfield_hr_tags = []
 
         for i in range(0, 16, 2):
             coil_tags.append(Tag(
@@ -74,6 +75,17 @@ class Command(BaseCommand):
                 description="A test input register tag",
             ))
 
+        for i in range(0, 5):
+            bitfield_hr_tags.append(Tag(
+                device=device,
+                alias=f"hr100 bit {i}",
+                channel=Tag.ChannelChoices.HOLDING_REGISTER,
+                data_type=Tag.DataTypeChoices.BOOL,
+                address=100,
+                bit_index=i,
+                description="A test bitfield tag",
+            ))
+
         chart_tag = Tag(
             device=device,
             alias=f"chart tag",
@@ -85,7 +97,7 @@ class Command(BaseCommand):
             description="A float tag for testing the chart",
         )
 
-        Tag.objects.bulk_create(coil_tags + di_tags + hr_tags + ir_tags + [chart_tag])
+        Tag.objects.bulk_create(coil_tags + di_tags + hr_tags + ir_tags + bitfield_hr_tags + [chart_tag])
 
         # ---------- Test Coils ----------
 
@@ -350,6 +362,33 @@ class Command(BaseCommand):
                 ]
             }
         ))
+        
+        for i in range(len(bitfield_hr_tags)):
+            widgets.append(DashboardWidget(
+                dashboard=dashboard,
+                tag=bitfield_hr_tags[i],
+                widget_type=DashboardWidget.WidgetTypeChoices.LED,
+                config = {
+                    "position_x": 15+i,
+                    "position_y": 10,
+                    "scale_x" : 1,
+                    "scale_y" : 1,
+                    "color_on": "green",
+                    "color_off": "red",
+                }
+            ))
+            widgets.append(DashboardWidget(
+                dashboard=dashboard,
+                tag=bitfield_hr_tags[i],
+                widget_type=DashboardWidget.WidgetTypeChoices.SWITCH,
+                config = {
+                    "position_x": 15+i,
+                    "position_y": 11,
+                    "scale_x" : 1,
+                    "scale_y" : 1,
+                    "showTagName" : False,
+                }
+            ))
 
         DashboardWidget.objects.bulk_create(widgets)
 

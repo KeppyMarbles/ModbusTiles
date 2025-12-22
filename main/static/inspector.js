@@ -17,6 +17,11 @@ export class Inspector {
             return "text";
     }
 
+    static getTagLabel(tag) {
+        const bit = tag.bit_index !== null ? ":" + tag.bit_index : "";
+        return `${tag.alias} (${tag.channel} ${tag.address}${bit})`;
+    }
+
     clear() {
         this.container.innerHTML = '';
     }
@@ -50,6 +55,8 @@ export class Inspector {
     createField(def, currentValue, onChange, section) { // TODO add uint, restrict float input for int fields?
         const wrapper = document.createElement('div');
         wrapper.className = "input-group";
+        if(def.description)
+            wrapper.title = def.description;
 
         const label = document.createElement('label');
         label.innerText = def.label || def.name;
@@ -229,40 +236,41 @@ export class Inspector {
             }, section);
         }
 
-        const tagSection = this.addSection();
-        const tagTypedFieldsContainer = document.createElement('div');
+        if(widgetClass.allowedChannels.length > 0) {
+            const tagSection = this.addSection();
+            const tagTypedFieldsContainer = document.createElement('div');
 
-        const createTagTypedFields = (tag) => {
-            tagTypedFieldsContainer.innerHTML = "";
+            const createTagTypedFields = (tag) => {
+                tagTypedFieldsContainer.innerHTML = "";
 
-            if(!tag || widget.tagTypedFields.length === 0)
-                return;
-            
-            // Add new inputs
-            const newFieldType = Inspector.getFieldType(tag.data_type);
-            
-            widget.tagTypedFields.forEach(field => {
-                field["type"] = newFieldType;
-                createConfigField(field, tagTypedFieldsContainer);
+                if(!tag || widgetClass.tagTypedFields.length === 0)
+                    return;
+                
+                // Add new inputs
+                const newFieldType = Inspector.getFieldType(tag.data_type);
+                
+                widgetClass.tagTypedFields.forEach(field => {
+                    createConfigField({ ...field, "type": newFieldType }, tagTypedFieldsContainer);
+                });
+            }
+
+            // Create dropdown with tags that are compatible with this widget
+            const compatibleTags = serverCache.tags.filter(tag => {
+                return widgetClass.allowedTypes.includes(tag.data_type) 
+                    && widgetClass.allowedChannels.includes(tag.channel);
             });
-        }
+            const tagOptions = compatibleTags.map(tag => ({ value: tag.external_id, label: Inspector.getTagLabel(tag) }));
 
-        // Create dropdown with tags that are compatible with this widget
-        const compatibleTags = serverCache.tags.filter(tag => {
-            return widgetClass.allowedTypes.includes(tag.data_type) 
-                && widgetClass.allowedChannels.includes(tag.channel);
-        });
-        const tagOptions = compatibleTags.map(tag => ({ value: tag.external_id, label: `${tag.alias} (${tag.channel} ${tag.address})`}));
-        
-        this.createField({label: "Control Tag", type: "select", options: tagOptions }, widget.tag?.external_id, (newVal) => {
-            widget.tag = compatibleTags.find(tag => tag.external_id === newVal);
-            widget.applyConfig();
-            createTagTypedFields(newVal); // Update the tag based fields
-        }, tagSection);
-        
-        // Add tag-dependent fields
-        createTagTypedFields(widget.tag);
-        tagSection.appendChild(tagTypedFieldsContainer);
+            this.createField({ label: "Control Tag", type: "select", options: tagOptions }, widget.tag?.external_id, (newVal) => {
+                widget.tag = compatibleTags.find(tag => tag.external_id === newVal);
+                widget.applyConfig();
+                createTagTypedFields(newVal); // Update the tag based fields
+            }, tagSection);
+            
+            // Add tag-dependent fields
+            createTagTypedFields(widget.tag);
+            tagSection.appendChild(tagTypedFieldsContainer);
+        }
 
         // Add rest of fields
         const customFieldsSection = this.addSection();
@@ -313,49 +321,58 @@ export class Inspector {
 
     _formCreateTag() { //TODO i wonder if the options map should be a function, standardized in the API
         this.addTitle("New Tag");
+
         const tagSection = this.addSection();
         const alias = this.createField({ label: "Tag Name", type: "text" }, "", null, tagSection);
+        const description = this.createField({ label: "Description (optional)", type: "text" }, "", null, tagSection)
 
+        const locationSection = this.addSection();
         const deviceOptions = serverCache.devices.map(d => ({ value: d.alias, label: d.alias }));
-        const device = this.createField({ label: "Device", type: "select", options: deviceOptions}, "", null, tagSection);
-
-        const address = this.createField({ label: "Address", type: "int" }, 0, null, tagSection);
+        const device = this.createField({ label: "Device", type: "select", options: deviceOptions}, "", null, locationSection);
+        const bitIndex = this.createField({ label: "Bit Index (0-15)", type: "int" }, 0, null, locationSection);
 
         // Dynamic data type field - update according to channel type
         const dataTypeContainer = document.createElement('div');
-        let getDataTypeValue = () => null;
+        let getDataTypeValue = () => { return null };
 
-        const onChannelChanged = (value) => {
+        const onChannelChanged = (channelValue) => {
             dataTypeContainer.innerHTML = '';
             let dataTypeOptions = serverCache.tagOptions.data_types;
-            let currentValue = "";
+            let dataTypeValue = getDataTypeValue();
 
             // Only show data types that are compatible with the selected channel
-            if(!value)
+            if(!channelValue)
                 dataTypeOptions = [];
-            else if(["coil", "di"].includes(value)) {
+            else if(["coil", "di"].includes(channelValue)) {
                 dataTypeOptions = dataTypeOptions.filter(t => {return t.value === 'bool'});
-                currentValue = "bool";
+                dataTypeValue = "bool";
             }
-            else 
-                dataTypeOptions = dataTypeOptions.filter(t => {return t.value !== 'bool'});
 
-            const newField = this.createField({ label: "Data Type", type: "select", options: dataTypeOptions }, currentValue, null, dataTypeContainer);
+            // Include the bit index field if it's a boolean value on registers
+            const onDataTypeChanged = (dataTypeValue) => {
+                if (dataTypeValue === "bool" && ["hr", "ir"].includes(channelValue))
+                    bitIndex.wrapper.classList.remove("hidden");
+                else
+                    bitIndex.wrapper.classList.add("hidden");
+            }
+            onDataTypeChanged(dataTypeValue);
+
+            const newField = this.createField({ label: "Data Type", type: "select", options: dataTypeOptions }, dataTypeValue, onDataTypeChanged, dataTypeContainer);
             getDataTypeValue = newField.getValue;
         }
-
+        
         const channelOptions = serverCache.tagOptions.channels.map(o => ({ value: o.value, label: o.label }));
-        const channel = this.createField({ label: "Channel", type: "select", options: channelOptions }, "", onChannelChanged, tagSection);
-        onChannelChanged()
-
-        tagSection.appendChild(dataTypeContainer);
-        //const dataTypeOptions = serverCache.tagOptions.data_types.map(o => ({ value: o.value, label: o.label }));
+        const channel = this.createField({ label: "Channel", type: "select", options: channelOptions }, "", onChannelChanged, locationSection);
+        onChannelChanged() // Add data type field
+        locationSection.appendChild(dataTypeContainer);
+        const address = this.createField({ label: "Address", type: "int" }, 0, null, locationSection);
+        locationSection.appendChild(bitIndex.wrapper); // Move bit index field
 
         //const readAmount = this.createField({label: "Read Amount", type: "int"}, 1, null, tagSection)
-        const historyRetention = this.createField({ label: "History Retention (Seconds)", type: "int" }, 0, null, tagSection)
-        const historyInterval = this.createField({ label: "History Write Interval (Seconds)", type: "int" }, 1, null, tagSection)
-        const description = this.createField({ label: "Description (optional)", type: "text" }, "", null, tagSection)
-
+        const historySection = this.addSection();
+        const historyRetention = this.createField({ label: "History Retention (Seconds)", type: "int" }, 0, null, historySection)
+        const historyInterval = this.createField({ label: "History Write Interval (Seconds)", type: "int" }, 1, null, historySection)
+        
         // Post values to server
         const tagSubmit = async () => {
             const payload = {
@@ -364,7 +381,8 @@ export class Inspector {
                 device: device.getValue(),
                 address: address.getValue(),
                 channel: channel.getValue(),
-                data_type: getDataTypeValue(), // Use latest getValue
+                bit_index: bitIndex.wrapper.classList.contains("hidden") ? null : bitIndex.getValue(),
+                data_type: getDataTypeValue(),
                 unit_id: 1,
                 //read_amount: readAmount.getValue(),
                 read_amount: 1,
@@ -378,7 +396,8 @@ export class Inspector {
                 refreshData();
             });
         };
-        this.addButton("Create Tag", tagSubmit, tagSection);
+        const createSection = this.addSection();
+        this.addButton("Create Tag", tagSubmit, createSection);
     }
 
     _formCreateAlarm() {
@@ -392,11 +411,13 @@ export class Inspector {
         let getTriggerValue = () => null;
         let getOperatorValue = () => null;
 
-        const onTagChanged = (tag) => {
+        const onTagChanged = (tagID) => {
             triggerContainer.innerHTML = ''; 
             operatorContainer.innerHTML = '';
+            
+            const tag = serverCache.tags.find(tag => tag.external_id === tagID);
 
-            if(tag === null)
+            if(!tag)
                 return;
 
             // Show choices for trigger operator
@@ -405,7 +426,7 @@ export class Inspector {
                 operatorChoices = operatorChoices.filter(t => {return t.value === "equals"});
 
             // Create an input with the same value type as the selected tag
-            fieldType = Inspector.getFieldType(tag.data_type);
+            const fieldType = Inspector.getFieldType(tag.data_type);
 
             const newOperatorField = this.createField({ label: "Operator", type: "select", options: operatorChoices }, "equals", null, operatorContainer);
             const newTriggerField = this.createField({ label: "Trigger Value", type: fieldType }, "", null, triggerContainer);
@@ -414,7 +435,7 @@ export class Inspector {
             getTriggerValue = newTriggerField.getValue;
         }
 
-        const tagOptions = serverCache.tags.map(tag => ({ value: tag.external_id, label: `${tag.alias} (${tag.channel} ${tag.address})`})); //TODO function?
+        const tagOptions = serverCache.tags.map(tag => ({ value: tag.external_id, label: Inspector.getTagLabel(tag)}));
         const tag = this.createField({ label: "Control Tag", type: "select", options: tagOptions }, "", onTagChanged, alarmSection);
         //onTagChanged()
 
@@ -443,6 +464,7 @@ export class Inspector {
             });
         }
 
-        this.addButton("Create Alarm", alarmSubmit, alarmSection);
+        const createSection = this.addSection();
+        this.addButton("Create Alarm", alarmSubmit, createSection);
     }
 }

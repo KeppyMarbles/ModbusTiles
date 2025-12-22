@@ -30,10 +30,8 @@ logger = logging.getLogger(__name__)
 channel_layer = get_channel_layer()
 clients: dict[str, ModbusBaseClient] = {}
 
-POLL_DURATION = 0.25
-INFO_DURATION = 30
 
-async def poll_devices():
+async def poll_devices(poll_interval=0.25, info_interval=30):
     """ Gather tag data and process write requests at a steady rate """
 
     @database_sync_to_async
@@ -65,15 +63,15 @@ async def poll_devices():
         while True:
             if iteration_count > 0:
                 avg = total_duration / iteration_count
-                amt = (avg / POLL_DURATION)*100
+                amt = (avg / poll_interval)*100
                 msg = f"Average poll duration: {avg:.3f}s ({amt:.2f}%)"
-                if avg > POLL_DURATION:
+                if avg > poll_interval:
                     logger.warning(msg)
                 else:
                     logger.info(msg)
 
             total_duration = iteration_count = 0
-            await asyncio.sleep(INFO_DURATION)
+            await asyncio.sleep(info_interval)
 
     logger.info("Starting Async Poller...")
 
@@ -102,7 +100,7 @@ async def poll_devices():
 
         # Sleep
         elapsed = time.monotonic() - start_time
-        sleep_time = max(0, POLL_DURATION - elapsed)
+        sleep_time = max(0, poll_interval - elapsed)
 
         total_duration += elapsed
         iteration_count += 1
@@ -116,7 +114,7 @@ async def _poll_device(device: Device, context: PollContext):
     try:
         client = await _get_client(device) #TODO stop trying if it fails too often?
     except Exception as e:
-        logger.warning(f"Error connecting to device {device}: {e}")
+        logger.warning(f"Couldn't connect to device {device}: {e}")
         return
     
     await _process_writes(client, device)
@@ -149,7 +147,7 @@ async def _get_client(device: Device) -> ModbusBaseClient | None:
     return conn
 
 
-def _build_read_blocks(tags: list[Tag]) -> list[ReadBlock]:
+def _build_read_blocks(tags: list[Tag], max_gap=8, max_size=128) -> list[ReadBlock]:
     """ Create blocks of contiguous registers in memory """
     #if not all(tag.device == tags[0].device for tag in tags):
     #    raise Exception("Tag device mismatch when building read block")
@@ -164,9 +162,6 @@ def _build_read_blocks(tags: list[Tag]) -> list[ReadBlock]:
     for channel, channel_tags in grouped_tags.items():
         channel_tags.sort(key=lambda x: x.address)
 
-        MAX_GAP = 8
-        MAX_SIZE = 128
-
         # First block
         block_tags = [channel_tags[0]]
         block_start = channel_tags[0].address
@@ -176,8 +171,8 @@ def _build_read_blocks(tags: list[Tag]) -> list[ReadBlock]:
         for tag in channel_tags[1:]:
             length = tag.get_read_count()
 
-            close_enough = (tag.address - block_end) <= MAX_GAP
-            within_size = (tag.address + length - block_start) <= MAX_SIZE
+            close_enough = (tag.address - block_end) <= max_gap
+            within_size = (tag.address + length - block_start) <= max_size
 
             if close_enough and within_size:
                 # Extend current block
@@ -209,7 +204,7 @@ async def _process_block(block: ReadBlock, client: ModbusBaseClient, context: Po
         return
     
     if rr.isError():
-        logger.warning(f"Modbus error while reading block starting at {block.start}")
+        logger.error(f"Modbus error while reading block starting at {block.start}")
         return
     
     if len(rr.registers) > 0:
@@ -217,7 +212,7 @@ async def _process_block(block: ReadBlock, client: ModbusBaseClient, context: Po
     elif len(rr.bits) > 0:
         block_data = rr.bits
     else:
-        logger.warning("Modbus response contained no data")
+        logger.error("Modbus response contained no data")
         return
 
     # For each tag, get the associated value found in the register data 
@@ -228,7 +223,7 @@ async def _process_block(block: ReadBlock, client: ModbusBaseClient, context: Po
             length = tag.get_read_count() #TODO
 
             if offset + length > len(block_data):
-                logger.warning(f"Tag {tag} out of bounds in block read")
+                logger.error(f"Tag {tag} out of bounds in block read")
                 continue
             
             raw_slice = block_data[offset : offset + length]
@@ -240,6 +235,14 @@ async def _process_block(block: ReadBlock, client: ModbusBaseClient, context: Po
                     data_type=_get_modbus_datatype(client, tag),
                     word_order=tag.device.word_order
                 )
+                # Handle bit-indexing
+                if tag.bit_index is not None:
+                    if tag.data_type != Tag.DataTypeChoices.BOOL:
+                        logger.error(f"Data type mismatch in {tag}: want to read bit {tag.bit_index} with type {tag.data_type}")
+                        continue
+                    else:
+                        values = bool((values >> tag.bit_index) & 1)
+
             elif len(rr.bits) > 0:
                 values = raw_slice if tag.read_amount > 1 else raw_slice[0]
 
@@ -308,20 +311,33 @@ async def _write_value(client: ModbusBaseClient, tag: Tag, values):
             case Tag.DataTypeChoices.FLOAT32:
                 values = [float(value) for value in values]
     except ValueError:
-        logger.warning(f"Tag data type mismatch: writing {values} to {tag}")
+        logger.error(f"Data type mismatch in {tag}: trying to write {values} with type {tag.data_type}")
         return
 
     # Write the list to the device registers
     match tag.channel:
         case Tag.ChannelChoices.HOLDING_REGISTER:
-            registers = client.convert_to_registers(values, data_type=_get_modbus_datatype(client, tag), word_order=tag.device.word_order)
-            result = await client.write_registers(tag.address, registers, device_id=tag.unit_id)
+            # Normal direct write
+            if tag.bit_index is None:                
+                registers = client.convert_to_registers(values, data_type=_get_modbus_datatype(client, tag), word_order=tag.device.word_order)
+                result = await client.write_registers(tag.address, registers, device_id=tag.unit_id)
+            
+            # Mask write (bitfield)
+            elif tag.data_type == Tag.DataTypeChoices.BOOL:
+                bit_mask = 1 << tag.bit_index
+                and_mask = 0xFFFF ^ bit_mask
+                or_mask = bit_mask if values[0] else 0x0000
+                result = await client.mask_write_register(address=tag.address, and_mask=and_mask, or_mask=or_mask, device_id=tag.unit_id)
+
+            else:
+                logger.error(f"Data type mismatch in {tag}: want to write bit {tag.bit_index} with type {tag.data_type}")
+                return
 
         case Tag.ChannelChoices.COIL:
             result = await client.write_coils(tag.address, values, device_id=tag.unit_id)
 
         case _:
-            logger.warning("Tried to write with a read-only tag")
+            logger.error("Tried to write with a read-only tag")
             return
     
     if result.isError():
@@ -341,7 +357,7 @@ def _get_modbus_reader(client: ModbusBaseClient, tag: Tag):
 def _get_modbus_datatype(client: ModbusBaseClient, tag: Tag):
     """ Returns the equivalent pymodbus datatype of a tag's datatype """
     return {
-        Tag.DataTypeChoices.BOOL: client.DATATYPE.BITS,
+        Tag.DataTypeChoices.BOOL: client.DATATYPE.UINT16, # Use bit indexing
         Tag.DataTypeChoices.INT16: client.DATATYPE.INT16,
         Tag.DataTypeChoices.UINT16: client.DATATYPE.UINT16,
         Tag.DataTypeChoices.INT32: client.DATATYPE.INT32,

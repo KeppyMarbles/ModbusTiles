@@ -50,7 +50,8 @@ class Command(BaseCommand):
             # Get all read-only tags
             tags = Tag.objects.filter(
                 is_active=True, 
-                channel__in=[Tag.ChannelChoices.INPUT_REGISTER, Tag.ChannelChoices.DISCRETE_INPUT]
+                channel__in=[Tag.ChannelChoices.INPUT_REGISTER, Tag.ChannelChoices.DISCRETE_INPUT],
+                bit_index=None, #TODO implement bit animating?
             ).select_related("device")
 
             for tag in tags:
