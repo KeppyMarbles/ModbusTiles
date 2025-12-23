@@ -41,6 +41,32 @@
     min-height: 20px;
 }
 
+@keyframes flash-green {
+    0%   { box-shadow: 0 0 0 0 rgba(40, 180, 99, 0); }
+    30%  { box-shadow: 0 0 0 3px rgba(40, 180, 99, 0.9); }
+    100% { box-shadow: 0 0 0 5px rgba(40, 180, 99, 0); }
+}
+
+@keyframes flash-red {
+    0%   { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); }
+    30%  { box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.9); }
+    100% { box-shadow: 0 0 0 5px rgba(231, 76, 60, 0); }
+}
+
+.dashboard-widget.flash-success {
+    animation: flash-green 700ms ease-out;
+}
+
+.dashboard-widget.flash-error {
+    animation: flash-red 700ms ease-out;
+}
+
+.dashboard-widget.pending {
+    opacity: 0.6;
+    pointer-events: none;
+    cursor: wait;
+}
+
 /* --- Alarms --- */
 
 .threat-high {
@@ -202,6 +228,20 @@ input:checked + .switch_slider:before {
         ),
         5rem
     );
+}
+
+/* --- Number Input Widget ---*/
+
+.dashboard-widget.number-input {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
 
 /* --- Chart --- */

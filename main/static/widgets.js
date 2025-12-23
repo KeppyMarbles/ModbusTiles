@@ -35,24 +35,11 @@ class Widget {
         }, 0);
     }
 
-    async submit(value) {
-        if(!this.tag) {
-            console.error("No tag value to submit");
-            return false;
-        }
-
-        if(this.config.confirmation && !window.confirm(this.getConfirmMessage(value))) {
-            return false;
-        }
-
-        return await postServer(`/api/write-requests/`, { tag: this.tag.external_id, value: value });
-    }
-
     onData(data) {
         if(data.age > this.valueTimeout) 
             this.elem.classList.add("is-state", "no-connection");
         else
-            this.elem.classList.remove("is-state", "no-connection"); //TODO disable interactions?
+            this.elem.classList.remove("is-state", "no-connection");
 
         this.onValue(data.value, data.time);
 
@@ -116,35 +103,55 @@ class Widget {
         this.elem.title = this.tag ? this.tag.alias : "";
     }
 
-    getConfirmMessage(val) {
-        return `Change ${this.tag.alias} to ${val}?`
-    }
-
-    updateFontSize() { // TODO method or function? (eg updateFontSize(this.text_elem))
-        if (this.text_elem) {
-            const amt = Math.round(this.text_elem.textContent.length / 3) * 3;
-            const k = 100;
-
-            // measure container
-            const rect = this.text_elem.parentElement.getBoundingClientRect();
-            const aspect = rect.width / rect.height;
-
-            // width assist factor (>= 1)
-            const widthBoost = Math.min(1.75, Math.sqrt(aspect));
-            const textScale = (k / Math.sqrt(amt));
-            
-            // store CSS variables
-            this.text_elem.style.setProperty('--text-scale', textScale);
-            this.text_elem.style.setProperty('--width-boost', widthBoost);
-        }
-    }
-
     onValue(val) {
-        throw new Error("onValue not implemented for this widget");
+        return;
     }
 
     clear() {
         return;
+    }
+}
+
+class InputWidget extends Widget {
+    static defaultFields = [ ...Widget.defaultFields,
+        { name: "confirmation", type: "bool", default: false, label: "Prompt Confirmation" },
+    ];
+
+    async trySubmit(value) {
+        this.submittedValue = null;
+
+        if(value === this.lastValue || !this.tag) {
+            return;
+        }
+
+        if(this.config.confirmation && !window.confirm(this.getConfirmMessage(value))) {
+            return;
+        }
+
+        const submitted = await postServer(`/api/write-requests/`, { tag: this.tag.external_id, value: value });
+        this.elem.classList.add('pending'); //TODO schedule remove?
+
+        if(submitted)
+            this.submittedValue = value;
+        else {
+            // Write request submission failed
+            this.onValue(this.lastValue);
+            flashBool(false, this.elem);
+        }
+    }
+
+    getConfirmMessage(val) {
+        return `Change ${this.tag.alias} to ${val}?`
+    }
+
+    onValue(val) {
+        this.lastValue = val;
+        if(this.submittedValue !== null && val == this.submittedValue) {
+            // Value changed successfully!
+            flashBool(true, this.elem);
+            this.submittedValue = null;
+        }
+        this.elem.classList.remove('pending');
     }
 }
 
@@ -159,14 +166,12 @@ class LabelWidget extends Widget { //TODO font size, formatting?
     constructor(widget_elem, config) {
         super(widget_elem, config);
         this.text_elem = this.elem.querySelector(".label_text");
-        
-        this.config.showTagName = false; //TODO don't show control tag label
     }
 
     applyConfig() {
         super.applyConfig();
         this.text_elem.textContent = this.config.text;
-        this.updateFontSize();
+        fitText(this.text_elem);
     }
 }
 
@@ -193,12 +198,12 @@ class BoolLabelWidget extends Widget {
     applyConfig() {
         super.applyConfig();
         this.onValue(false);
-        this.updateFontSize();
+        fitText(this.text_elem);
     }
 
     onValue(val) {
         this.text_elem.textContent = val ? this.config.text_on : this.config.text_off;
-        this.updateFontSize();
+        fitText(this.text_elem);
     }
 
     clear() {
@@ -206,22 +211,15 @@ class BoolLabelWidget extends Widget {
     }
 }
 
-class SwitchWidget extends Widget {
+class SwitchWidget extends InputWidget {
     static displayName = "Switch";
     static allowedChannels = ["coil", "hr"];
     static allowedTypes = ["bool"];
-    static customFields = [
-        { name: "confirmation", type: "bool", default: false, label: "Prompt Confirmation" },
-    ]
 
     constructor(widget_elem, config, tagID) {
         super(widget_elem, config, tagID);
         this.input = this.elem.querySelector(".switch-input");
-        this.input.addEventListener("change", async () => {
-            const submitted = await this.submit(this.input.checked);
-            if(!submitted)
-                this.input.checked = !this.input.checked;
-        });
+        this.input.addEventListener("change", async () => this.trySubmit(this.input.checked));
     }
 
     getConfirmMessage(val) {
@@ -229,11 +227,12 @@ class SwitchWidget extends Widget {
     }
 
     onValue(val) {
+        super.onValue(val);
         this.input.checked = val ? true : false;
     }
 
     clear() {
-        this.input.checked = false;
+        this.onValue(false);
     }
 }
 
@@ -267,7 +266,7 @@ class LEDWidget extends Widget {
 
 // -------- Number Widgets --------
 
-class ButtonWidget extends Widget {
+class ButtonWidget extends InputWidget {
     static displayName = "Slider";
     static allowedChannels = ["coil", "hr"];
     static allowedTypes = ["bool", "int16", "uint16", "int32", "uint32", "int64", "uint64", "float32", "float64", "string"];
@@ -284,23 +283,17 @@ class ButtonWidget extends Widget {
     constructor(widget_elem, config, tagID) {
         super(widget_elem, config, tagID);
         this.button = this.elem.querySelector(".form-button");
-
-        this.button.addEventListener("click", async () => {
-            this.submit(this.config.submit_value);
-        });
+        this.button.addEventListener("click", async () => this.trySubmit(this.config.submit_value));
     }
 
     applyConfig() {
         super.applyConfig();
         this.button.innerText = this.config.button_text;
-    }
-
-    onValue(val) {
-        return;
+        this.button.title = `Submit ${this.submit_value}`;
     }
 }
 
-class DropdownWidget extends Widget {
+class DropdownWidget extends InputWidget {
     static displayName = "Dropdown";
     static allowedChannels = ["hr"];
     static allowedTypes = ["int16", "uint16", "int32", "uint32", "int64", "uint64", "float32", "float64"];
@@ -312,10 +305,7 @@ class DropdownWidget extends Widget {
     constructor(widget_elem, config, tagID) {
         super(widget_elem, config, tagID);
         this.select = this.elem.querySelector(".form-input"); //TODO?
-
-        this.select.addEventListener("change", async () => {
-            this.submit(this.select.value);
-        });
+        this.select.addEventListener("change", async () => this.trySubmit(Number(this.select.value)));
     }
 
     applyConfig() {
@@ -333,6 +323,7 @@ class DropdownWidget extends Widget {
     }
 
     onValue(val) {
+        super.onValue(val);
         this.select.value = val;
     }
 
@@ -341,21 +332,18 @@ class DropdownWidget extends Widget {
     }
 }
 
-class SliderWidget extends Widget {
+class SliderWidget extends InputWidget {
     static displayName = "Slider";
     static allowedChannels = ["hr"];
     static allowedTypes = ["int16", "uint16", "int32", "uint32", "int64", "uint64", "float32", "float64"];
     static customFields = [
         { name: "min_value", type: "number", default: 0, label: "Minimum Value" },
         { name: "max_value", type: "number", default: 10, label: "Maximum Value" },
+        { name: "step", type: "number", default: 1, label: "Step" },
         { name: "prefix", type: "text", default: "", label: "Value Prefix" },
         { name: "suffix", type: "text", default: "", label: "Value Suffix" },
         { name: "display_range", type: "bool", default: true, label: "Show Range" },
         { name: "display_value", type: "bool", default: false, label: "Show Value" },
-        { name: "confirmation", type: "bool", default: false, label: "Prompt Confirmation" },
-    ]
-    static tagTypedFields = [
-        { name: "step", default: 1, label: "Step"}, //TODO default not working?
     ]
 
     constructor(widget_elem, config, tagID) {
@@ -367,13 +355,12 @@ class SliderWidget extends Widget {
         this.shouldUpdate = true;
         
         this.input.addEventListener("change", async () => {
-            const submitted = await this.submit(this.input.value);
-            if(!submitted)
-                this.input.value = this.lastValue;
+            await this.trySubmit(this.input.value);
             this.shouldUpdate = true;
         });
+
         this.input.addEventListener("input", (e) => {
-            clearTimeout(this.timeoutID);
+            // Prevent value updates when using the slider
             this.shouldUpdate = false;
             this._updateDisplayValue();
         })
@@ -397,11 +384,11 @@ class SliderWidget extends Widget {
     }
 
     onValue(val) {
+        super.onValue(val);
         if(this.shouldUpdate) {
             this.input.value = val;
             this._updateDisplayValue();
         }
-        this.lastValue = val;
     }
 
     clear() {
@@ -498,13 +485,13 @@ class MultiLabelWidget extends Widget {
 
     applyConfig() {
         super.applyConfig();
-        this.updateFontSize();
+        fitText(this.text_elem);
     }
 
     onValue(val) {
         const kv = this.config.label_values.find(kv => kv.value == val);
         this.text_elem.textContent = kv ? kv.label : `Unknown Value: ${val}`;
-        this.updateFontSize();
+        fitText(this.text_elem);
     }
 
     clear() {
@@ -529,16 +516,70 @@ class NumberLabelWidget extends Widget {
     applyConfig() {
         super.applyConfig();
         this.onValue(0);
-        this.updateFontSize();
+        fitText(this.text_elem);
     }
 
     onValue(val) {
         this.text_elem.textContent = this.config.prefix + val.toFixed(this.config.precision) + this.config.suffix;
-        this.updateFontSize();
+        fitText(this.text_elem);
     }
 
     clear() {
         this.onValue(0);
+    }
+}
+
+class NumberInputWidget extends InputWidget {
+    static allowedChannels = ["hr"];
+    static allowedTypes = ["int16", "uint16", "int32", "uint32", "float32", "float64"];
+    static customFields = [
+        { name: "precision", type: "int", default: 2, label: "Decimal Places" },
+        { name: "step", type: "number", default: 1, label: "Step" },
+        { name: "min", type: "number", default: 0, label: "Minimum Value" },
+        { name: "max", type: "number", default: 100, label: "Maximum Value" },
+    ]
+
+    constructor(widget_elem, config, tagID) {
+        super(widget_elem, config, tagID);
+        this.input = this.elem.querySelector('input');
+        this.button = this.elem.querySelector('.form-button');
+
+        this.button.addEventListener('click', async () => {
+            this.trySubmit(Number(this.input.value));
+            this.input.blur(); 
+        })
+        this.input.onkeydown = (e) => {
+            if (e.key === 'Enter') this.write();
+        };
+
+        // Prevent value updates while using the input
+        this.isFocused = false;
+        this.input.onfocus = () => { this.isFocused = true; };
+        this.input.onblur = () => { this.isFocused = false; };
+    }
+
+    applyConfig() {
+        super.applyConfig();
+        this.input.step = this.config.step;
+        this.input.min = this.config.min;
+        this.input.max = this.config.max;
+    }
+
+    getConfirmMessage(val) {
+        return `Set ${this.tag.alias} to ${this.input.value}?`;
+    }
+
+    onValue(val) {
+        super.onValue(val);
+        if (!this.isFocused) {
+            if (typeof val === 'number' && val % 1 !== 0)
+                val = parseFloat(val).toFixed(this.config.precision);
+            this.input.value = val;
+        }
+    }
+
+    clear() {
+        this.input.value = "";
     }
 }
 
@@ -623,7 +664,7 @@ class ChartWidget extends Widget {
             const timestamps = data.map(e => e.timestamp);
             const values = data.map(e => e.value);
 
-            const config = { responsive: true, displayModeBar: false };
+            const config = { responsive: true, displayModeBar: false, staticPlot: false };
 
             await Plotly.newPlot(this.chartDiv, [this._getTrace(timestamps, values)], this._getLayout(), config);
             this.realData = true;
@@ -850,6 +891,30 @@ function throttledResizeObserver(elem, cb, time) {
     return resizeObserver;
 }
 
+function fitText(elem) {
+    const amt = Math.round(elem.textContent.length / 3) * 3;
+    const k = 100;
+
+    // measure container
+    const rect = elem.parentElement.getBoundingClientRect();
+    const aspect = rect.width / rect.height;
+
+    // width assist factor (>= 1)
+    const widthBoost = Math.min(1.75, Math.sqrt(aspect));
+    const textScale = (k / Math.sqrt(amt));
+    
+    // store CSS variables
+    elem.style.setProperty('--text-scale', textScale);
+    elem.style.setProperty('--width-boost', widthBoost);
+}
+
+function flashBool(flag, elem) {
+    const cls = flag ? 'flash-success' : 'flash-error';
+    elem.classList.remove('flash-success', 'flash-error');
+    void elem.offsetWidth;
+    elem.classList.add(cls);
+}
+
 export const WidgetRegistry = {
     "switch": SwitchWidget,
     "slider": SliderWidget,
@@ -859,6 +924,7 @@ export const WidgetRegistry = {
     "bool_label" : BoolLabelWidget,
     "multi_label" : MultiLabelWidget,
     "number_label" : NumberLabelWidget,
+    "number_input" : NumberInputWidget,
     "chart": ChartWidget,
     "button" : ButtonWidget,
     "dropdown" : DropdownWidget,

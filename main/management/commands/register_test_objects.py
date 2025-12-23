@@ -390,6 +390,18 @@ class Command(BaseCommand):
                 }
             ))
 
+        widgets.append(DashboardWidget(
+            dashboard=dashboard,
+            tag=hr_tags[-1],
+            widget_type=DashboardWidget.WidgetTypeChoices.NUMBER_INPUT,
+            config = {
+                "position_x": 15,
+                "position_y": 12,
+                "scale_x" : 3,
+                "scale_y" : 1,
+            }
+        ))
+
         DashboardWidget.objects.bulk_create(widgets)
 
         # ---------- Alarms ----------

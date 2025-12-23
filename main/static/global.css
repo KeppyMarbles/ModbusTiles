@@ -71,8 +71,10 @@ body {
     font-weight: 600;
     transition: background 0.2s;
 }
-.form-button-primary { background: var(--primary-color); color: white; }
-.form-button-primary:hover { background: #004494; }
+.form-button:hover { 
+    background: var(--primary-color);
+    color: white; 
+}
 
 .form-box {
     margin-bottom: 15px;

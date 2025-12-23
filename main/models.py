@@ -356,7 +356,7 @@ class DashboardWidget(models.Model):
         BOOL_LABEL = "bool_label", _("Boolean Label")
         MULTI_LABEL = "multi_label", _("Multi-Value Label")
         NUMBER_LABEL = "number_label", _("Number Label")
-        #VALUE = "val", _("Numeric Value")
+        NUMBER_INPUT = "number_input", _("Number Input")
         LINE_CHART = "chart", _("Time-Series Chart")
         BUTTON = "button", _("Button")
         LABEL = "label", _("Text Label")
