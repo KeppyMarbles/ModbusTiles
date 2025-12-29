@@ -19,7 +19,7 @@ class Command(BaseCommand):
     help = 'Runs a Modbus TCP simulator that animates read-only tags from the DB'
 
     def add_arguments(self, parser):
-        parser.add_argument("--port", type=int)
+        parser.add_argument("--port", type=int, default=502)
 
     def handle(self, *args, **options):
         port = options["port"]
