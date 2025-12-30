@@ -28,8 +28,14 @@ export async function refreshData() { //TODO options?
             fetch('/api/alarm-options/')
         ]);
 
-        serverCache.tags = await tagsResp.json();
-        serverCache.alarms = await alarmsResp.json();
+        const tagList = await tagsResp.json();
+        const alarmList = await alarmsResp.json();
+
+        const tagMap = new Map(tagList.map(tag => [tag.external_id, tag]));
+        const alarmMap = new Map(alarmList.map(alarm => [alarm.external_id, alarm]));
+
+        serverCache.tags = tagMap
+        serverCache.alarms = alarmMap
         serverCache.devices = await devicesResp.json();
         serverCache.tagOptions = await tagOptions.json();
         serverCache.alarmOptions = await alarmOptions.json();

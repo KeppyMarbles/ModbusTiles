@@ -199,10 +199,7 @@ export class Dashboard {
         console.log("Widgets:", widgetData);
 
         // Add widgets to the gridstack grid
-        widgetData.forEach(wData => {
-            const tag = serverCache.tags.find(t => t.external_id === wData.tag); //TODO O(1)?
-            this.createWidget(wData.widget_type, tag, wData.config);
-        });
+        widgetData.forEach(wData => this.createWidget(wData.widget_type, serverCache.tags[wData.tag], wData.config));
     }
 
     /**

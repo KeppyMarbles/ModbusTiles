@@ -88,8 +88,8 @@
 
 /**
  * @typedef {Object} ServerCacheObject
- * @property {TagObject[]} tags All tags registered on the server
- * @property {AlarmConfigObject[]} alarms All alarms registered on the server
+ * @property {Map<string, TagObject>} tags All tags registered on the server
+ * @property {Map<string, AlarmConfigObject>} alarms All alarms registered on the server
  * @property {DeviceListObject[]} devices All devices registered on the server
  * @property {TagOptionsObject} tagOptions Choice collection for tag attributes
  * @property {AlarmOptionsObject} alarmOptions Choice collection for alarm attributes

@@ -1,5 +1,5 @@
 import { serverCache, requestServer } from "./global.js";
-/** @import { InspectorFieldDefinition, ChoiceObject, DataType, TagObject, ChannelType, InspectorDataType, AlarmConfigObject } from "./types.js" */
+/** @import { InspectorFieldDefinition, ChoiceObject, DataType, TagObject, ChannelType, InspectorDataType, AlarmConfigObject, Dev } from "./types.js" */
 /** @import { Widget } from "./widgets.js" */
 /** @import { Dashboard } from "./dashboard.js" */
 
@@ -332,16 +332,16 @@ export class Inspector {
             }
 
             // Create dropdown with tags that are compatible with this widget
-            const compatibleTags = serverCache.tags.filter(tag => {
+            const compatibleTags = [...serverCache.tags.values()].filter(tag => {
                 return widgetClass.allowedTypes.includes(tag.data_type) 
                     && widgetClass.allowedChannels.includes(tag.channel);
             });
             const tagOptions = compatibleTags.map(tag => ({ value: tag.external_id, label: Inspector.getTagLabel(tag) }));
 
-            this.addField({ label: "Control Tag", type: "select", options: tagOptions }, widget.tag?.external_id, (newVal) => {
-                widget.tag = compatibleTags.find(tag => tag.external_id === newVal);
+            this.addField({ label: "Control Tag", type: "select", options: tagOptions }, widget.tag?.external_id, (newID) => {
+                widget.tag = serverCache.tags[newID];
                 widget.applyConfig();
-                createTagTypedFields(newVal); // Update the tag based fields
+                createTagTypedFields(newID); // Update the tag based fields
             }, tagSection);
             
             // Add tag-dependent fields
@@ -388,10 +388,9 @@ export class Inspector {
         this.clear();
         const tagSelectSection = this.addSection();
 
-        const tagOptions = serverCache.tags.map(tag => ({ value: tag.external_id, label: Inspector.getTagLabel(tag) }));
+        const tagOptions = [...serverCache.tags.values()].map(tag => ({ value: tag.external_id, label: Inspector.getTagLabel(tag) }));
         this.addField({ label: "Tag", type: "select", options: tagOptions }, tag?.external_id, (tagID) => {
-            const selected = serverCache.tags.find(tag => tag.external_id === tagID);
-            this.inspectTag(selected)
+            this.inspectTag(serverCache.tags[tagID])
         }, tagSelectSection);
 
         this.addTitle("Create or Edit Tag");
@@ -487,7 +486,7 @@ export class Inspector {
             if(create) {
                 requestServer('/api/tags/', 'POST', payload, (data) => {
                     alert("Tag created!");
-                    serverCache.tags.push(data);
+                    serverCache.tags[data.external_id] = data;
                     this.inspectTag(data);
                 });
             }
@@ -510,7 +509,7 @@ export class Inspector {
                 if(window.confirm(`Are you sure you want to delete tag ${tag.alias}?`)) {
                     requestServer(`/api/tags/${tag.external_id}/`, 'DELETE', null, async () => {
                         alert("Tag deleted.");
-                        serverCache.tags = serverCache.tags.filter(t => t !== tag);
+                        serverCache.tags.delete(tag.external_id);
                         this.inspectTag(); 
                     });
                 }
@@ -528,10 +527,9 @@ export class Inspector {
         this.clear();
         const alarmSelectSection = this.addSection();
 
-        const alarmOptions = serverCache.alarms.map(alarm => ({ value: alarm.external_id, label: Inspector.getAlarmLabel(alarm) }));
+        const alarmOptions = [...serverCache.alarms.values()].map(alarm => ({ value: alarm.external_id, label: Inspector.getAlarmLabel(alarm) }));
         this.addField({ label: "Alarm", type: "select", options: alarmOptions }, alarm?.external_id, (alarmID) => {
-            const selected = serverCache.alarms.find(alarm => alarm.external_id === alarmID);
-            this.inspectAlarm(selected)
+            this.inspectAlarm(serverCache.alarms[alarmID])
         }, alarmSelectSection);
 
         this.addTitle("Create or Edit Alarm");
@@ -552,7 +550,7 @@ export class Inspector {
             triggerContainer.innerHTML = ''; 
             operatorContainer.innerHTML = '';
             
-            const tag = serverCache.tags.find(tag => tag.external_id === tagID);
+            const tag = serverCache.tags[tagID];
 
             if(!tag)
                 return;
@@ -576,7 +574,7 @@ export class Inspector {
         }
         onTagChanged(alarm?.tag);
 
-        const tagOptions = serverCache.tags.map(tag => ({ value: tag.external_id, label: Inspector.getTagLabel(tag)}));
+        const tagOptions = [...serverCache.tags.values()].map(tag => ({ value: tag.external_id, label: Inspector.getTagLabel(tag)}));
         const tag = this.addField({ label: "Control Tag", type: "select", options: tagOptions }, alarm?.tag, onTagChanged, alarmSection);
 
         alarmSection.appendChild(operatorContainer);
@@ -607,7 +605,7 @@ export class Inspector {
             if(create) {
                 requestServer('/api/alarms/', 'POST', payload, (data) => {
                     alert("Alarm created!");
-                    serverCache.alarms.push(data);
+                    serverCache.alarms[data.external_id] = data;
                     this.inspectAlarm(data);
                 });
             }
@@ -631,7 +629,7 @@ export class Inspector {
                 if(window.confirm(`Are you sure you want to delete alarm ${alarm.alias}?`)) {
                     requestServer(`/api/alarms/${alarm.external_id}/`, 'DELETE', null, async () => {
                         alert("Alarm deleted.");
-                        serverCache.alarms = serverCache.alarms.filter(a => a !== alarm);
+                        serverCache.alarms.delete(alarm.external_id);
                         this.inspectAlarm(); 
                     });
                 }

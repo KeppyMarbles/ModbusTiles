@@ -93,9 +93,7 @@ export class Widget {
             this.elem.classList.remove("is-state", "no-connection");
 
         this.onValue(data.value, data.time);
-
-        const alarm = data.alarm ? serverCache.alarms.find(a => a.external_id === data.alarm) : null; //TODO O(1)
-        this.setAlarm(alarm);
+        this.setAlarm(serverCache.alarms[data.alarm]);
     }
 
     /**
