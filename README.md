@@ -30,3 +30,6 @@ The poller runs in the same event loop as the Django/Uvicorn server, reading blo
 
 #### Frontend
 Each widget is defined by its GridStack element HTML, and Widget subclass. When loading a dashboard, widget config is fetched and those objects are created. When entering view mode, Widgets are registered with the dashboard TagListener, which fetches initial needed values then sets up a WebSocket, propagating new values as they are recieved. Submitting a value through an InputWidget creates a TagWriteRequest object in the database.
+
+## Disclaimer
+This is an early stage hobbyist/educational project so I don't recommend this for any safety-critical or professional environment. It is also not feature-rich like other SCADA tools and has a lot of things unimplemented or unfinished
