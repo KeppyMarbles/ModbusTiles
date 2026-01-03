@@ -1,4 +1,4 @@
-/** @import { ServerCacheObject } from "./types.js" */
+/** @import { ServerCacheObject, TagObject, AlarmConfigObject } from "./types.js" */
 
 /** 
  * Collection of object metadata from the server
@@ -28,11 +28,13 @@ export async function refreshData() { //TODO options?
             fetch('/api/alarm-options/')
         ]);
 
+        /** @type {TagObject[]} */
         const tagList = await tagsResp.json();
+        /** @type {AlarmConfigObject[]} */
         const alarmList = await alarmsResp.json();
 
-        const tagMap = new Map(tagList.map(tag => [tag.external_id, tag]));
-        const alarmMap = new Map(alarmList.map(alarm => [alarm.external_id, alarm]));
+        const tagMap = Object.fromEntries(tagList.map(tag => [tag.external_id, tag]));
+        const alarmMap = Object.fromEntries(alarmList.map(alarm => [alarm.external_id, alarm]));
 
         serverCache.tags = tagMap
         serverCache.alarms = alarmMap

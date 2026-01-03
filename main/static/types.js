@@ -8,6 +8,7 @@
  * Object recieved from `api.serializers.AlarmSerializer`
  * @typedef {Object} AlarmConfigObject
  * @property {string} tag The UUID of the tag
+ * @property {string} external_id The UUID of the alarm config
  * @property {*} trigger_value Value to compare with
  * @property {'equals' | 'greater_than' | 'less_than'} operator Operator for comparing tag value with trigger_value
  * @property {boolean} enabled If the alarm is triggerable

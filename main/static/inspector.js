@@ -1,5 +1,5 @@
 import { serverCache, requestServer } from "./global.js";
-/** @import { InspectorFieldDefinition, ChoiceObject, DataType, TagObject, ChannelType, InspectorDataType, AlarmConfigObject, Dev } from "./types.js" */
+/** @import { InspectorFieldDefinition, ChoiceObject, DataType, TagObject, ChannelType, InspectorDataType, AlarmConfigObject } from "./types.js" */
 /** @import { Widget } from "./widgets.js" */
 /** @import { Dashboard } from "./dashboard.js" */
 
@@ -332,7 +332,7 @@ export class Inspector {
             }
 
             // Create dropdown with tags that are compatible with this widget
-            const compatibleTags = [...serverCache.tags.values()].filter(tag => {
+            const compatibleTags = Object.values(serverCache.tags).filter(tag => {
                 return widgetClass.allowedTypes.includes(tag.data_type) 
                     && widgetClass.allowedChannels.includes(tag.channel);
             });
@@ -388,7 +388,7 @@ export class Inspector {
         this.clear();
         const tagSelectSection = this.addSection();
 
-        const tagOptions = [...serverCache.tags.values()].map(tag => ({ value: tag.external_id, label: Inspector.getTagLabel(tag) }));
+        const tagOptions = Object.values(serverCache.tags).map(tag => ({ value: tag.external_id, label: Inspector.getTagLabel(tag) }));
         this.addField({ label: "Tag", type: "select", options: tagOptions }, tag?.external_id, (tagID) => {
             this.inspectTag(serverCache.tags[tagID])
         }, tagSelectSection);
@@ -527,7 +527,7 @@ export class Inspector {
         this.clear();
         const alarmSelectSection = this.addSection();
 
-        const alarmOptions = [...serverCache.alarms.values()].map(alarm => ({ value: alarm.external_id, label: Inspector.getAlarmLabel(alarm) }));
+        const alarmOptions = Object.values(serverCache.alarms).map(alarm => ({ value: alarm.external_id, label: Inspector.getAlarmLabel(alarm) }));
         this.addField({ label: "Alarm", type: "select", options: alarmOptions }, alarm?.external_id, (alarmID) => {
             this.inspectAlarm(serverCache.alarms[alarmID])
         }, alarmSelectSection);
@@ -574,7 +574,7 @@ export class Inspector {
         }
         onTagChanged(alarm?.tag);
 
-        const tagOptions = [...serverCache.tags.values()].map(tag => ({ value: tag.external_id, label: Inspector.getTagLabel(tag)}));
+        const tagOptions = Object.values(serverCache.tags).map(tag => ({ value: tag.external_id, label: Inspector.getTagLabel(tag)}));
         const tag = this.addField({ label: "Control Tag", type: "select", options: tagOptions }, alarm?.tag, onTagChanged, alarmSection);
 
         alarmSection.appendChild(operatorContainer);
