@@ -6,12 +6,15 @@
 <body>
     <header class="app-header">
         <div class="brand">
-            <h1>Dashboards
+            <h1>ModbusTiles
                 <span class="separator">/</span>
-                <span class="dashboard-alias">{{ user.username }}</span>
+                <span class="dashboard-alias">{{ user.username }}'s dashboards</span>
             </h1>
         </div>
         <div class="header-controls">
+            <a class="dashboard-alias" href="{% url 'alarms' %}">View Alarms
+                <span id="alarm-badge">0</span>
+            </a>
             <form method="post" action="{% url 'logout' %}" style="margin: 0 auto;">
                 {% csrf_token %}
                 <button type="submit" class="form-button">Log Out</button>

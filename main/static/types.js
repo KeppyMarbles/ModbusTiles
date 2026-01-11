@@ -18,6 +18,18 @@
  */
 
 /**
+ * Object recieved from `api.serializers.ActivatedAlarmSerializer`
+ * @typedef {Object} ActivatedAlarmObject
+ * @property {string} alias The name of the alarm
+ * @property {string} tag The name of the tag
+ * @property {string} message Message that subscribers to the alarm recieve
+ * @property {ThreatLevel} threat_level The urgency of the alarm
+ * @property {boolean} is_active If the alarm is on
+ * @property {boolean} acknowledged If the alarm has been marked as heard by a user
+ * @property {string} acknowledged_by_username The user who heard the alarm
+ */
+
+/**
  * Object recieved from `api.serializers.TagValueSerializer`
  * @typedef {Object} TagValueObject
  * @property {string} id The UUID of the tag

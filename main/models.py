@@ -291,6 +291,10 @@ class ActivatedAlarm(models.Model):
 
     config = models.ForeignKey(AlarmConfig, on_delete=models.CASCADE)
     timestamp = models.DateTimeField(auto_now_add=True)
+
+    acknowledged = models.BooleanField(default=False)
+    acknowledged_at = models.DateTimeField(null=True, blank=True)
+    acknowledged_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL, related_name="acknowledged_alarms")
     
     is_active = models.BooleanField(default=False)
 

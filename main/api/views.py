@@ -255,6 +255,37 @@ class AlarmConfigViewSet(UserModelViewSet):
         return qs
 
 
+class ActivatedAlarmViewSet(ModelViewSet):
+    queryset = ActivatedAlarm.objects.all()
+    serializer_class = ActivatedAlarmSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        # Optional: Filter for performance if table gets huge
+        return super().get_queryset().select_related('config', 'config__tag', 'acknowledged_by')
+
+    @action(detail=True, methods=['post'])
+    def acknowledge(self, request, pk=None):
+        alarm: ActivatedAlarm = self.get_object()
+        
+        if alarm.acknowledged:
+            return Response({"status": "Already acknowledged"}, status=200)
+
+        alarm.acknowledged = True
+        alarm.acknowledged_at = timezone.now()
+        alarm.acknowledged_by = request.user
+        alarm.save()
+        
+        return Response(self.get_serializer(alarm).data)
+
+    @action(detail=False, methods=['get'])
+    def active_count(self, request):
+        """Returns count of active, unacknowledged alarms for the badge"""
+        count = ActivatedAlarm.objects.filter(is_active=True, acknowledged=False).count()
+        return Response({"count": count})
+    
+
+
 class AlarmMetadataView(APIView):
     """ Returns the available choices alarm threat levels """
     permission_classes = [IsAuthenticated]

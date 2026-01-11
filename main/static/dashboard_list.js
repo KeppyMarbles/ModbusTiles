@@ -13,4 +13,19 @@ function createDashboard() {
     });
 }
 
+function checkAlarms() {
+    requestServer('/api/activated-alarms/active_count/', 'GET', null, (data) => {
+        const badge = document.getElementById('alarm-badge');
+        if (data.count > 0) {
+            badge.textContent = data.count;
+            badge.style.display = 'inline-block';
+        } 
+        else {
+            badge.style.display = 'none';
+        }
+    });
+}
+checkAlarms();
+//setInterval(checkAlarms, 10000);
+
 document.getElementById("create-dashboard").onclick = createDashboard;

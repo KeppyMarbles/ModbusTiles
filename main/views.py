@@ -1,4 +1,4 @@
-from ..models import Dashboard, DashboardWidget
+from .models import Dashboard, DashboardWidget
 from django.shortcuts import render
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.decorators import login_required
@@ -22,13 +22,13 @@ def dashboard_list(request):
 
 @login_required
 def dashboard_view(request, alias):
-    dashboard = get_object_or_404(
-        Dashboard,
-        alias=alias,
-        owner=request.user
-    )
-
+    dashboard = get_object_or_404( Dashboard, alias=alias, owner=request.user)
     return render(request, "dashboard.html", {
         "dashboard": dashboard,
         "widget_types": [choice for choice in DashboardWidget.WidgetTypeChoices],
     })
+
+
+@login_required
+def alarm_list_view(request):
+    return render(request, "alarm_list.html")

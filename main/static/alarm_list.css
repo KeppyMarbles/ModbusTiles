@@ -1,0 +1,55 @@
+.alarm-table { 
+    width: 100%; 
+    border-collapse: collapse; 
+    background: white; 
+    border-radius: 8px; 
+    overflow: hidden; 
+}
+
+.alarm-table th, 
+.alarm-table td { 
+    padding: 12px; 
+    text-align: left; 
+    border-bottom: 1px solid #eee; 
+}
+
+.alarm-table th { 
+    background: #f8fafc; 
+    font-weight: 600; 
+    color: #666; 
+}
+
+.alarm-table .user {
+    color: #888; 
+    font-size: 0.9em;
+}
+
+.alarm-table .message {
+    font-weight: bold; 
+    font-size: 0.8em; 
+    margin-left: 10px;
+}
+
+.alarm-table .threat-level {
+    text-transform:uppercase;
+}
+
+.row-crit { 
+    border-left: 5px solid #e74c3c; 
+}
+
+.row-high { 
+    border-left: 5px solid #f1c40f; 
+}
+
+.row-low { 
+    border-left: 5px solid #3498db; 
+}
+
+.ack-btn { 
+    background: #e2e8f0; color: #333; 
+}
+
+.ack-btn:hover { 
+    background: #cbd5e1; 
+}

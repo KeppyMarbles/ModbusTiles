@@ -1,0 +1,34 @@
+{% load static %}
+<head>
+    <link rel="stylesheet" href="{% static 'global.css' %}">
+    <link rel="stylesheet" href="{% static 'alarm_list.css' %}">
+</head>
+<body>
+    <header class="app-header">
+        <div class="brand">
+            <h1>
+                <a href="{% url 'dashboards' %}" class="breadcrumb-link">ModbusTiles</a>
+                <span class="separator">/</span>
+                <span class="dashboard-alias">Alarms</span>
+            </h1>
+        </div>
+    </header>
+    <main class="app-layout" style="display: block; padding: 20px; overflow-y: auto;">
+        <div style="max-width: 1200px; margin: 0 auto;">
+            <h2 class="form-title">Incidents</h2>
+            <table class="alarm-table" id="active-alarms-table">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Name</th>
+                        <th>Message</th>
+                        <th>Level</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </main>
+</body>
+<script type="module" src="{% static 'alarm_list.js' %}"></script>

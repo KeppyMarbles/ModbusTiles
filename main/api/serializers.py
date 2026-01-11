@@ -122,10 +122,16 @@ class AlarmSubscriptionSerializer(serializers.ModelSerializer):
 
 
 class ActivatedAlarmSerializer(serializers.ModelSerializer):
+    acknowledged_by_username = serializers.CharField(source='acknowledged_by.username', read_only=True)
+    alias = serializers.CharField(source='config.alias')
+    tag = serializers.CharField(source='config.tag.alias')
+    message = serializers.CharField(source='config.message')
+    threat_level = serializers.CharField(source='config.threat_level')
+
     class Meta:
         model = ActivatedAlarm
-        fields = "__all__"
-        read_only_fields = ['config', 'timestamp', 'is_active']
+        exclude = ['config']
+        read_only_fields = ['config', 'timestamp', 'is_active', 'acknowledged', 'acknowledged_at', 'acknowledged_by']
 
 
 class DashboardSerializer(serializers.ModelSerializer):
