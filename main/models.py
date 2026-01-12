@@ -241,11 +241,12 @@ class AlarmConfig(models.Model):
                 default=None,
             )
 
-            current = active_map.get(tag.id)
+            current: ActivatedAlarm = active_map.get(tag.id)
 
             if current and (not winning or current.config_id != winning.id):
                 # Deactivate current alarm for this tag
                 current.is_active = False
+                current.resolved_at = timezone.now()
                 deactivate.append(current)
                 logger.info(f"Alarm Deactivated: {current.config}")
 
@@ -255,7 +256,7 @@ class AlarmConfig(models.Model):
                 activate.append(alarm)
                 logger.info(f"Alarm Activated: {winning}")
 
-        ActivatedAlarm.objects.bulk_update(deactivate, ["is_active"])
+        ActivatedAlarm.objects.bulk_update(deactivate, ["is_active", "resolved_at"])
         ActivatedAlarm.objects.bulk_create(activate)
 
     def is_activation(self, value):
@@ -297,6 +298,7 @@ class ActivatedAlarm(models.Model):
     acknowledged_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL, related_name="acknowledged_alarms")
     
     is_active = models.BooleanField(default=False)
+    resolved_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         unique_together = ('config', 'timestamp')

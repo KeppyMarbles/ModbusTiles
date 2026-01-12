@@ -1,4 +1,4 @@
-import { requestServer } from "./global.js";
+import { requestServer, refreshData, serverCache } from "./global.js";
 /** @import { ActivatedAlarmObject } from "./types.js" */
 
 /** 
@@ -13,20 +13,28 @@ async function loadAlarms() {
         data.sort((a, b) => (a.is_active === b.is_active) ? 0 : a.is_active ? -1 : 1);
 
         data.forEach(alarm => {
+            const alarmConfig = serverCache.alarms[alarm.config];
+            const tag = serverCache.tags[alarmConfig.tag];
+            const threat_level = serverCache.alarmOptions.threat_levels.find(choice => choice.value === alarmConfig.threat_level)?.label;
+
+            console.log(alarm);
+
             const tr = document.createElement('tr');
-            tr.className = `row-${alarm.threat_level}`;
+            tr.className = `row-${alarmConfig.threat_level}`;
             
             const time = new Date(alarm.timestamp).toLocaleString();
+            const timeHeard = alarm.acknowledged ? new Date(alarm.acknowledged_at).toLocaleString() : "";
+            const timeResolved = alarm.is_active ? "" : new Date(alarm.resolved_at).toLocaleString();
             const status = alarm.is_active ? "ACTIVE" : "Resolved";
 
             const actionHtml = alarm.acknowledged ? 
-                `<span class="user">Heard by ${alarm.acknowledged_by_username || 'Unknown'}</span>` :
+                `<span class="user" title="Heard at ${timeHeard}">Heard by ${alarm.acknowledged_by_username || 'Unknown'}</span>` :
                 `<button class="form-button ack-btn" data-id="${alarm.id}">Acknowledge</button>`;
 
             tr.innerHTML = `
                 <td>${time}</td>
-                <td>${alarm.alias}</td> <td>${alarm.message} <span class="message">[${status}]</span></td>
-                <td class="threat-level">${alarm.threat_level}</td>
+                <td>${tag.alias}</td> <td>${alarmConfig.message} <span class="message" title="Resolved at ${timeResolved}">[${status}]</span></td>
+                <td class="threat-level">${threat_level}</td>
                 <td>${actionHtml}</td>
             `;
             tbody.appendChild(tr);
@@ -42,5 +50,6 @@ function acknowledge(id) {
     requestServer(`/api/activated-alarms/${id}/acknowledge/`, 'POST', null, () => loadAlarms());
 }
 
+await refreshData();
 loadAlarms();
 //setInterval(loadAlarms, 5000);

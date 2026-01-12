@@ -20,13 +20,13 @@
 /**
  * Object recieved from `api.serializers.ActivatedAlarmSerializer`
  * @typedef {Object} ActivatedAlarmObject
- * @property {string} alias The name of the alarm
- * @property {string} tag The name of the tag
- * @property {string} message Message that subscribers to the alarm recieve
- * @property {ThreatLevel} threat_level The urgency of the alarm
+ * @property {string} config The UUID of this activation's alarm config
  * @property {boolean} is_active If the alarm is on
  * @property {boolean} acknowledged If the alarm has been marked as heard by a user
- * @property {string} acknowledged_by_username The user who heard the alarm
+ * @property {string} acknowledged_by_username The user who heard the alarm, if any
+ * @property {string} acknowledged_at The time the alarm was heard, if any
+ * @property {string} timestamp The time the alarm was activated
+ * @property {string} resolved_at The time the alarm was resolved, if any
  */
 
 /**
@@ -65,7 +65,7 @@
  * Object for storing an html option
  * @typedef {Object} ChoiceObject
  * @property {string} value The choice value
- * @property {string|number} label The choice name
+ * @property {string} label The choice name
  */
 
 /**
@@ -101,8 +101,8 @@
 
 /**
  * @typedef {Object} ServerCacheObject
- * @property {Map<string, TagObject>} tags All tags registered on the server
- * @property {Map<string, AlarmConfigObject>} alarms All alarms registered on the server
+ * @property {Record<string, TagObject>} tags All tags registered on the server
+ * @property {Record<string, AlarmConfigObject>} alarms All alarms registered on the server
  * @property {DeviceListObject[]} devices All devices registered on the server
  * @property {TagOptionsObject} tagOptions Choice collection for tag attributes
  * @property {AlarmOptionsObject} alarmOptions Choice collection for alarm attributes
