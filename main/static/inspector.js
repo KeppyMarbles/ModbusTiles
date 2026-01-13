@@ -403,6 +403,7 @@ export class Inspector {
         const deviceOptions = serverCache.devices.map(d => ({ value: d.alias, label: d.alias }));
         const device = this.addField({ label: "Device", type: "select", options: deviceOptions }, tag?.device, null, locationSection);
         const bitIndex = this.addField({ label: "Bit Index (0-15)", type: "int" }, tag?.bit_index, tag?.bit_index, locationSection);
+        const restrictedWriteField = this.addField({ label: "Read-Only", type: "bool", description: "If the tag value should be protected from non-staff users"}, tag?.read_only, null, locationSection);
 
         // Dynamic data type field - update according to channel type
         const dataTypeContainer = document.createElement('div');
@@ -425,14 +426,18 @@ export class Inspector {
                 dataTypeValue = "bool";
             }
 
+            // Only show read-only checkbox if it's a writable tag
+            ["coil", "hr"].includes(channelValue) ? 
+                restrictedWriteField.wrapper.classList.remove("hidden") :
+                restrictedWriteField.wrapper.classList.add("hidden");
+
             /**
              * Include the bit index field if it's a boolean value on holding/input registers
              *  @param {DataType} dataTypeValue
              */ 
             const onDataTypeChanged = (dataTypeValue) => {
-                if (dataTypeValue === "bool" && ["hr", "ir"].includes(channelValue))
-                    bitIndex.wrapper.classList.remove("hidden");
-                else
+                dataTypeValue === "bool" && ["hr", "ir"].includes(channelValue) ?
+                    bitIndex.wrapper.classList.remove("hidden") :
                     bitIndex.wrapper.classList.add("hidden");
             }
             onDataTypeChanged(dataTypeValue);
@@ -450,6 +455,7 @@ export class Inspector {
             tag?.address || 0, null, locationSection);
 
         locationSection.appendChild(bitIndex.wrapper); // Move bit index field
+        locationSection.appendChild(restrictedWriteField.wrapper); // Move read-only field
 
         //const readAmount = this.addField({label: "Read Amount", type: "int"}, 1, null, tagSection)
         const historySection = this.addSection();
@@ -480,7 +486,8 @@ export class Inspector {
                 read_amount: 1,
                 history_retention: historyRetention.getValue(),
                 history_interval: historyInterval.getValue(),
-                is_active: true
+                is_active: true,
+                restricted_write: restrictedWriteField.getValue(),
             };
 
             if(create) {

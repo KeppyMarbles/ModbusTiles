@@ -5,57 +5,34 @@ from rest_framework.generics import ListAPIView
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
-from rest_framework.exceptions import MethodNotAllowed
 from rest_framework.decorators import action
+from rest_framework.serializers import Serializer
 from .serializers import TagSerializer, TagValueSerializer, TagWriteRequestSerializer, TagHistoryEntrySerializer
 from .serializers import AlarmConfigSerializer, ActivatedAlarmSerializer
-from .serializers import DashboardDropdownSerializer, DashboardSerializer, DashboardWidgetSerializer, DashboardWidgetBulkSerializer
-from .serializers import DeviceSerializer, DeviceDropdownSerializer
+from .serializers import DashboardSerializer, DashboardWidgetSerializer, DashboardWidgetBulkSerializer
+from .serializers import DeviceSerializer
 from ..models import DashboardWidget, Dashboard, Tag, Device, AlarmConfig, ActivatedAlarm, TagWriteRequest, TagHistoryEntry
 from rest_framework.exceptions import PermissionDenied, ValidationError
-from rest_framework.serializers import Serializer
 from django.utils import timezone
 from django.db import transaction
-from django.db.models import Q
-from django.db.models.base import Model
-from django.db.models.manager import BaseManager
+from rest_framework.request import HttpRequest
 
 #TODO should the metadata views all be one class?
 #TODO better docstrings
 #TODO figure out permissions for everything
 
-class UserModelViewSet(ModelViewSet):
-    """Base view for user-owned objects"""
+class ReadOnlyViewSet(ModelViewSet):
+    """ Restrict write perms to staff """
 
-    user_max_count = None  # None = unlimited
-
-    def get_queryset(self):
-        qs = super().get_queryset()
-        user = self.request.user
-
-        if user.is_staff:
-            return qs
-
-        return qs.filter(Q(owner=user) | Q(owner__isnull=True))
-
-    def perform_create(self, serializer):
-        if self.user_max_count is not None:
-            count = self.get_queryset().count()
-            if count >= self.user_max_count:
-                raise PermissionDenied("Max objects for user reached")
-
-        serializer.save(owner=self.request.user)
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsAdminUser()]
+        return [IsAuthenticated()]
 
 
-class DeviceViewSet(UserModelViewSet):
+class DeviceViewSet(ReadOnlyViewSet):
     queryset = Device.objects.all()
-    serializers = { "list": DeviceDropdownSerializer }
-    permission_classes = [IsAuthenticated]
-
-    user_max_count = 99
-
-    def get_serializer_class(self):
-        return self.serializers.get(self.action) or DeviceSerializer
+    serializer_class = DeviceSerializer
 
 
 class DeviceMetadataView(APIView):
@@ -69,15 +46,12 @@ class DeviceMetadataView(APIView):
         })
 
 
-class TagViewSet(UserModelViewSet):
-    lookup_field = 'external_id'
+class TagViewSet(ReadOnlyViewSet):
     serializer_class = TagSerializer
-    queryset = Tag.objects.all()
-
-    user_max_count = 999
+    lookup_field = 'external_id'
 
     def get_queryset(self):
-        qs = super().get_queryset()
+        qs = Tag.objects.all()
 
         device_alias = self.request.query_params.get("device")
         if device_alias:
@@ -100,25 +74,20 @@ class TagMetadataView(APIView):
 class TagWriteRequestViewSet(ModelViewSet):
     queryset = TagWriteRequest.objects.all()
     serializer_class = TagWriteRequestSerializer
-    permission_classes = [IsAuthenticated]
 
-    def perform_create(self, serializer):
-        tag = serializer.validated_data['tag']
+    def perform_create(self, serializer: Serializer):
+        tag: Tag = serializer.validated_data['tag']
         user = self.request.user
 
-        if tag.owner != user and not user.is_staff:
-            raise PermissionDenied("You do not have permission to write to this tag.") #TODO field to allow other users to write to a tag?
+        if tag.restricted_write and not user.is_staff:
+            raise PermissionDenied("This tag is set to read-only.")
 
         serializer.save()
 
-    def update(self, request, *args, **kwargs):
-        raise MethodNotAllowed("PUT/PATCH not allowed on TagWriteRequest")
-
-    def partial_update(self, request, *args, **kwargs):
-        raise MethodNotAllowed("PATCH not allowed on TagWriteRequest")
-
-    def destroy(self, request, *args, **kwargs):
-        raise MethodNotAllowed("DELETE not allowed on TagWriteRequest")
+    def get_permissions(self):
+        if self.action in ['update', 'partial_update', 'destroy']:
+            return [IsAdminUser()]
+        return [IsAuthenticated()]
 
 
 class DashboardViewSet(ModelViewSet):
@@ -131,17 +100,11 @@ class DashboardViewSet(ModelViewSet):
         return Dashboard.objects.filter(owner=self.request.user)
 
     @action(detail=True, methods=['post'], url_path='save-data')
-    def save_data(self, request, alias=None):
+    def save_data(self, request: HttpRequest, alias=None):
         dashboard: Dashboard = self.get_object()
 
         # Get meta
-        meta_serializer = DashboardSerializer(
-            dashboard, 
-            data=request.data,
-            partial=True, 
-            context={'request': request}
-        )
-
+        meta_serializer = DashboardSerializer(dashboard, data=request.data, partial=True, context={'request': request})
         meta_serializer.is_valid(raise_exception=True)
         dashboard = meta_serializer.save()
 
@@ -167,29 +130,17 @@ class DashboardViewSet(ModelViewSet):
         # Save widgets
         try:
             with transaction.atomic():
-                # Wipe clean
+                # Wipe clean and add new objects
                 dashboard.widgets.all().delete()
-                
-                # Prepare new objects
-                new_widgets = []
-                for item in serializer.validated_data:
-                    new_widgets.append(DashboardWidget(
-                        dashboard=dashboard,
-                        tag=item.get('tag'), # Serializer converts UUID -> Tag Object
-                        widget_type=item['widget_type'],
-                        config=item['config']
-                    ))
-                
-                DashboardWidget.objects.bulk_create(new_widgets)
+                DashboardWidget.objects.bulk_create([ 
+                    DashboardWidget(dashboard=dashboard, tag=item.get('tag'), widget_type=item['widget_type'], config=item['config'])
+                    for item in serializer.validated_data
+                ])
                 
         except Exception as e:
             raise ValidationError(f"Save failed: {str(e)}")
 
-        return Response({
-            "status": "saved", 
-            "widgets_count": len(new_widgets),
-            "preview_updated": 'preview_image' in request.FILES
-        })
+        return Response({ "status": "saved" })
     
     def _get_new_alias(self):
         base = "untitled"
@@ -236,16 +187,12 @@ class DashboardWidgetViewSet(ModelViewSet):
         serializer.save()
 
 
-class AlarmConfigViewSet(UserModelViewSet):
-    lookup_field = 'external_id'
+class AlarmConfigViewSet(ReadOnlyViewSet):
     serializer_class = AlarmConfigSerializer
-    permission_classes = [IsAuthenticated]
-    queryset =  AlarmConfig.objects.all()
-
-    user_max_count = 999
+    lookup_field = 'external_id'
 
     def get_queryset(self):
-        qs = super().get_queryset()
+        qs = AlarmConfig.objects.all()
 
         # Get alarms for a specified tag
         tag_id = self.request.query_params.get("tag")

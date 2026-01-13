@@ -25,8 +25,7 @@ async function loadAlarms() {
  */
 function createAlarmRow(alarm) {
     const alarmConfig = serverCache.alarms[alarm.config];
-    const tag = serverCache.tags[serverCache.alarms[alarm.config].tag];
-    const threatLevel = {"low": "🔔 Low", "high": "⚠️ High", "crit": "‼️ Critical"}[alarmConfig.threat_level];
+    const tag = serverCache.tags[alarmConfig.tag];
 
     const tr = document.createElement('tr');
     tr.className = `row-${alarmConfig.threat_level}`;
@@ -36,7 +35,7 @@ function createAlarmRow(alarm) {
     //const timeResolved = alarm.is_active ? "" : new Date(alarm.resolved_at).toLocaleString();
     //const status = alarm.is_active ? "ACTIVE" : "Resolved";
 
-    tr.appendChild(td(threatLevel, "threat-level"));
+    tr.appendChild(td({"low": "🔔 Low", "high": "⚠️ High", "crit": "‼️ Critical"}[alarmConfig.threat_level], "threat-level"));
     tr.appendChild(td(time));
     tr.appendChild(td(tag.alias, null, tag.description));
 

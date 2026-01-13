@@ -84,8 +84,8 @@ class Tag(models.Model):
 
     current_value = models.JSONField(null=True)
     is_active = models.BooleanField(default=True)
-
-    #created_at = models.DateTimeField(auto_now_add=True)
+    
+    restricted_write = models.BooleanField(default=False)
 
     class Meta:
         unique_together = ("device", "channel", "address", "unit_id", "bit_index")

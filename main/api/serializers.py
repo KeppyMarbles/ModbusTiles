@@ -28,18 +28,6 @@ class DeviceSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
-class DeviceDropdownSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Device
-        fields = ["alias", "protocol"] 
-
-
-class DashboardDropdownSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Dashboard
-        fields = ["alias", "description"]
-
-
 class AlarmConfigSerializer(serializers.ModelSerializer):
     tag = serializers.SlugRelatedField(slug_field='external_id', queryset=Tag.objects.all())
     notification_cooldown = DurationSecondsField(required=False, allow_null=True)
