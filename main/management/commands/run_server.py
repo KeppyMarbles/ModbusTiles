@@ -1,19 +1,31 @@
+import asyncio
+from uvicorn import Config, Server
 from django.core.management.base import BaseCommand
-import uvicorn
+from main.services.poll_devices import poll_devices
+from main.services.cleanup import loop_cleanup
 
 class Command(BaseCommand):
     help = "Run Uvicorn with background Modbus poller"
 
     def add_arguments(self, parser):
         parser.add_argument("--port", type=int, default=8000)
+        parser.add_argument("--poll-interval", type=float, default=0.25)
+        parser.add_argument("--cleanup-interval", type=float, default=60)
 
     def handle(self, *args, **options):
-        port = options["port"]
+        try:
+            asyncio.run(self.run_async(options["port"], options["poll_interval"], options["cleanup_interval"]))
+        except KeyboardInterrupt:
+            pass
 
-        uvicorn.run(
-            "modbus_tiles.asgi_with_poller:app",
-            host="0.0.0.0",
-            port=port,
-            reload=False,
-            lifespan="off",
-        )
+    async def run_async(self, port: int, poll_interval: float, cleanup_interval: float):
+        config = Config("modbus_tiles.asgi:application", host="0.0.0.0", port=port, lifespan="off")
+        server = Server(config)
+
+        poll_task = asyncio.create_task(poll_devices(poll_interval=poll_interval))
+        cleanup_task = asyncio.create_task(loop_cleanup(interval=cleanup_interval))
+
+        await server.serve()
+
+        poll_task.cancel()
+        cleanup_task.cancel()
