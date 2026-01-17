@@ -8,7 +8,7 @@ set MIG_DIR=%APP_DIR%\migrations
 set PREVIEW_DIR=.media\dashboard_previews
 
 SET INPUT=
-SET /P INPUT="Wipe DB and register test objects? (y/n): "
+SET /P INPUT="Wipe entire database? (y/n): "
 IF /I NOT "%INPUT%"=="y" GOTO END
 
 REM ---------- Clear DB ----------
@@ -43,10 +43,6 @@ python manage.py makemigrations
 echo.
 echo Running migrate...
 python manage.py migrate
-
-echo.
-echo Registering test data...
-python manage.py register_test_objects
 
 echo.
 echo Done!

@@ -2,11 +2,12 @@ import uuid
 import os
 import logging
 from datetime import timedelta
+from typing import Self
 from django.db import models
 from django.utils import timezone
 from django.utils.text import slugify
 from django.contrib.auth import get_user_model
-from typing import Self
+from pymodbus.client.base import ModbusBaseClient
 
 
 User = get_user_model()
@@ -119,12 +120,8 @@ class Tag(models.Model):
 
             if tag.last_history_at and now - tag.last_history_at < tag.history_interval:
                 continue
-
-            entries.append(TagHistoryEntry( #TODO value change delta? (amount must be changed this much to save entry)
-                tag=tag, 
-                value=tag.current_value,
-                timestamp=now
-            ))
+            
+            entries.append(TagHistoryEntry(tag=tag, value=tag.current_value, timestamp=now)) #TODO value change delta? (amount must be changed this much to save entry)
 
             tag.last_history_at = now
         
@@ -138,6 +135,32 @@ class Tag(models.Model):
                 Tag.ChannelChoices.HOLDING_REGISTER, 
                 Tag.ChannelChoices.INPUT_REGISTER
             ]
+    
+    @property
+    def pymodbus_datatype(self):
+        """ Returns the Pymodbus DATATYPE enum for this tag. """
+        return {
+            self.DataTypeChoices.BOOL:    ModbusBaseClient.DATATYPE.UINT16,
+            self.DataTypeChoices.INT16:   ModbusBaseClient.DATATYPE.INT16,
+            self.DataTypeChoices.UINT16:  ModbusBaseClient.DATATYPE.UINT16,
+            self.DataTypeChoices.INT32:   ModbusBaseClient.DATATYPE.INT32,
+            self.DataTypeChoices.UINT32:  ModbusBaseClient.DATATYPE.UINT32,
+            self.DataTypeChoices.INT64:   ModbusBaseClient.DATATYPE.INT64,
+            self.DataTypeChoices.UINT64:  ModbusBaseClient.DATATYPE.UINT64,
+            self.DataTypeChoices.FLOAT32: ModbusBaseClient.DATATYPE.FLOAT32,
+            self.DataTypeChoices.FLOAT64: ModbusBaseClient.DATATYPE.FLOAT64,
+            self.DataTypeChoices.STRING:  ModbusBaseClient.DATATYPE.STRING,
+        }[self.data_type]
+
+    @property
+    def modbus_function_code(self) -> int:
+        """ Returns the Function Code (1, 2, 3, or 4) for this tag's channel. """
+        return {
+            self.ChannelChoices.COIL: 1,
+            self.ChannelChoices.DISCRETE_INPUT: 2,
+            self.ChannelChoices.HOLDING_REGISTER: 3,
+            self.ChannelChoices.INPUT_REGISTER: 4,
+        }[self.channel]
     
     def __str__(self):
         bit = f":{self.bit_index}" if self.bit_index is not None else ""
@@ -236,12 +259,7 @@ class AlarmConfig(models.Model):
                 if c.is_activation(tag.current_value)
             ]
 
-            winning = max(
-                triggered,
-                key=lambda c: cls.ALARM_PRIORITY[c.threat_level],
-                default=None,
-            )
-
+            winning = max(triggered, key=lambda c: cls.ALARM_PRIORITY[c.threat_level], default=None)
             current: ActivatedAlarm = active_map.get(tag.id)
 
             if current and (not winning or current.config_id != winning.id):
@@ -304,9 +322,7 @@ class ActivatedAlarm(models.Model):
     class Meta:
         unique_together = ('config', 'timestamp')
         ordering = ["-timestamp"]
-        indexes = [
-            models.Index(fields=["config", "-timestamp"]),
-        ]
+        indexes = [ models.Index(fields=["config", "-timestamp"]) ]
 
     @classmethod
     def get_tag_map(cls: Self, tags: list[Tag]) -> dict[int, Self]:

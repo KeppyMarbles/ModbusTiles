@@ -366,8 +366,8 @@ export class Inspector {
         const title = this.addTitle(dashboard.title);
         const dashboardSection = this.addSection();
 
-        this.addField({ label: "Dashboard Name", type: "text" }, dashboard.config.title, (value) => {dashboard.config.title = value}, dashboardSection);
-        this.addField({ label: "Description", type: "text" }, dashboard.config.description, (value) => {dashboard.config.description = value}, dashboardSection);
+        this.addField({ label: "Dashboard Name", type: "text" }, dashboard.config.title, (value) => { dashboard.config.title = value }, dashboardSection);
+        this.addField({ label: "Description", type: "text" }, dashboard.config.description, (value) => { dashboard.config.description = value }, dashboardSection);
 
         const dashboardPropertiesSection = this.addSection();
         this.addField({ label: "Columns", type: "int" }, dashboard.config.column_count, (value) => dashboard.setColumnCount(value), dashboardPropertiesSection);

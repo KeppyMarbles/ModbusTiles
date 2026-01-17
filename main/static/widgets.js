@@ -476,7 +476,7 @@ class SliderWidget extends InputWidget {
         super.onValue(val);
         if(this.shouldUpdate) {
             this.input.value = val;
-            this._updateDisplayValue();
+            this._updateDisplayValue(val);
         }
     }
 
@@ -484,9 +484,9 @@ class SliderWidget extends InputWidget {
         this.onValue(0);
     }
 
-    _updateDisplayValue() {
+    _updateDisplayValue(val) {
         if(this.config.display_value)
-            this.value_label.textContent = this.config.prefix + "Value: " + this.input.value + this.config.suffix; //TODO decimals
+            this.value_label.textContent = this.config.prefix + "Value: " + val + this.config.suffix; //TODO decimals
         else
             this.value_label.textContent = "";
     }
@@ -543,16 +543,16 @@ class MeterWidget extends Widget {
 
     onValue(val) {
         this.bar.value = val;
-        this._updateDisplayValue();
+        this._updateDisplayValue(val);
     }
 
     clear() {
         this.onValue(0);
     }
 
-    _updateDisplayValue() {
+    _updateDisplayValue(val) {
         if(this.config.display_value)
-            this.value_label.textContent = this.config.prefix + "Value: " + this.bar.value + this.config.suffix; //TODO decimals
+            this.value_label.textContent = this.config.prefix + "Value: " + val + this.config.suffix; //TODO decimals
         else
             this.value_label.textContent = "";
     }
@@ -695,6 +695,8 @@ class ChartWidget extends Widget {
         { name: "line_color", type: "color", default: "#17BECF", label: "Line Color" },
         { name: "line_width", type: "number", default: 2, label: "Line Width" },
         { name: "show_grid", type: "bool", default: true, label: "Show Grid" },
+        { name: "y_min", type: "number", default: null, label: "Y Min" },
+        { name: "y_max", type: "number", default: null, label: "Y Max" },
     ]
 
     constructor(gridElem, config, tag) {
@@ -825,6 +827,16 @@ class ChartWidget extends Widget {
     _getLayout() {
         const gridColor = this.config.show_grid ? 'rgba(128, 128, 128, 0.2)' : 'rgba(0,0,0,0)';
 
+        const yAxis = {
+            gridcolor: gridColor,
+            linecolor: this.textColor,
+            tickfont: { color: this.textColor },
+            autorange: (this.config.y_min == null || this.config.y_max == null),
+        };
+
+        if(!yAxis.autorange)
+            yAxis.range = [this.config.y_min, this.config.y_max];
+
         return {
             title: {
                 text: this.config.title,
@@ -838,12 +850,7 @@ class ChartWidget extends Widget {
                 linecolor: this.textColor,
                 tickfont: { color: this.textColor }
             },
-            yaxis: {
-                autorange: true,
-                gridcolor: gridColor,
-                linecolor: this.textColor,
-                tickfont: { color: this.textColor }
-            },
+            yaxis: yAxis,
             paper_bgcolor: 'rgba(0,0,0,0)',
             plot_bgcolor: 'rgba(0,0,0,0)',
         };

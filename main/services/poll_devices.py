@@ -213,8 +213,14 @@ def _build_read_blocks(tags: list[Tag], max_gap=8, max_size=128) -> list[ReadBlo
 async def _process_block(block: ReadBlock, client: ModbusBaseClient, context: PollContext):
     """ Read the given data from the device connection and update associated tags """
 
+    read_func = {
+        Tag.ChannelChoices.COIL: client.read_coils,
+        Tag.ChannelChoices.DISCRETE_INPUT: client.read_discrete_inputs,
+        Tag.ChannelChoices.HOLDING_REGISTER: client.read_holding_registers,
+        Tag.ChannelChoices.INPUT_REGISTER: client.read_input_registers,
+    }[block.tags[0].channel]
+
     # Get register data for this block
-    read_func = _get_modbus_reader(client, block.tags[0])
     try:
         rr = await read_func(block.start, count=block.length, device_id=0)
     except Exception as e:
@@ -250,7 +256,7 @@ async def _process_block(block: ReadBlock, client: ModbusBaseClient, context: Po
             if len(rr.registers) > 0:
                 values = client.convert_from_registers(
                     raw_slice, 
-                    data_type=_get_modbus_datatype(client, tag),
+                    data_type=tag.pymodbus_datatype,
                     word_order=tag.device.word_order
                 )
                 # Handle bit-indexing
@@ -341,7 +347,7 @@ async def _write_value(client: ModbusBaseClient, tag: Tag, values):
 
             # Normal direct write
             else:
-                registers = client.convert_to_registers(values, data_type=_get_modbus_datatype(client, tag), word_order=tag.device.word_order)
+                registers = client.convert_to_registers(values, data_type=tag.pymodbus_datatype, word_order=tag.device.word_order)
                 result = await client.write_registers(tag.address, registers, device_id=tag.unit_id)
 
         case Tag.ChannelChoices.COIL:
@@ -363,19 +369,3 @@ def _get_modbus_reader(client: ModbusBaseClient, tag: Tag):
         Tag.ChannelChoices.HOLDING_REGISTER: client.read_holding_registers,
         Tag.ChannelChoices.INPUT_REGISTER: client.read_input_registers,
     }[tag.channel]
-
-
-def _get_modbus_datatype(client: ModbusBaseClient, tag: Tag):
-    """ Returns the equivalent pymodbus datatype of a tag's datatype """
-    return {
-        Tag.DataTypeChoices.BOOL: client.DATATYPE.UINT16, # Use bit indexing
-        Tag.DataTypeChoices.INT16: client.DATATYPE.INT16,
-        Tag.DataTypeChoices.UINT16: client.DATATYPE.UINT16,
-        Tag.DataTypeChoices.INT32: client.DATATYPE.INT32,
-        Tag.DataTypeChoices.UINT32: client.DATATYPE.UINT32,
-        Tag.DataTypeChoices.INT64: client.DATATYPE.INT64,
-        Tag.DataTypeChoices.UINT64: client.DATATYPE.UINT64,
-        Tag.DataTypeChoices.FLOAT32: client.DATATYPE.FLOAT32,
-        Tag.DataTypeChoices.FLOAT64: client.DATATYPE.FLOAT64,
-        Tag.DataTypeChoices.STRING: client.DATATYPE.STRING
-    }[tag.data_type]
