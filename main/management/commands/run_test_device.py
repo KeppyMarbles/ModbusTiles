@@ -2,7 +2,7 @@ import random
 import math
 import time
 import json
-from ...models import Tag, Dashboard
+from ...models import Tag, Dashboard, Device
 from ...services.io_csv import DeviceImporter, TagImporter, AlarmConfigImporter
 from ...api.views import DashboardViewSet
 from .base_simulator import BaseModbusSimulator
@@ -62,3 +62,7 @@ class Command(BaseModbusSimulator):
             data = json.load(file)
             dashboard, _ = Dashboard.objects.get_or_create(alias=data["alias"], owner=user)
             DashboardViewSet.update_dashboard(dashboard=dashboard, data=data)
+
+        device = Device.objects.get(alias="Simulated_AHU")
+        self.word_order = device.word_order
+        self.port = device.port

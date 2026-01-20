@@ -23,7 +23,7 @@
       "config": {
         "position_x": 0,
         "position_y": 1,
-        "scale_x": 4,
+        "scale_x": 2,
         "scale_y": 2,
         "color_on": "green",
         "color_off": "gray",
@@ -32,27 +32,27 @@
       }
     },
     {
-      "tag": "27f4ec26-8527-485e-ab9e-9036df533ade",
+      "tag": "849d5fef-b201-4748-bc48-9afdaf4d43c7",
       "widget_type": "bool_label",
       "config": {
-        "text_on": "OCCUPIED",
-        "text_off": "UNOCCUPIED",
-        "position_x": 4,
-        "position_y": 1,
-        "scale_x": 4,
-        "scale_y": 2,
+        "text_on": "Fan On",
+        "text_off": "Fan Off",
+        "position_x": 0,
+        "position_y": 3,
+        "scale_x": 2,
+        "scale_y": 1,
         "locked": false,
-        "showTagName": true
+        "showTagName": false
       }
     },
     {
       "tag": "554df4b1-b7e0-4ca1-8fca-af0f13879742",
       "widget_type": "number_input",
       "config": {
-        "position_x": 0,
-        "position_y": 3,
+        "position_x": 20,
+        "position_y": 2,
         "scale_x": 4,
-        "scale_y": 2,
+        "scale_y": 1,
         "step": 0.5,
         "min": 55,
         "max": 80,
@@ -66,10 +66,10 @@
       "tag": "14aa6017-7f87-4ab9-9892-e0849f141a80",
       "widget_type": "slider",
       "config": {
-        "position_x": 4,
+        "position_x": 20,
         "position_y": 3,
         "scale_x": 4,
-        "scale_y": 2,
+        "scale_y": 1,
         "min_value": 0,
         "max_value": 100,
         "suffix": "% Open",
@@ -91,11 +91,11 @@
         "max_value": 100,
         "warning_threshold": 80,
         "critical_threshold": 90,
-        "position_x": 8,
+        "position_x": 3,
         "position_y": 1,
         "scale_x": 6,
         "scale_y": 4,
-        "suffix": "°F",
+        "suffix": "F",
         "locked": false,
         "showTagName": true,
         "prefix": ""
@@ -109,7 +109,7 @@
         "history_seconds": 60,
         "chart_type": "area",
         "line_color": "#2ecc71",
-        "position_x": 14,
+        "position_x": 9,
         "position_y": 1,
         "scale_x": 10,
         "scale_y": 4,
@@ -128,7 +128,7 @@
       "config": {
         "text": "Maintenance / Diagnostics",
         "position_x": 0,
-        "position_y": 6,
+        "position_y": 7,
         "scale_x": 24,
         "scale_y": 1,
         "locked": false,
@@ -145,7 +145,7 @@
         "low_value": 1,
         "optimum_value": 0,
         "position_x": 0,
-        "position_y": 7,
+        "position_y": 8,
         "scale_x": 8,
         "scale_y": 2,
         "suffix": " in.WC",
@@ -162,12 +162,40 @@
       "config": {
         "color_on": "red",
         "color_off": "gray",
-        "position_x": 9,
-        "position_y": 7,
+        "position_x": 8,
+        "position_y": 8,
         "scale_x": 2,
         "scale_y": 2,
         "locked": false,
         "showTagName": true
+      }
+    },
+    {
+      "tag": "586f0e20-306e-4f1e-a0a6-7d6a74b652d8",
+      "widget_type": "number_label",
+      "config": {
+        "locked": false,
+        "showTagName": false,
+        "precision": 2,
+        "prefix": "Room Temperature: ",
+        "suffix": "F",
+        "position_x": 15,
+        "position_y": 5,
+        "scale_x": 4,
+        "scale_y": 1
+      }
+    },
+    {
+      "tag": null,
+      "widget_type": "label",
+      "config": {
+        "locked": false,
+        "showTagName": true,
+        "text": "Controls",
+        "position_x": 20,
+        "position_y": 1,
+        "scale_x": 4,
+        "scale_y": 1
       }
     }
   ]

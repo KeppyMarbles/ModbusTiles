@@ -5,6 +5,8 @@ Simulated_AHU,Supply_Air_Temp,Current temperature of air leaving unit,ir,float32
 Simulated_AHU,Duct_Static_Pressure,Air pressure in main duct (inches WC),ir,float32,4,0,True,False,0:00:01,0:00:00,4bf3a75d-a96e-4c9f-81bc-08a9edc7c87e
 Simulated_AHU,Occupancy_Mode,"0=Unoccupied, 1=Occupied",coil,bool,1,0,True,False,0:00:01,0:00:00,27f4ec26-8527-485e-ab9e-9036df533ade
 Simulated_AHU,Cooling_Valve_Cmd,Chilled Water Valve Position (0-100%),hr,uint16,0,0,True,False,0:00:01,0:00:00,14aa6017-7f87-4ab9-9892-e0849f141a80
+Simulated_AHU,Heating_Valve_Cmd,Heated Water Valve Position (0-100%),hr,uint16,1,0,True,False,0:00:01,0:00:00,76ef2ac8-e0cf-40c3-97c4-f7ad3d26e9d1
 Simulated_AHU,Supply_Temp_Setpoint,Target Supply Temperature,hr,float32,2,0,True,False,0:00:01,0:00:00,554df4b1-b7e0-4ca1-8fca-af0f13879742
+Simulated_AHU,HVAC_Mode,HVAC Mode (Off/Cool/Heat),hr,uint16,4,0,True,False,0:00:01,0:00:00,c6905f17-3385-4b08-81c8-e52760100eb7
 Simulated_AHU,Fan_Running_Status,Feedback from fan VFD,di,bool,0,0,True,False,0:00:01,0:00:00,849d5fef-b201-4748-bc48-9afdaf4d43c7
 Simulated_AHU,Freeze_Stat_Alarm,Low temperature safety trip,di,bool,1,0,True,False,0:00:01,0:00:00,8bfd8281-55e9-40ae-acd1-4b29e32d27dd

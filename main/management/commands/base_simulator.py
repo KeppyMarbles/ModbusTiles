@@ -20,12 +20,10 @@ class BaseModbusSimulator(BaseCommand, ABC):
     help = 'Runs a Modbus TCP simulator'
 
     def add_arguments(self, parser):
-        parser.add_argument("--port", type=int, default=502)
-        parser.add_argument("--interval", type=float, default=0.5)
+        parser.add_argument("--interval", type=float, default=0.1)
         parser.add_argument("--size", type=int, default=2**13)
 
     def handle(self, *args, **options): #TODO word order
-        self.port = options["port"]
         self.interval = options["interval"]
         size = options["size"]
         
@@ -68,17 +66,18 @@ class BaseModbusSimulator(BaseCommand, ABC):
 
     def setup_simulation(self):
         """ Optional hook for initialization """
-        pass
+        self.port = 502
+        self.word_order = "big"
 
     def read_tag(self, tag: Tag):
         """ Direct read from memory based on Tag attributes """
 
         count = tag.pymodbus_datatype.value[1]
         vals = self.context[0].getValues(tag.modbus_function_code, tag.address, count=count)
-        return ModbusBaseClient.convert_from_registers(vals, data_type=tag.pymodbus_datatype, word_order="big") #self.word_order
+        return ModbusBaseClient.convert_from_registers(vals, data_type=tag.pymodbus_datatype, word_order=self.word_order)
 
     def write_tag(self, tag: Tag, value):
         """ Direct write to memory based on Tag attributes """
 
-        registers = ModbusBaseClient.convert_to_registers(value, data_type=tag.pymodbus_datatype, word_order="big")
+        registers = ModbusBaseClient.convert_to_registers(value, data_type=tag.pymodbus_datatype, word_order=self.word_order)
         self.context[0].setValues(tag.modbus_function_code, tag.address, registers)

@@ -8,10 +8,10 @@ call .venv\Scripts\activate
 REM ---------- Start Simulator ----------
 echo.
 echo *** STARTING PLC SIMULATOR 1 ***
-start cmd /k "call .venv\Scripts\activate && python manage.py run_demo_device --port 502"
+start cmd /k "call .venv\Scripts\activate && python manage.py run_demo_device"
 timeout /t 1
 echo *** STARTING PLC SIMULATOR 2 ***
-start cmd /k "call .venv\Scripts\activate && python manage.py run_test_device --port 503"
+start cmd /k "call .venv\Scripts\activate && python manage.py run_test_device"
 
 REM ---------- Collect Statics ----------
 echo.

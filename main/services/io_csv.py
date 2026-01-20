@@ -1,5 +1,6 @@
 import csv
 import uuid
+import ast
 from django.db import models, transaction
 from django.utils.dateparse import parse_duration
 from ..models import Tag, Device, AlarmConfig
@@ -75,8 +76,12 @@ class AlarmConfigImporter(BaseCSVImporter):
 
     def clean_row(self, row: dict):
         row["tag"] = Tag.objects.get(external_id=row["tag"]) #TODO just use as PK?
+
+        row["trigger_value"] = ast.literal_eval(row["trigger_value"])
+
         if "notification_cooldown" in row:
             row["notification_cooldown"] = parse_duration(row["notification_cooldown"])
+
         return super().clean_row(row)
     
 

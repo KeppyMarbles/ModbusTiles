@@ -4,14 +4,14 @@ import logging
 from dataclasses import dataclass
 from collections import defaultdict
 from django.utils import timezone
-from django.db import connection, close_old_connections
+from django.db import connection
 from pymodbus.client import AsyncModbusTcpClient, AsyncModbusUdpClient
 from pymodbus.client.base import ModbusBaseClient
 from channels.layers import get_channel_layer
 from channels.db import database_sync_to_async
 from ..models import Device, Tag, TagWriteRequest, AlarmConfig, ActivatedAlarm
 from ..api.serializers import TagValueSerializer
-from .notify_alarms import send_alarm_notifications #TODO use
+#from .notify_alarms import send_alarm_notifications #TODO use
 
 
 @dataclass
@@ -70,7 +70,7 @@ async def poll_devices(poll_interval=0.25, info_interval=30):
         while True:
             if iteration_count > 0:
                 avg = total_duration / iteration_count
-                amt = (avg / poll_interval)*100
+                amt = (avg / poll_interval)*100 if poll_interval > 0 else 0
                 msg = f"Average poll duration: {avg:.3f}s ({amt:.2f}%)"
                 if avg > poll_interval:
                     logger.warning(msg)

@@ -399,6 +399,7 @@ class DropdownWidget extends InputWidget {
     }
 
     applyConfig() {
+        super.applyConfig();
         this.select.options.length = 0;
         this.config.dropdown_choices.forEach(choice => {
             const opt = document.createElement('option');
