@@ -50,7 +50,7 @@
       "widget_type": "number_input",
       "config": {
         "position_x": 20,
-        "position_y": 2,
+        "position_y": 3,
         "scale_x": 4,
         "scale_y": 1,
         "step": 0.5,
@@ -67,7 +67,7 @@
       "widget_type": "slider",
       "config": {
         "position_x": 20,
-        "position_y": 3,
+        "position_y": 4,
         "scale_x": 4,
         "scale_y": 1,
         "min_value": 0,
@@ -88,9 +88,9 @@
       "config": {
         "title": "Supply Air Temp",
         "min_value": 40,
-        "max_value": 100,
-        "warning_threshold": 80,
-        "critical_threshold": 90,
+        "max_value": 200,
+        "warning_threshold": 150,
+        "critical_threshold": 175,
         "position_x": 3,
         "position_y": 1,
         "scale_x": 6,
@@ -171,15 +171,15 @@
       }
     },
     {
-      "tag": "586f0e20-306e-4f1e-a0a6-7d6a74b652d8",
+      "tag": "7f189b33-c587-4f3a-bd19-cd73cf96401e",
       "widget_type": "number_label",
       "config": {
         "locked": false,
         "showTagName": false,
         "precision": 2,
-        "prefix": "Room Temperature: ",
+        "prefix": "Outdoor Temperature: ",
         "suffix": "F",
-        "position_x": 15,
+        "position_x": 11,
         "position_y": 5,
         "scale_x": 4,
         "scale_y": 1
@@ -194,6 +194,68 @@
         "text": "Controls",
         "position_x": 20,
         "position_y": 1,
+        "scale_x": 4,
+        "scale_y": 1
+      }
+    },
+    {
+      "tag": "76ef2ac8-e0cf-40c3-97c4-f7ad3d26e9d1",
+      "widget_type": "slider",
+      "config": {
+        "locked": false,
+        "showTagName": true,
+        "confirmation": false,
+        "min_value": 0,
+        "max_value": 100,
+        "step": 1,
+        "prefix": "",
+        "suffix": "",
+        "display_range": true,
+        "display_value": false,
+        "position_x": 20,
+        "position_y": 5,
+        "scale_x": 4,
+        "scale_y": 1
+      }
+    },
+    {
+      "tag": "c6905f17-3385-4b08-81c8-e52760100eb7",
+      "widget_type": "dropdown",
+      "config": {
+        "locked": false,
+        "showTagName": true,
+        "confirmation": false,
+        "dropdown_choices": [
+          {
+            "label": "Off",
+            "value": "0"
+          },
+          {
+            "label": "Cool",
+            "value": "1"
+          },
+          {
+            "label": "Heat",
+            "value": "2"
+          }
+        ],
+        "position_x": 20,
+        "position_y": 2,
+        "scale_x": 4,
+        "scale_y": 1
+      }
+    },
+    {
+      "tag": "586f0e20-306e-4f1e-a0a6-7d6a74b652d8",
+      "widget_type": "number_label",
+      "config": {
+        "locked": false,
+        "showTagName": false,
+        "precision": 2,
+        "prefix": "Room Temperature: ",
+        "suffix": "F",
+        "position_x": 15,
+        "position_y": 5,
         "scale_x": 4,
         "scale_y": 1
       }
