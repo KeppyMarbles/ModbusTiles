@@ -1,2 +1,2 @@
 alias,ip_address,port,protocol,word_order,is_active
-Simulated_AHU,127.0.0.1,502,tcp,big,True
+SimulatedAHU,127.0.0.1,502,tcp,big,True

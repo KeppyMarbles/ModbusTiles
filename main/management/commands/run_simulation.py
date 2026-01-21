@@ -16,7 +16,7 @@ from ...models import Tag # Imported for Channel/DataType constants only
 
 logger = logging.getLogger(__name__)
 
-class BaseModbusSimulator(BaseCommand, ABC):
+class Command(BaseCommand, ABC):
     help = 'Runs a Modbus TCP simulator'
 
     def add_arguments(self, parser):
@@ -59,7 +59,6 @@ class BaseModbusSimulator(BaseCommand, ABC):
             elapsed = time.monotonic() - start_time
             time.sleep(max(0, self.interval - elapsed))
 
-    @abstractmethod
     def tick(self):
         """ Called each interval """
         pass

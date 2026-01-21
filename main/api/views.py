@@ -32,6 +32,7 @@ class ReadOnlyViewSet(ModelViewSet):
 class DeviceViewSet(ReadOnlyViewSet):
     queryset = Device.objects.all()
     serializer_class = DeviceSerializer
+    permission_classes = [IsAuthenticated]
 
 
 class DeviceMetadataView(APIView):
@@ -48,6 +49,7 @@ class DeviceMetadataView(APIView):
 class TagViewSet(ReadOnlyViewSet):
     serializer_class = TagSerializer
     lookup_field = 'external_id'
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         qs = Tag.objects.all()
@@ -179,6 +181,7 @@ class DashboardWidgetViewSet(ModelViewSet):
 class AlarmConfigViewSet(ReadOnlyViewSet):
     serializer_class = AlarmConfigSerializer
     lookup_field = 'external_id'
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         qs = AlarmConfig.objects.all()

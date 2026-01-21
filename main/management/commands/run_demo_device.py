@@ -2,7 +2,7 @@ import random
 import logging
 import json
 from django.contrib.auth import get_user_model
-from .base_simulator import BaseModbusSimulator
+from .run_simulation import Command as BaseModbusSimulator
 from ...api.views import DashboardViewSet
 from ...models import Tag, Dashboard, Device
 from ...services.io_csv import DeviceImporter, TagImporter, AlarmConfigImporter
@@ -107,8 +107,10 @@ class Command(BaseModbusSimulator):
         self.write_tag(self.temp_setpoint_tag, setpoint)
         self.write_tag(self.outdoor_temp_tag, outdoor_temp)
         self.write_tag(self.supply_temp_tag, supply_temp)
-        self.write_tag(self.duct_pressure_tag, static_pressure)
         self.write_tag(self.freeze_alarm_tag, supply_temp < 40.0)
+
+        if fan_enable:
+            self.write_tag(self.duct_pressure_tag, static_pressure)
 
     def setup_simulation(self):
         user = User.objects.filter(username="testuser").first()
@@ -133,20 +135,20 @@ class Command(BaseModbusSimulator):
             dashboard, _ = Dashboard.objects.get_or_create(alias=data["alias"], owner=user)
             DashboardViewSet.update_dashboard(dashboard=dashboard, data=data)
 
-        device = Device.objects.get(alias="Simulated_AHU")
+        device = Device.objects.get(alias="SimulatedAHU")
         self.word_order = device.word_order
         self.port = device.port
 
-        self.fan_running_tag = Tag.objects.get(alias="Fan_Running_Status")
-        self.return_temp_tag = Tag.objects.get(alias="Return_Air_Temp")
-        self.temp_setpoint_tag = Tag.objects.get(alias="Supply_Temp_Setpoint")
-        self.outdoor_temp_tag = Tag.objects.get(alias="Outdoor_Temp")
-        self.supply_temp_tag = Tag.objects.get(alias="Supply_Air_Temp")
-        self.cooling_valve_tag = Tag.objects.get(alias="Cooling_Valve_Cmd")
-        self.heating_valve_tag = Tag.objects.get(alias="Heating_Valve_Cmd")
-        self.duct_pressure_tag = Tag.objects.get(alias="Duct_Static_Pressure")
-        self.freeze_alarm_tag = Tag.objects.get(alias="Freeze_Stat_Alarm")
-        self.mode_tag = Tag.objects.get(alias="HVAC_Mode")
+        self.fan_running_tag = Tag.objects.get(alias="Fan Running Status")
+        self.return_temp_tag = Tag.objects.get(alias="Return Air Temp")
+        self.temp_setpoint_tag = Tag.objects.get(alias="Supply Temp Setpoint")
+        self.outdoor_temp_tag = Tag.objects.get(alias="Outdoor Temp")
+        self.supply_temp_tag = Tag.objects.get(alias="Supply Air Temp")
+        self.cooling_valve_tag = Tag.objects.get(alias="Cooling Valve Cmd")
+        self.heating_valve_tag = Tag.objects.get(alias="Heating Valve Cmd")
+        self.duct_pressure_tag = Tag.objects.get(alias="Duct Static Pressure")
+        self.freeze_alarm_tag = Tag.objects.get(alias="Freeze Stat Alarm")
+        self.mode_tag = Tag.objects.get(alias="HVAC Mode")
 
         self.write_tag(self.supply_temp_tag, 75)
         self.write_tag(self.outdoor_temp_tag, 85)

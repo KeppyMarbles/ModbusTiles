@@ -5,7 +5,7 @@ import json
 from ...models import Tag, Dashboard, Device
 from ...services.io_csv import DeviceImporter, TagImporter, AlarmConfigImporter
 from ...api.views import DashboardViewSet
-from .base_simulator import BaseModbusSimulator
+from .run_simulation import Command as BaseModbusSimulator
 from django.contrib.auth import get_user_model
 import logging
 
@@ -63,6 +63,6 @@ class Command(BaseModbusSimulator):
             dashboard, _ = Dashboard.objects.get_or_create(alias=data["alias"], owner=user)
             DashboardViewSet.update_dashboard(dashboard=dashboard, data=data)
 
-        device = Device.objects.get(alias="Simulated_AHU")
+        device = Device.objects.get(alias="TestPLC")
         self.word_order = device.word_order
         self.port = device.port
