@@ -1,5 +1,6 @@
 .alarm-table { 
-    width: 100%; 
+    width: 100%;
+    table-layout: fixed; 
     border-collapse: collapse; 
     background: white; 
     border-radius: 8px; 
@@ -30,7 +31,29 @@
     margin-left: 10px;
 }
 
-.alarm-table .threat-level {
+/* Threat Level */
+.alarm-table tr > *:nth-child(1) { 
+    width: 12%; 
+}
+
+/* Time Activated */
+.alarm-table tr > *:nth-child(2) { 
+    width: 18%; 
+}
+
+/* Tag */
+.alarm-table tr > *:nth-child(3) { 
+    width: 15%; 
+}
+
+/* Message */
+.alarm-table tr > *:nth-child(4) { 
+    width: 35%; 
+}
+
+/* Actions */
+.alarm-table tr > *:nth-child(5) { 
+    width: 20%; 
 }
 
 .resolved-title {
