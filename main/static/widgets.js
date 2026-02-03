@@ -452,7 +452,7 @@ class SliderWidget extends InputWidget {
         this.input.addEventListener("input", (e) => {
             // Prevent value updates when using the slider
             this.shouldUpdate = false;
-            this._updateDisplayValue();
+            this._updateDisplayValue(this.input.value);
         })
     }
 
@@ -538,7 +538,7 @@ class MeterWidget extends Widget {
             this.min_label.textContent = "";
             this.max_label.textContent = "";
         }
-        this._updateDisplayValue();
+        this._updateDisplayValue(this.bar.value);
         this.clear();
     }
 

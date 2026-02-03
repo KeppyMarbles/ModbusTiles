@@ -49,9 +49,9 @@
       "tag": "554df4b1-b7e0-4ca1-8fca-af0f13879742",
       "widget_type": "number_input",
       "config": {
-        "position_x": 20,
-        "position_y": 3,
-        "scale_x": 4,
+        "position_x": 22,
+        "position_y": 2,
+        "scale_x": 2,
         "scale_y": 1,
         "step": 0.5,
         "min": 55,
@@ -67,7 +67,7 @@
       "widget_type": "slider",
       "config": {
         "position_x": 20,
-        "position_y": 4,
+        "position_y": 3,
         "scale_x": 4,
         "scale_y": 1,
         "min_value": 0,
@@ -79,7 +79,7 @@
         "step": 1,
         "prefix": "",
         "display_range": true,
-        "display_value": false
+        "display_value": true
       }
     },
     {
@@ -209,11 +209,11 @@
         "max_value": 100,
         "step": 1,
         "prefix": "",
-        "suffix": "",
+        "suffix": "% Open",
         "display_range": true,
-        "display_value": false,
+        "display_value": true,
         "position_x": 20,
-        "position_y": 5,
+        "position_y": 4,
         "scale_x": 4,
         "scale_y": 1
       }
@@ -241,7 +241,7 @@
         ],
         "position_x": 20,
         "position_y": 2,
-        "scale_x": 4,
+        "scale_x": 2,
         "scale_y": 1
       }
     },
