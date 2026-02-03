@@ -82,7 +82,7 @@ class TagWriteRequestAdmin(admin.ModelAdmin):
     list_display = ("tag", "value", "timestamp", "processed")
     list_filter = ("processed",)
     search_fields = ("tag__alias",)
-    readonly_fields = ("timestamp", "value", "timestamp")
+    readonly_fields = ("timestamp", "value", "user", "tag", "processed")
 
 
 # Alarm config

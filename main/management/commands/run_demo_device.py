@@ -1,16 +1,12 @@
 import random
 import logging
 import json
-from django.contrib.auth import get_user_model
 from .run_simulation import Command as BaseModbusSimulator
 from ...api.views import DashboardViewSet
 from ...models import Tag, Dashboard, Device
 from ...services.io_csv import DeviceImporter, TagImporter, AlarmConfigImporter
 
-
 logger = logging.getLogger(__name__)
-User = get_user_model()
-
 
 class Command(BaseModbusSimulator):
     help = 'Runs the HVAC Physics Simulation'
@@ -113,13 +109,7 @@ class Command(BaseModbusSimulator):
             self.write_tag(self.duct_pressure_tag, static_pressure)
 
     def setup_simulation(self):
-        user = User.objects.filter(username="testuser").first()
-        if user is None:
-            user = User.objects.create_superuser(
-                username="testuser",
-                email="test@example.com",
-                password="test1234",
-            )
+        user = BaseModbusSimulator.ensure_testuser()
 
         with open("test_data/DemoDevice.csv") as file:
             DeviceImporter(file).run()

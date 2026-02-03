@@ -6,11 +6,9 @@ from ...models import Tag, Dashboard, Device
 from ...services.io_csv import DeviceImporter, TagImporter, AlarmConfigImporter
 from ...api.views import DashboardViewSet
 from .run_simulation import Command as BaseModbusSimulator
-from django.contrib.auth import get_user_model
 import logging
 
 logger = logging.getLogger(__name__)
-User = get_user_model()
 
 class Command(BaseModbusSimulator):
     help = 'Animates read-only tags found in the database with random noise'
@@ -41,13 +39,7 @@ class Command(BaseModbusSimulator):
         return random.randint(0, 10) #TODO base off int type?
     
     def setup_simulation(self):
-        user = User.objects.filter(username="testuser").first()
-        if user is None:
-            user = User.objects.create_superuser(
-                username="testuser",
-                email="test@example.com",
-                password="test1234",
-            )
+        user = BaseModbusSimulator.ensure_testuser()
 
         with open("test_data/TestDevice.csv") as file:
             DeviceImporter(file).run()

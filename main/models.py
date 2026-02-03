@@ -209,9 +209,7 @@ class TagHistoryEntry(models.Model):
 
     class Meta:
         ordering = ["-timestamp"]
-        indexes = [
-            models.Index(fields=["tag", "-timestamp"]),
-        ]
+        indexes = [models.Index(fields=["tag", "-timestamp"])]
 
     def __str__(self):
         return f"{self.tag.alias}: {self.value} @ {self.timestamp}"
@@ -224,6 +222,7 @@ class TagWriteRequest(models.Model):
     value = models.JSONField()
     timestamp = models.DateTimeField(auto_now_add=True)
     processed = models.BooleanField(default=False)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
 
 
 class AlarmConfig(models.Model):
@@ -285,11 +284,7 @@ class AlarmConfig(models.Model):
             if not configs:
                 continue
             
-            triggered = [
-                c for c in configs
-                if c.is_activation(tag.current_value)
-            ]
-
+            triggered = [c for c in configs if c.is_activation(tag.current_value)]
             winning = max(triggered, key=lambda c: cls.ALARM_PRIORITY[c.threat_level], default=None)
             current: ActivatedAlarm = active_map.get(tag.id)
 

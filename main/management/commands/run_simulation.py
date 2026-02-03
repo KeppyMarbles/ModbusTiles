@@ -1,10 +1,9 @@
 import time
-import struct
 import threading
 import logging
-from abc import ABC, abstractmethod
-from types import SimpleNamespace
+from abc import ABC
 from django.core.management.base import BaseCommand
+from django.contrib.auth import get_user_model
 from pymodbus.server import StartTcpServer
 from pymodbus.datastore import (
     ModbusSequentialDataBlock,
@@ -15,6 +14,7 @@ from pymodbus.client.base import ModbusBaseClient
 from ...models import Tag # Imported for Channel/DataType constants only
 
 logger = logging.getLogger(__name__)
+User = get_user_model()
 
 class Command(BaseCommand, ABC):
     help = 'Runs a Modbus TCP simulator'
@@ -80,3 +80,15 @@ class Command(BaseCommand, ABC):
 
         registers = ModbusBaseClient.convert_to_registers(value, data_type=tag.pymodbus_datatype, word_order=self.word_order)
         self.context[0].setValues(tag.modbus_function_code, tag.address, registers)
+
+    @staticmethod
+    def ensure_testuser():
+        user = User.objects.filter(username="testuser").first()
+        if user is None:
+            username = "testuser"
+            password = "test1234"
+            user = User.objects.create_superuser(username=username, password=password)
+            logger.info(f"Username: {username}")
+            logger.info(f"Password: {password}")
+            
+        return user

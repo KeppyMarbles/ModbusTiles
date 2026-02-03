@@ -83,7 +83,7 @@ class TagWriteRequestViewSet(ModelViewSet):
         if tag.restricted_write and not user.is_staff:
             raise PermissionDenied("This tag is set to read-only.")
 
-        serializer.save()
+        serializer.save(user=user)
 
     def get_permissions(self):
         if self.action in ['update', 'partial_update', 'destroy']:
