@@ -2,7 +2,7 @@ from datetime import timedelta
 from rest_framework import serializers
 from django.utils import timezone
 from django.core.exceptions import ValidationError
-from ..models import Device, Tag, AlarmConfig, ActivatedAlarm, AlarmSubscription, Dashboard, DashboardWidget, TagWriteRequest
+from ..models import Device, Tag, AlarmConfig, ActivatedAlarm, AlarmSubscription, Dashboard, DashboardWidget, TagWriteRequest, Schedule
 
 
 class DurationSecondsField(serializers.IntegerField):
@@ -23,6 +23,19 @@ class DurationSecondsField(serializers.IntegerField):
         return int(value.total_seconds())
     
 
+class CleanedModelSerializer(serializers.ModelSerializer):
+    def validate(self, attrs):
+        instance = self.instance or self.Meta.model()
+        for attr, value in attrs.items():
+            setattr(instance, attr, value)
+        try:
+            instance.clean()
+        except ValidationError as e:
+            raise serializers.ValidationError(e.message_dict)
+
+        return attrs
+    
+
 class DeviceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Device
@@ -38,7 +51,17 @@ class AlarmConfigSerializer(serializers.ModelSerializer):
         exclude = ["owner", "last_notified"]
 
 
-class TagSerializer(serializers.ModelSerializer):
+class ScheduleSerializer(CleanedModelSerializer):
+    tag = serializers.SlugRelatedField(slug_field='external_id', queryset=Tag.objects.all())
+    time = serializers.TimeField(format='%H:%M:%S', input_formats=['%H:%M', '%I:%M%p', '%I:%M %p', '%H:%M:%S'])
+
+    class Meta:
+        model = Schedule
+        read_only_fields = ["owner"]
+        exclude = ["last_run"]
+
+
+class TagSerializer(CleanedModelSerializer):
     device = serializers.SlugRelatedField( slug_field='alias',  queryset=Device.objects.all())
     history_retention = DurationSecondsField(required=False, allow_null=True)
     history_interval = DurationSecondsField(required=False, allow_null=True)
@@ -47,18 +70,6 @@ class TagSerializer(serializers.ModelSerializer):
         model = Tag
         read_only_fields = ["external_id"]
         exclude = ["owner"]
-
-    def validate(self, attrs):
-        instance = self.instance or Tag()
-        for attr, value in attrs.items():
-            setattr(instance, attr, value)
-
-        try:
-            instance.clean()
-        except ValidationError as e:
-            raise serializers.ValidationError(e.message_dict)
-
-        return attrs
 
 
 class TagValueSerializer(serializers.ModelSerializer):

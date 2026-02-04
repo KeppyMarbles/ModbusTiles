@@ -3,6 +3,7 @@ from uvicorn import Config, Server
 from django.core.management.base import BaseCommand
 from main.services.poll_devices import poll_devices
 from main.services.cleanup import loop_cleanup
+from main.services.scheduler import run_scheduler
 
 class Command(BaseCommand):
     help = "Run Uvicorn with background Modbus poller"
@@ -24,8 +25,10 @@ class Command(BaseCommand):
 
         poll_task = asyncio.create_task(poll_devices(poll_interval=poll_interval))
         cleanup_task = asyncio.create_task(loop_cleanup(interval=cleanup_interval))
+        scheduler_task = asyncio.create_task(run_scheduler())
 
         await server.serve()
 
         poll_task.cancel()
         cleanup_task.cancel()
+        scheduler_task.cancel()

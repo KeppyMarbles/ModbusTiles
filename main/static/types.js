@@ -3,7 +3,7 @@
 /** @typedef {'low' | 'high' | 'crit'} ThreatLevel */
 /** @typedef {'tcp' | 'udp' | 'rtu'} DeviceProtocol */
 /** @typedef {'big' | 'little'} DeviceWordOrder */
-/** @typedef {'bool' | 'int' | 'number' | 'text' | 'color' | 'select' | 'enum'} InspectorDataType */
+/** @typedef {'bool' | 'int' | 'number' | 'text' | 'color' | 'select' | 'enum' | 'time'} InspectorDataType */
 
 /**
  * Object for storing an html option
@@ -17,6 +17,7 @@
  * @typedef {Object} ServerCacheObject
  * @property {Record<string, TagObject>} tags All tags registered on the server
  * @property {Record<string, AlarmConfigObject>} alarms All alarms registered on the server
+ * @property {Record<string, ScheduleObject>} schedules All schedules registered on the server
  * @property {DeviceListObject[]} devices All devices registered on the server
  * @property {TagOptionsObject} tagOptions Choice collection for tag attributes
  * @property {AlarmOptionsObject} alarmOptions Choice collection for alarm attributes
@@ -31,6 +32,16 @@
  * @property {string} label The text to display above the input
  * @property {string} [description] The html title to apply to the label
  * @property {ChoiceObject[]} [options]
+ */
+
+/**
+ * @typedef {Object} ScheduleObject
+ * @property {string} alias Name of the schedule
+ * @property {string} tag The UUID of the tag
+ * @property {*} write_value The value to write to the tag
+ * @property {string} time The time of day the value should be written
+ * @property {boolean[]} days The days of the week to enable
+ * @property {boolean} enabled If the scheduled write should occur
  */
 
 /**

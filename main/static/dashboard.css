@@ -100,9 +100,20 @@ body.screenshot-mode * {
 
 /* --- Tabs --- */
 
-.tab-buttons { display: flex; border-bottom: 1px solid var(--border-color); }
+.tab-buttons {
+    display: flex;
+    flex-direction: column;   /* stack rows */
+    width: 100%;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.tab-buttons > div {
+    display: flex;
+    width: 100%;              /* full width row */
+}
+
 .tab-buttons button {
-    flex: 1;
+    flex: 1;                  /* equal width buttons */
     padding: 12px;
     background: transparent;
     border: none;
@@ -111,9 +122,11 @@ body.screenshot-mode * {
     font-weight: 500;
     color: var(--text-muted);
 }
+
 .tab-buttons button.active {
     color: var(--primary-color);
     border-bottom-color: var(--primary-color);
 }
+
 .tab-content { display: none; }
 .tab-content.active { display: block; animation: fadeIn 0.3s; }

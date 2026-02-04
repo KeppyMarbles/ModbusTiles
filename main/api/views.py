@@ -9,9 +9,10 @@ from rest_framework.decorators import action
 from rest_framework.serializers import Serializer
 from .serializers import TagSerializer, TagValueSerializer, TagWriteRequestSerializer, TagHistoryEntrySerializer
 from .serializers import AlarmConfigSerializer, ActivatedAlarmSerializer
+from .serializers import ScheduleSerializer
 from .serializers import DashboardSerializer, DashboardWidgetSerializer, DashboardWidgetBulkSerializer
 from .serializers import DeviceSerializer
-from ..models import DashboardWidget, Dashboard, Tag, Device, AlarmConfig, ActivatedAlarm, TagWriteRequest, TagHistoryEntry
+from ..models import DashboardWidget, Dashboard, Tag, Device, AlarmConfig, ActivatedAlarm, TagWriteRequest, TagHistoryEntry, Schedule
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from django.utils import timezone
 from django.db import transaction
@@ -32,7 +33,6 @@ class ReadOnlyViewSet(ModelViewSet):
 class DeviceViewSet(ReadOnlyViewSet):
     queryset = Device.objects.all()
     serializer_class = DeviceSerializer
-    permission_classes = [IsAuthenticated]
 
 
 class DeviceMetadataView(APIView):
@@ -49,7 +49,6 @@ class DeviceMetadataView(APIView):
 class TagViewSet(ReadOnlyViewSet):
     serializer_class = TagSerializer
     lookup_field = 'external_id'
-    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         qs = Tag.objects.all()
@@ -178,10 +177,25 @@ class DashboardWidgetViewSet(ModelViewSet):
         serializer.save()
 
 
+class ScheduleViewSet(ModelViewSet):
+    serializer_class = ScheduleSerializer
+    lookup_field = 'external_id'
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self): #TODO actually use this? not used in AlarmConfig either
+        qs = Schedule.objects.all()
+
+        # Get schedules for a specified tag
+        tag_id = self.request.query_params.get("tag")
+        if tag_id:
+            qs = qs.filter(tag__external_id=tag_id)
+
+        return qs
+
+
 class AlarmConfigViewSet(ReadOnlyViewSet):
     serializer_class = AlarmConfigSerializer
     lookup_field = 'external_id'
-    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         qs = AlarmConfig.objects.all()

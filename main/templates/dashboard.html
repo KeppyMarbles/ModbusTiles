@@ -36,10 +36,15 @@
                 </div>
             
             <div class="tab-buttons">
-                <button id="add-button" class="active" data-tab="palette">Widgets</button>
-                <button id="inspect-button" data-tab="tab-inspect">Properties</button>
-                <button id="tag-button" data-tab="tab-tag">Tags</button>
-                <button id="alarm-button" data-tab="tab-alarm">Alarms</button>
+                <div>
+                    <button id="tag-button" data-tab="tab-tag">Tags</button>
+                    <button id="alarm-button" data-tab="tab-alarm">Alarms</button>
+                    <button id="schedule-button" data-tab="tab-schedule">Schedules</button>
+                </div>
+                <div>
+                    <button id="add-button" class="active" data-tab="palette">Widgets</button>
+                    <button id="inspect-button" data-tab="tab-inspect">Properties</button>
+                </div>
             </div>
 
             <div class="sidebar-content">
@@ -59,6 +64,9 @@
                 </div>
                 <div id="tab-alarm" class="tab-content">
                     <div id="alarm-form"></div> 
+                </div>
+                <div id="tab-schedule" class="tab-content">
+                    <div id="schedule-form"></div> 
                 </div>
             </div>
         </aside>

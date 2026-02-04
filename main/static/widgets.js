@@ -410,7 +410,8 @@ class DropdownWidget extends InputWidget {
     }
 
     getConfirmMessage(val) {
-        return `Change ${this.tag.alias} to ${this.select.label}?`;
+        const kv = this.config.dropdown_choices.find(kv => kv.value == val);
+        return `Change ${this.tag.alias} to ${kv.label}?`;
     }
 
     onValue(val) {

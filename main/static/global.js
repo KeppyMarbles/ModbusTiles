@@ -1,12 +1,13 @@
-/** @import { ServerCacheObject, TagObject, AlarmConfigObject } from "./types.js" */
+/** @import { ServerCacheObject, TagObject, AlarmConfigObject, ScheduleObject } from "./types.js" */
 
 /** 
  * Collection of object metadata from the server
  * @type {ServerCacheObject} 
  */
 export const serverCache = {
-    tags: [], //TODO make this a map of external_id -> other info?
-    alarms: [],
+    tags: {},
+    alarms: {},
+    schedules: {},
     devices: [],
     tagOptions: [],
     alarmOptions: [],
@@ -20,27 +21,33 @@ export const serverCache = {
 export async function refreshData() { //TODO options?
     try {
         // Fetch Tags and Devices in parallel
-        const [tagsResp, alarmsResp, devicesResp, tagOptions, alarmOptions] = await Promise.all([
+        const [tagsResp, alarmsResp, schedulesResp, devicesResp, tagOptions, alarmOptions] = await Promise.all([
             fetch('/api/tags/'),
             fetch('/api/alarms/'),
+            fetch('/api/schedules/'),
             fetch('/api/devices/'),
             fetch('/api/tag-options/'),
             fetch('/api/alarm-options/')
         ]);
 
-        /** @type {TagObject[]} */
-        const tagList = await tagsResp.json();
-        /** @type {AlarmConfigObject[]} */
-        const alarmList = await alarmsResp.json();
+        /** @type {[TagObject[], AlarmConfigObject[], ScheduleObject[]]} */
+        const [tagList , alarmList, scheduleList] = await Promise.all([
+            tagsResp.json(),
+            alarmsResp.json(),
+            schedulesResp.json()
+        ])
 
         const tagMap = Object.fromEntries(tagList.map(tag => [tag.external_id, tag]));
         const alarmMap = Object.fromEntries(alarmList.map(alarm => [alarm.external_id, alarm]));
+        const scheduleMap = Object.fromEntries(scheduleList.map(schedule => [schedule.external_id, schedule]));
 
-        serverCache.tags = tagMap
-        serverCache.alarms = alarmMap
+        serverCache.tags = tagMap;
+        serverCache.alarms = alarmMap;
+        serverCache.schedules = scheduleMap;
         serverCache.devices = await devicesResp.json();
         serverCache.tagOptions = await tagOptions.json();
         serverCache.alarmOptions = await alarmOptions.json();
+        
         console.log("Data loaded:", serverCache);
         return true;
     } 

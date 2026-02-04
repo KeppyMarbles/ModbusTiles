@@ -164,8 +164,6 @@ class Tag(models.Model):
         }[self.channel]
     
     def clean(self):
-        super().clean()
-
         if not (0 <= self.bit_index <= 15):
             raise ValidationError({ "bit_index": "Bit index must be between 0 and 15" })
         
@@ -253,7 +251,7 @@ class AlarmConfig(models.Model):
     enabled = models.BooleanField(default=True)
     
     # Enrichment data
-    alias = models.CharField(max_length=100)
+    alias = models.CharField(max_length=100, unique=True)
     message = models.CharField(default="", max_length=200, help_text="e.g., 'Sump Pump Failure - Check Breaker'")
     threat_level = models.CharField(choices=ThreatLevelChoices.choices) #TODO textField?
     
@@ -318,8 +316,8 @@ class AlarmConfig(models.Model):
         except TypeError:
             return False
 
-    class Meta: #TODO shouldn't we prevent multiple alarms for the same value?
-        unique_together = ("alias", "tag")
+    class Meta:
+        unique_together = ("tag", "trigger_value", "operator") #TODO functionally identical jsons might be unique
 
     def __str__(self):
         signs = { 
@@ -377,6 +375,30 @@ class AlarmSubscription(models.Model):
 
     class Meta:
         unique_together = ('user', 'alarm_config')
+
+
+class Schedule(models.Model):
+    external_id = models.UUIDField(default=uuid.uuid4, unique=True)
+    alias = models.CharField(max_length=100, help_text="e.g., 'Office Hours Start'", unique=True)
+    tag = models.ForeignKey(Tag, on_delete=models.CASCADE, related_name="schedules")
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    write_value = models.JSONField(help_text="Value to write when triggered")
+    time = models.TimeField()
+    days = models.JSONField(default=list, help_text="Length 7 boolean list, starting with Monday")
+    
+    enabled = models.BooleanField(default=True)
+    last_run = models.DateTimeField(null=True, blank=True)
+
+    def clean(self):
+        for similar_schedule in Schedule.objects.filter(tag=self.tag, time=self.time, enabled=True).exclude(pk=self.pk):
+            for idx, day_flag in enumerate(self.days):
+                if day_flag and similar_schedule.days[idx]:
+                    raise ValidationError({"time": f"Schedule '{similar_schedule.alias}' already writes to this tag at {self.time} on day {idx}"})
+
+    def __str__(self):
+        return f"{self.alias} -> {self.tag.alias}: {self.write_value} @ {self.time}"
 
 
 class Dashboard(models.Model):

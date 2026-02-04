@@ -37,6 +37,10 @@ export class Dashboard {
         this.alarmForm = new Inspector(document.getElementById('alarm-form'));
         this.alarmForm.inspectAlarm();
 
+        /** @type {Inspector} */
+        this.scheduleForm = new Inspector(document.getElementById('schedule-form'));
+        this.scheduleForm.inspectSchedule();
+
         /** @type {DashboardObject} */
         this.config = null;
 

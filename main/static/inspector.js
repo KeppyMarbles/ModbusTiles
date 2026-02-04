@@ -1,7 +1,9 @@
 import { serverCache, requestServer } from "./global.js";
-/** @import { InspectorFieldDefinition, ChoiceObject, DataType, TagObject, ChannelType, InspectorDataType, AlarmConfigObject } from "./types.js" */
+/** @import { InspectorFieldDefinition, ChoiceObject, DataType, TagObject, ChannelType, InspectorDataType, AlarmConfigObject, ScheduleObject } from "./types.js" */
 /** @import { Widget } from "./widgets.js" */
 /** @import { Dashboard } from "./dashboard.js" */
+
+//TODO might need some refactoring... we use very similar code for tag-dependent fields, create/edit/delete api calls for each object
 
 /**
  * Manages a form to edit widgets and dashboards, or create tags and alarms
@@ -95,8 +97,8 @@ export class Inspector {
     /**
      * @param {InspectorFieldDefinition} def The field properties
      * @param {*} currentValue The value to set in the input
-     * @param {(val: *)} onChange The callback that recieves the new data when input changes
-     * @param {HTMLElement} section The element to append the field to, typically from `addSection`
+     * @param {(val: *)} [onChange] The callback that recieves the new data when input changes
+     * @param {HTMLElement} [section] The element to append the field to, typically from `addSection`
      */
     addField(def, currentValue, onChange, section) {
         const wrapper = document.createElement('div');
@@ -196,6 +198,11 @@ export class Inspector {
             case "number":
                 input.type = "number";
                 getValue = () => input.value === "" ? 0 : Number(input.value);
+                break;
+
+            case "time":
+                input.type = "time";
+                getValue = () => input.value;
                 break;
                 
             default:
@@ -363,7 +370,7 @@ export class Inspector {
      */
     inspectDashboard(dashboard) { 
         this.clear();
-        const title = this.addTitle(dashboard.title);
+        const title = this.addTitle("Dashboard");
         const dashboardSection = this.addSection();
 
         this.addField({ label: "Dashboard Name", type: "text" }, dashboard.config.title, (value) => { dashboard.config.title = value }, dashboardSection);
@@ -381,7 +388,7 @@ export class Inspector {
     }
 
     /**
-     * 
+     * Populate the form with properties of a given tag
      * @param {TagObject} tag 
      */
     inspectTag(tag) {
@@ -396,7 +403,7 @@ export class Inspector {
         this.addTitle("Create or Edit Tag");
 
         const tagSection = this.addSection();
-        const alias = this.addField({ label: "Tag Name", type: "text" }, tag?.alias || "", null, tagSection);
+        const alias = this.addField({ label: "Tag Name", type: "text" }, tag?.alias, null, tagSection);
         const description = this.addField({ label: "Description (optional)", type: "text" }, tag?.description, null, tagSection)
 
         const locationSection = this.addSection();
@@ -527,7 +534,7 @@ export class Inspector {
     }
 
     /**
-     * 
+     * Populate the form with properties of a given alarm
      * @param {AlarmConfigObject} alarm 
      */
     inspectAlarm(alarm) {
@@ -558,9 +565,7 @@ export class Inspector {
             operatorContainer.innerHTML = '';
             
             const tag = serverCache.tags[tagID];
-
-            if(!tag)
-                return;
+            if(!tag) return;
 
             // Show choices for trigger operator
             let operatorChoices = serverCache.alarmOptions.operator_choices;
@@ -570,7 +575,7 @@ export class Inspector {
             // Create an input with the same value type as the selected tag
             const fieldType = Inspector.getFieldType(tag.data_type);
 
-            const newOperatorField = this.addField({ label: "Operator", type: "select", options: operatorChoices}, alarm?.operator || "", null, operatorContainer);
+            const newOperatorField = this.addField({ label: "Operator", type: "select", options: operatorChoices}, alarm?.operator, null, operatorContainer);
             const newTriggerField = this.addField({ label: "Trigger Value", type: fieldType, 
                     description: "The value to compare with for triggering the alarm" }, 
                 alarm?.trigger_value, null, triggerContainer
@@ -638,6 +643,104 @@ export class Inspector {
                         alert("Alarm deleted.");
                         delete serverCache.alarms[alarm.external_id];
                         this.inspectAlarm(); 
+                    });
+                }
+            }, deleteSection);
+            delButton.style.color = "crimson";
+        }
+    }
+
+    /**
+     * Populate the form with properties of a given schedule
+     * @param {ScheduleObject} schedule 
+     */
+    inspectSchedule(schedule) {
+        this.clear();
+
+        const scheduleSelectSection = this.addSection();
+
+        const scheduleOptions = Object.values(serverCache.schedules).map(schedule => ({ value: schedule.external_id, label: schedule.alias }));
+        this.addField({ label: "Schedule", type: "select", options: scheduleOptions }, schedule?.external_id, (schID) => {
+            this.inspectSchedule(serverCache.schedules[schID])
+        }, scheduleSelectSection);
+
+        this.addTitle("Create or Edit Schedule");
+
+        const alias = this.addField({ label: "Schedule Name", type: "text" }, schedule?.alias, null);
+
+        const tagSection = this.addSection();
+        const writeContainer = document.createElement('div'); 
+        let getWriteValue = () => null;
+
+        const onTagChanged = (tagID) => {
+            writeContainer.innerHTML = ''; 
+            
+            const tag = serverCache.tags[tagID];
+            if(!tag) return;
+
+            // Create an input with the same value type as the selected tag //TODO make generalized? used twice...
+            const fieldType = Inspector.getFieldType(tag.data_type);
+            const newTriggerField = this.addField({ label: "Write Value", type: fieldType }, schedule?.write_value, null, writeContainer);
+            getWriteValue = newTriggerField.getValue;
+        }
+        onTagChanged(schedule?.tag);
+        
+        const tagOptions = Object.values(serverCache.tags).map(tag => ({ value: tag.external_id, label: Inspector.getTagLabel(tag)}));
+        const tag = this.addField({ label: "Control Tag", type: "select", options: tagOptions }, schedule?.tag, onTagChanged, tagSection);
+        tagSection.appendChild(writeContainer);        
+
+        const timeSection = this.addSection();
+        const time = this.addField({ label: "Time", type: "time"}, schedule?.time, null, timeSection);
+
+        const dayNames = ["Mondays", "Tuesdays", "Wednesdays", "Thursdays", "Fridays", "Saturdays", "Sundays"];
+        const dayChecks = dayNames.map((name, idx) => this.addField({ label: name, type: "bool" }, schedule?.days[idx], null, timeSection))
+        
+        const miscSection = this.addSection();
+        const enabled = this.addField({ label: "Enabled", type: "bool" }, schedule?.enabled || true, null, miscSection); //TODO add "enabled" field to other things?
+
+        /**
+         * Post schedule configuration to the server
+         * @param {boolean} create If schedule should be created or updated
+         */
+        const scheduleSubmit = async (create) => {
+            const payload = {
+                alias: alias.getValue(),
+                tag: tag.getValue(),
+                write_value: getWriteValue(), // Use latest getValue
+                time: time.getValue(),
+                days: dayChecks.map(check => check.getValue()),
+                enabled: enabled.getValue(),
+            }
+            
+            if(create) {
+                requestServer('/api/schedules/', 'POST', payload, (data) => {
+                    alert("Schedule created!");
+                    serverCache.schedules[data.external_id] = data;
+                    this.inspectSchedule(data);
+                });
+            }
+            else {
+                requestServer(`/api/schedules/${schedule.external_id}/`, 'PUT', payload, (data) => {
+                    alert("Schedule changed!");
+                    Object.assign(schedule, data);
+                    this.inspectSchedule(schedule);
+                });
+            }
+        }
+
+        const createSection = this.addSection();
+        this.addButton("Create New Schedule", () => scheduleSubmit(true), createSection);
+
+        if(schedule) {
+            this.addButton(`Update ${schedule.alias}`, () => scheduleSubmit(false), createSection);
+
+            const deleteSection = this.addSection();
+            const delButton = this.addButton(`Delete ${schedule.alias}`, () => {
+                if(window.confirm(`Are you sure you want to delete schedule ${schedule.alias}?`)) {
+                    requestServer(`/api/schedules/${schedule.external_id}/`, 'DELETE', null, async () => {
+                        alert("Schedule deleted.");
+                        delete serverCache.schedules[schedule.external_id];
+                        this.inspectSchedule(); 
                     });
                 }
             }, deleteSection);
