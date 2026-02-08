@@ -29,18 +29,6 @@ export class Dashboard {
         /** @type {Inspector} */
         this.inspector = new Inspector(document.getElementById('inspector-form'));
 
-        /** @type {Inspector} */
-        this.tagForm = new Inspector(document.getElementById('tag-form'));
-        this.tagForm.inspectTag();
-
-        /** @type {Inspector} */
-        this.alarmForm = new Inspector(document.getElementById('alarm-form'));
-        this.alarmForm.inspectAlarm();
-
-        /** @type {Inspector} */
-        this.scheduleForm = new Inspector(document.getElementById('schedule-form'));
-        this.scheduleForm.inspectSchedule();
-
         /** @type {DashboardObject} */
         this.config = null;
 
@@ -291,7 +279,8 @@ export class Dashboard {
         if(widget) {
             widget.gridElem.classList.add("selected")
             this.inspector.inspectWidget(widget);
-            activateTab(document.getElementById('inspect-button'));
+            if(dashboardEdit)
+                activateTab(document.getElementById('inspect-button'));
         }
         else {
             this.inspector.inspectDashboard(this);
@@ -516,12 +505,39 @@ function activateTab(btn) {
 }
 
 document.querySelectorAll('.tab-buttons button').forEach(btn => {
-    btn.addEventListener('click', () => {
-        activateTab(btn);
-    });
+    btn.addEventListener('click', () => activateTab(btn));
 });
 
 await refreshData();
 
+const tagForm = new Inspector(document.getElementById('tag-form'));
+tagForm.inspectTag();
+
+const alarmForm = new Inspector(document.getElementById('alarm-form'));
+alarmForm.inspectAlarm();
+
+const scheduleForm = new Inspector(document.getElementById('schedule-form'));
+scheduleForm.inspectSchedule();
+
+let dashboardEdit = true;
+
+document.getElementById("context-button").addEventListener('click', () => {
+    dashboardEdit = !dashboardEdit;
+    if(dashboardEdit) {
+        document.getElementById("dashboard-tabs").classList.remove("hidden");
+        document.getElementById("system-tabs").classList.add("hidden");
+        document.getElementById("editor-name").innerText = "Dashboard Editor";
+        document.getElementById("context-button").innerText = ">";
+        activateTab(document.getElementById("add-button"));
+    }
+    else {
+        document.getElementById("dashboard-tabs").classList.add("hidden");
+        document.getElementById("system-tabs").classList.remove("hidden");
+        document.getElementById("editor-name").innerText = "System Editor";
+        document.getElementById("context-button").innerText = "<";
+        activateTab(document.getElementById("tag-button"));
+    }
+})
+
 const alias = document.getElementById('dashboard-container').dataset.alias; // Set by Django
-var dashboard = new Dashboard(alias);
+const dashboard = new Dashboard(alias);

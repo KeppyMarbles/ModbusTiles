@@ -35,6 +35,7 @@
  */
 
 /**
+ * Object recieved from `api.serializers.ScheduleSerializer` through `/api/schedules/${external_id}`
  * @typedef {Object} ScheduleObject
  * @property {string} alias Name of the schedule
  * @property {string} tag The UUID of the tag

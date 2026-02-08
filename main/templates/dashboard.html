@@ -16,7 +16,7 @@
         </div>
         <div class="header-controls">
             <div class="connection-status hidden" id="connection-banner">⚠️ Offline</div>
-            <button type="button" id="edit-button" class="form-button">Edit Dashboard</button>
+            <button type="button" id="edit-button" class="form-button">Open Editor</button>
             <button type="button" id="view-button" class="form-button hidden">View Dashboard</button>
         </div>
     </header>
@@ -32,41 +32,46 @@
 
         <aside id="editor-sidebar" class="sidebar">
             <div class="sidebar-header">
-                <h2>Editor</h2>
-                </div>
+                <h2 id="editor-name">Dashboard Editor</h2>
+                <button id="context-button" class="form-button">></button>
+            </div>
             
             <div class="tab-buttons">
-                <div>
+                <div id="system-tabs" class="hidden">
                     <button id="tag-button" data-tab="tab-tag">Tags</button>
                     <button id="alarm-button" data-tab="tab-alarm">Alarms</button>
                     <button id="schedule-button" data-tab="tab-schedule">Schedules</button>
                 </div>
-                <div>
+                <div id="dashboard-tabs">
                     <button id="add-button" class="active" data-tab="palette">Widgets</button>
                     <button id="inspect-button" data-tab="tab-inspect">Properties</button>
                 </div>
             </div>
 
             <div class="sidebar-content">
-                <div id="palette" class="tab-content active">
-                    <p class="section-label">Drag to Add</p>
-                    <div class="widget-grid">
-                        {% for type in widget_types %}
-                            {% include "widgets/"|add:type.value|add:".html" %}
-                        {% endfor %}
+                <div>
+                    <div id="palette" class="tab-content active">
+                        <p class="section-label">Drag to Add</p>
+                        <div class="widget-grid">
+                            {% for type in widget_types %}
+                                {% include "widgets/"|add:type.value|add:".html" %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div id="tab-inspect" class="tab-content">
+                        <div id="inspector-form"></div> 
                     </div>
                 </div>
-                <div id="tab-inspect" class="tab-content">
-                    <div id="inspector-form"></div> 
-                </div>
-                <div id="tab-tag" class="tab-content">
-                    <div id="tag-form"></div> 
-                </div>
-                <div id="tab-alarm" class="tab-content">
-                    <div id="alarm-form"></div> 
-                </div>
-                <div id="tab-schedule" class="tab-content">
-                    <div id="schedule-form"></div> 
+                <div>
+                    <div id="tab-tag" class="tab-content">
+                        <div id="tag-form"></div> 
+                    </div>
+                    <div id="tab-alarm" class="tab-content">
+                        <div id="alarm-form"></div> 
+                    </div>
+                    <div id="tab-schedule" class="tab-content">
+                        <div id="schedule-form"></div> 
+                    </div>
                 </div>
             </div>
         </aside>
