@@ -16,7 +16,7 @@ export const serverCache = {
 /**
  * Requests an update for {@link serverCache}
  * 
- * Called on page load or when an alarm or tag is created
+ * Called on page load (for dashboard and alarm list)
  */
 export async function refreshData() { //TODO options?
     try {

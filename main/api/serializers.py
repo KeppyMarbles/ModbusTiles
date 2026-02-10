@@ -99,8 +99,8 @@ class TagWriteRequestSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TagWriteRequest
-        fields = ['tag', 'value', 'timestamp', 'processed']
-        read_only_fields = ['timestamp', 'processed']
+        fields = ['tag', 'value', 'timestamp', 'processed', 'failed']
+        read_only_fields = ['timestamp', 'processed', 'failed']
     
     def validate_tag(self, tag: Tag):
         if tag.channel in [Tag.ChannelChoices.DISCRETE_INPUT, Tag.ChannelChoices.INPUT_REGISTER]:

@@ -198,7 +198,6 @@ export class Dashboard {
         const palette = document.getElementById('palette');
         const gridPaletteElem = palette.querySelector(`[data-type="${typeName}"]`);
         const gridElem = gridPaletteElem.cloneNode(true);
-        //gridStackNewItem.title = wData.tag_description; //TODO get description of tag
 
         /** @type {typeof Widget} */
         const widgetClass = WidgetRegistry[typeName];
@@ -228,7 +227,6 @@ export class Dashboard {
      * @param {boolean} flag
      */
     toggleEdit(flag) {
-        //TODO supress warnings? (no connection, stale value indicators)
         if(flag === this.editMode)
             return;
 

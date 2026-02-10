@@ -23,7 +23,7 @@ class Command(BaseCommand, ABC):
         parser.add_argument("--interval", type=float, default=0.1)
         parser.add_argument("--size", type=int, default=2**13)
 
-    def handle(self, *args, **options): #TODO word order
+    def handle(self, *args, **options):
         self.interval = options["interval"]
         size = options["size"]
         

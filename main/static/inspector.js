@@ -46,7 +46,7 @@ export class Inspector {
      * @returns The string used for this alarm in a dropdown
      */
     static getAlarmLabel(alarm) {
-        return `${alarm.alias}`; //TODO
+        return `${alarm.alias}`;
     }
 
     /**
@@ -348,7 +348,7 @@ export class Inspector {
             this.addField({ label: "Control Tag", type: "select", options: tagOptions }, widget.tag?.external_id, (newID) => {
                 widget.tag = serverCache.tags[newID];
                 widget.applyConfig();
-                createTagTypedFields(newID); // Update the tag based fields
+                createTagTypedFields(widget.tag); // Update the tag based fields
             }, tagSection);
             
             // Add tag-dependent fields

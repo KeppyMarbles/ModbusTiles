@@ -292,7 +292,7 @@ async def _process_writes(client, device: Device):
     @database_sync_to_async
     def save_requests(requests: list[TagWriteRequest]):
         connection.ensure_connection()
-        TagWriteRequest.objects.bulk_update(requests, ['processed'])
+        TagWriteRequest.objects.bulk_update(requests, ['processed', 'failed'])
 
     writes = await get_pending_writes(device)
 
@@ -306,8 +306,8 @@ async def _process_writes(client, device: Device):
             logger.info(f"Processed write request for tag {req.tag}")
 
         except Exception as e:
-            logger.error(f"Write failed for {req.tag}: {e}") #TODO mark write status as failed
-            #TODO 
+            logger.error(f"Write failed for {req.tag}: {e}")
+            req.failed = True
 
         # Mark as done
         req.processed = True

@@ -39,6 +39,7 @@
  * @typedef {Object} ScheduleObject
  * @property {string} alias Name of the schedule
  * @property {string} tag The UUID of the tag
+ * @property {string} external_id The UUID of the schedule
  * @property {*} write_value The value to write to the tag
  * @property {string} time The time of day the value should be written
  * @property {boolean[]} days The days of the week to enable

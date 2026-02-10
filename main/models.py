@@ -130,38 +130,41 @@ class Tag(models.Model):
             TagHistoryEntry.objects.bulk_create(entries)
             cls.objects.bulk_update([entry.tag for entry in entries], ['last_history_at'])
 
+    _REGISTER_CHANNELS = [ChannelChoices.HOLDING_REGISTER, ChannelChoices.INPUT_REGISTER]
+
     @property
     def is_bit_indexed(self):
-        return self.data_type == Tag.DataTypeChoices.BOOL and self.channel in [
-                Tag.ChannelChoices.HOLDING_REGISTER, 
-                Tag.ChannelChoices.INPUT_REGISTER
-            ]
+        return self.data_type == Tag.DataTypeChoices.BOOL and self.channel in self._REGISTER_CHANNELS
+    
+    _PYMODBUS_DATATYPE_MAP = {
+        DataTypeChoices.BOOL:    ModbusBaseClient.DATATYPE.UINT16,
+        DataTypeChoices.INT16:   ModbusBaseClient.DATATYPE.INT16,
+        DataTypeChoices.UINT16:  ModbusBaseClient.DATATYPE.UINT16,
+        DataTypeChoices.INT32:   ModbusBaseClient.DATATYPE.INT32,
+        DataTypeChoices.UINT32:  ModbusBaseClient.DATATYPE.UINT32,
+        DataTypeChoices.INT64:   ModbusBaseClient.DATATYPE.INT64,
+        DataTypeChoices.UINT64:  ModbusBaseClient.DATATYPE.UINT64,
+        DataTypeChoices.FLOAT32: ModbusBaseClient.DATATYPE.FLOAT32,
+        DataTypeChoices.FLOAT64: ModbusBaseClient.DATATYPE.FLOAT64,
+        DataTypeChoices.STRING:  ModbusBaseClient.DATATYPE.STRING,
+    }
     
     @property
     def pymodbus_datatype(self):
         """ Returns the Pymodbus DATATYPE enum for this tag. """
-        return {
-            self.DataTypeChoices.BOOL:    ModbusBaseClient.DATATYPE.UINT16,
-            self.DataTypeChoices.INT16:   ModbusBaseClient.DATATYPE.INT16,
-            self.DataTypeChoices.UINT16:  ModbusBaseClient.DATATYPE.UINT16,
-            self.DataTypeChoices.INT32:   ModbusBaseClient.DATATYPE.INT32,
-            self.DataTypeChoices.UINT32:  ModbusBaseClient.DATATYPE.UINT32,
-            self.DataTypeChoices.INT64:   ModbusBaseClient.DATATYPE.INT64,
-            self.DataTypeChoices.UINT64:  ModbusBaseClient.DATATYPE.UINT64,
-            self.DataTypeChoices.FLOAT32: ModbusBaseClient.DATATYPE.FLOAT32,
-            self.DataTypeChoices.FLOAT64: ModbusBaseClient.DATATYPE.FLOAT64,
-            self.DataTypeChoices.STRING:  ModbusBaseClient.DATATYPE.STRING,
-        }[self.data_type]
+        return self._PYMODBUS_DATATYPE_MAP[self.data_type]
+    
+    _MODBUS_FUNCTION_CODE_MAP = {
+        ChannelChoices.COIL: 1,
+        ChannelChoices.DISCRETE_INPUT: 2,
+        ChannelChoices.HOLDING_REGISTER: 3,
+        ChannelChoices.INPUT_REGISTER: 4,
+    }
 
     @property
     def modbus_function_code(self) -> int:
         """ Returns the Function Code (1, 2, 3, or 4) for this tag's channel. """
-        return {
-            self.ChannelChoices.COIL: 1,
-            self.ChannelChoices.DISCRETE_INPUT: 2,
-            self.ChannelChoices.HOLDING_REGISTER: 3,
-            self.ChannelChoices.INPUT_REGISTER: 4,
-        }[self.channel]
+        return self._MODBUS_FUNCTION_CODE_MAP[self.channel]
     
     def clean(self):
         if not (0 <= self.bit_index <= 15):
@@ -220,6 +223,7 @@ class TagWriteRequest(models.Model):
     value = models.JSONField()
     timestamp = models.DateTimeField(auto_now_add=True)
     processed = models.BooleanField(default=False)
+    failed = models.BooleanField(default=False)
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
 
 
