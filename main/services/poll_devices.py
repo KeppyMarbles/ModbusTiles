@@ -54,7 +54,7 @@ async def poll_devices(poll_interval=0.25, info_interval=30):
         Tag.objects.bulk_update(context.updated_tags, ['current_value'])
         Tag.bulk_create_history(context.updated_tags)
 
-        AlarmConfig.update_alarms(context.updated_tags)
+        AlarmConfig.update_alarms(context.updated_tags) #TODO might be doing too much? kind of heavy
     
     @database_sync_to_async
     def get_tag_data(context: PollContext):
@@ -86,7 +86,7 @@ async def poll_devices(poll_interval=0.25, info_interval=30):
     asyncio.create_task(log_duration())
     
     while True:
-        start_time = time.monotonic()
+        start_time = time.perf_counter()
 
         devices = await get_active_devices()
         context = PollContext(updated_tags=[], read_tags=[])
@@ -106,7 +106,7 @@ async def poll_devices(poll_interval=0.25, info_interval=30):
         )
 
         # Sleep
-        elapsed = time.monotonic() - start_time
+        elapsed = time.perf_counter() - start_time
         sleep_time = max(0, poll_interval - elapsed)
 
         total_duration += elapsed
@@ -327,9 +327,9 @@ async def _write_value(client: ModbusBaseClient, tag: Tag, values):
         match tag.data_type:
             case Tag.DataTypeChoices.BOOL:
                 values = [bool(value) for value in values]
-            case Tag.DataTypeChoices.INT16 | Tag.DataTypeChoices.UINT16:
+            case Tag.DataTypeChoices.INT16 | Tag.DataTypeChoices.UINT16 | Tag.DataTypeChoices.INT32 | Tag.DataTypeChoices.UINT32  | Tag.DataTypeChoices.INT64 | Tag.DataTypeChoices.UINT64:
                 values = [int(value) for value in values]
-            case Tag.DataTypeChoices.FLOAT32:
+            case Tag.DataTypeChoices.FLOAT32 | Tag.DataTypeChoices.FLOAT64:
                 values = [float(value) for value in values]
     except ValueError:
         logger.error(f"Data type mismatch in {tag}: trying to write {values} with type {tag.data_type}")

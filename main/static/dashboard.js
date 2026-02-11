@@ -32,9 +32,14 @@ export class Dashboard {
         /** @type {DashboardObject} */
         this.config = null;
 
-        // Elements
+        /** @type {HTMLDivElement} */
         this.widgetGrid = document.getElementById('dashboard-grid');
+
+        /** @type {HTMLButtonElement} */
         this.editButton = document.getElementById('edit-button');
+
+        /** @type {HTMLButtonElement} */
+        this.fileInput = null;
 
         // Init
         this._setupEvents();
@@ -71,12 +76,12 @@ export class Dashboard {
         });
 
         // Import file
-        const fileInput = document.getElementById('importFile');
-        fileInput.addEventListener("change", async (e) => {
+        this.fileInput = document.getElementById('importFile');
+        this.fileInput.addEventListener("change", async (e) => {
             const file = e.target.files[0];
             if(file)
                 await this.importFile(file);
-            fileInput.value = "";
+            this.fileInput.value = "";
         });
 
         // Window events
@@ -300,6 +305,7 @@ export class Dashboard {
     }
 
     /**
+     * Update number of columns used in GridStack grid
      * @param {number} val 
      */
     setColumnCount(val) {

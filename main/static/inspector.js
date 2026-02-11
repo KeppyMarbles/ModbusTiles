@@ -685,7 +685,8 @@ export class Inspector {
         }
         onTagChanged(schedule?.tag);
         
-        const tagOptions = Object.values(serverCache.tags).map(tag => ({ value: tag.external_id, label: Inspector.getTagLabel(tag)}));
+        const writeableTags = Object.values(serverCache.tags).filter(tag => ["coil", "hr"].includes(tag.channel));
+        const tagOptions = writeableTags.map(tag => ({ value: tag.external_id, label: Inspector.getTagLabel(tag)}));
         const tag = this.addField({ label: "Control Tag", type: "select", options: tagOptions }, schedule?.tag, onTagChanged, tagSection);
         tagSection.appendChild(writeContainer);        
 
