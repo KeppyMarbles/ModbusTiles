@@ -9,7 +9,7 @@
  * Object describing an html option
  * @typedef {Object} ChoiceObject
  * @property {string} value The choice value
- * @property {string} label The choice name
+ * @property {string} display_name The choice name
  */
 
 /**
@@ -18,9 +18,10 @@
  * @property {Record<string, TagObject>} tags All tags registered on the server
  * @property {Record<string, AlarmConfigObject>} alarms All alarms registered on the server
  * @property {Record<string, ScheduleObject>} schedules All schedules registered on the server
- * @property {DeviceListObject[]} devices All devices registered on the server
- * @property {TagOptionsObject} tagOptions Choice collection for tag attributes
- * @property {AlarmOptionsObject} alarmOptions Choice collection for alarm attributes
+ * @property {DeviceObject[]} devices All devices registered on the server
+ * @property {Object} tagOptions OPTIONS response for tag
+ * @property {Object} alarmOptions OPTIONS response for alarm config
+ * @property {Object} deviceOptions OPTIONS response for device
 */
 
 /** 
@@ -122,27 +123,6 @@
  * @property {string} ip_address IP used for Modbus connection
  * @property {string} port Port used for Modbus connection
  * @property {DeviceWordOrder} word_order Endianness of multi-byte data in the device
- */
-
-/**
- * Object recieved from `api.views.DeviceMetadataView` through `/api/device-options/`
- * @typedef {Object} DeviceOptionsObject
- * @property {ChoiceObject[]} protocols Choices for device modbus protocols
- * @property {ChoiceObject[]} word_orders Choices for device word orders
- */
-
-/**
- * Object recieved from `api.views.TagMetadataView` through `/api/tag-options/`
- * @typedef {Object} TagOptionsObject
- * @property {ChoiceObject[]} channels Choices for tag channels
- * @property {ChoiceObject[]} data_types Choices for tag datatypes
- */
-
-/**
- * Object recieved from `api.views.AlarmMetadataView` through `/api/alarm-options/`
- * @typedef {Object} AlarmOptionsObject
- * @property {ChoiceObject[]} operator_choices Choices for alarm comparison operators
- * @property {ChoiceObject[]} threat_levels Choices for alarm threat levels
  */
 
 /**

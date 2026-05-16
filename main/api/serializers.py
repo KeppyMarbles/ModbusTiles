@@ -70,7 +70,7 @@ class TagSerializer(CleanedModelSerializer):
 
     class Meta:
         model = Tag
-        fields = "__all__"
+        exclude = ["last_history_at", "last_updated", "current_value"]
         read_only_fields = ["external_id"]
 
 

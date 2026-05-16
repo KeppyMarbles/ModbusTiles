@@ -227,15 +227,15 @@
         "confirmation": false,
         "dropdown_choices": [
           {
-            "label": "Off",
+            "display_name": "Off",
             "value": "0"
           },
           {
-            "label": "Cool",
+            "display_name": "Cool",
             "value": "1"
           },
           {
-            "label": "Heat",
+            "display_name": "Heat",
             "value": "2"
           }
         ],

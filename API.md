@@ -18,7 +18,7 @@ Requires authentication. Writes require admin.
 Read-only fields: `external_id`
 
 ### `GET` /api/tags/?device={alias}/
-Get a tag in the form of [TagObject](#tagobject), optionally specifying a device alias.
+Get a list of tags in the form of [TagObject](#tagobject)[], optionally specifying a device alias.
 
 ### `POST` /api/tags/
 Create a tag in the form of [TagObject](#tagobject).
@@ -55,14 +55,14 @@ Update a dashboard using formData, with properties of [DashboardConfigObject](#d
 ## Dashboard Widget
 Requires authentication. Can only view your own widgets.
 
-### `GET` /api/dashboard-widgets/?device={alias}/
+### `GET` /api/dashboard-widgets/?dashboard={alias}/
 List all widgets in the form of [DashboardWidgetInfoObject](#dashboardwidgetinfoobject)[], optionally specifying a dashboard alias.
 
 ## Schedule
 Requires authentication. Writes require admin.
 
 ### `GET` /api/schedules/?tag={external_id}/
-Get a tag in the form of [ScheduleObject](#scheduleobject), optionally specifying a tag id.
+Get a list of schedules in the form of [ScheduleObject](#scheduleobject)[], optionally specifying a tag id.
 
 ### `POST` /api/schedules/
 Create a schedule in the form of [ScheduleObject](#scheduleobject).
@@ -74,7 +74,7 @@ Get or update a specific schedule in the form of [ScheduleObject](#scheduleobjec
 Requires authentication. Writes require admin.
 
 ### `GET` /api/alarms?tag={external_id}/
-Get an alarm config in the form of [AlarmConfigObject](#alarmconfigobject), optionally specifying a tag id.
+Get a list of alarm configs in the form of [AlarmConfigObject](#alarmconfigobject)[], optionally specifying a tag id.
 
 ### `POST` /api/alarms/
 Create an alarm config in the form of [AlarmConfigObject](#alarmconfigobject).
@@ -143,21 +143,6 @@ The word order used by a device.
 'big' | 'little'
 ```
 
-### InspectorDataType
-The data type used by an inspector field.
-```typescript
-'bool' | 'int' | 'number' | 'text' | 'color' | 'select' | 'enum' | 'time'
-```
-
-### ChoiceObject
-Object describing an html option.
-```typescript
-{
-    value: string,
-    label: string,
-}
-```
-
 ### ScheduleObject
 Contains the definition of a schedule.
 ```typescript
@@ -179,7 +164,7 @@ Contains metadata about an alarm configuration.
     tag: string, // UUID of tag watched
     external_id: string,
     trigger_value: any, // Value to compare
-    operator: 'equals' | 'greater_than' | 'less_than' // How to compare the tag value with the trigger value
+    operator: 'equals' | 'greater_than' | 'less_than', // How to compare the tag value with the trigger value
     enabled: boolean,
     alias: string,
     message: string,
@@ -261,33 +246,6 @@ Contains metadata about a device.
     ip_address: string,
     port: string,
     word_order: DeviceWordOrder,
-}
-```
-
-### DeviceOptionsObject
-Contains info about acceptable device property choices in the database.
-```typescript
-{
-    protocols: ChoiceObject[],
-    word_orders: ChoiceObject[],
-}
-```
-
-### TagOptionsObject
-Contains info about acceptable tag property choices in the database.
-```typescript
-{
-    channels: ChoiceObject[],
-    data_types: ChoiceObject[],
-}
-```
-
-### AlarmOptionsObject
-Contains info about acceptable alarm property choices in the database.
-```typescript
-{
-    operator_choices: ChoiceObject[],
-    threat_levels: ChoiceObject[],
 }
 ```
 

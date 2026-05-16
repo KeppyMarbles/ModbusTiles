@@ -36,17 +36,6 @@ class DeviceViewSet(StaffWriteOnlyViewSet):
     lookup_field = 'alias'
 
 
-class DeviceMetadataView(APIView):
-    """ Returns the available choices for protocols and word orders """
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        return Response({
-            "protocols": [{"value": k, "label": v} for k, v in Device.ProtocolChoices.choices],
-            "word_orders": [{"value": k, "label": v} for k, v in Device.WordOrderChoices.choices],
-        })
-
-
 class TagViewSet(StaffWriteOnlyViewSet):
     serializer_class = TagSerializer
     lookup_field = 'external_id'
@@ -60,17 +49,6 @@ class TagViewSet(StaffWriteOnlyViewSet):
             qs = qs.filter(device__alias=device_alias)
 
         return qs
-    
-
-class TagMetadataView(APIView):
-    """ Returns the available choices for Channels and Data Types """
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        return Response({
-            "channels": [{"value": k, "label": v} for k, v in Tag.ChannelChoices.choices],
-            "data_types": [{"value": k, "label": v} for k, v in Tag.DataTypeChoices.choices],
-        })
     
 
 class TagWriteRequestViewSet(ModelViewSet):
@@ -230,17 +208,6 @@ class ActivatedAlarmViewSet(ReadOnlyModelViewSet):
 
         count = ActivatedAlarm.objects.filter(is_active=True, acknowledged=False).count()
         return Response({"count": count})
-
-
-class AlarmMetadataView(APIView):
-    """ Returns the available choices alarm threat levels """
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        return Response({
-            "threat_levels": [{"value": k, "label": v} for k, v in AlarmConfig.ThreatLevelChoices.choices],
-            "operator_choices": [{"value": k, "label": v} for k, v in AlarmConfig.OperatorChoices.choices],
-        })
     
     
 class TagMultiValueView(APIView):

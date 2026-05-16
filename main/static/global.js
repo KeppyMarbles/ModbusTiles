@@ -9,8 +9,9 @@ export const serverCache = {
     alarms: {},
     schedules: {},
     devices: [],
-    tagOptions: [],
-    alarmOptions: [],
+    tagOptions: {},
+    alarmOptions: {},
+    deviceOptions: {},
 }
 
 /**
@@ -21,20 +22,25 @@ export const serverCache = {
 export async function refreshData() { //TODO options?
     try {
         // Fetch Tags and Devices in parallel
-        const [tagsResp, alarmsResp, schedulesResp, devicesResp, tagOptions, alarmOptions] = await Promise.all([
+        const [tagsResp, alarmsResp, schedulesResp, devicesResp, tagOptionsResp, alarmOptionsResp, deviceOptionsResp] = await Promise.all([
             fetch('/api/tags/'),
             fetch('/api/alarms/'),
             fetch('/api/schedules/'),
             fetch('/api/devices/'),
-            fetch('/api/tag-options/'),
-            fetch('/api/alarm-options/')
+            fetch('/api/tags/', { method: "OPTIONS" }),
+            fetch('/api/alarms/', { method: "OPTIONS" }),
+            fetch('/api/devices/', { method: "OPTIONS" }),
         ]);
 
-        /** @type {[TagObject[], AlarmConfigObject[], ScheduleObject[]]} */
-        const [tagList , alarmList, scheduleList] = await Promise.all([
+        /** @type {[TagObject[], AlarmConfigObject[], ScheduleObject[], DeviceObject[], Object, Object, Object]} */
+        const [tagList , alarmList, scheduleList, deviceList, tagOptions, alarmOptions, deviceOptions] = await Promise.all([
             tagsResp.json(),
             alarmsResp.json(),
-            schedulesResp.json()
+            schedulesResp.json(),
+            devicesResp.json(),
+            tagOptionsResp.json(),
+            alarmOptionsResp.json(),
+            deviceOptionsResp.json(),
         ])
 
         const tagMap = Object.fromEntries(tagList.map(tag => [tag.external_id, tag]));
@@ -44,9 +50,10 @@ export async function refreshData() { //TODO options?
         serverCache.tags = tagMap;
         serverCache.alarms = alarmMap;
         serverCache.schedules = scheduleMap;
-        serverCache.devices = await devicesResp.json();
-        serverCache.tagOptions = await tagOptions.json();
-        serverCache.alarmOptions = await alarmOptions.json();
+        serverCache.devices = deviceList;
+        serverCache.tagOptions = tagOptions;
+        serverCache.alarmOptions = alarmOptions;
+        serverCache.deviceOptions = deviceOptions;
         
         console.log("Data loaded:", serverCache);
         return true;

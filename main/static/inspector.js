@@ -153,7 +153,7 @@ export class Inspector {
             options.forEach(opt => {
                 const el = document.createElement('option');
                 el.value = opt.value;
-                el.text = opt.label;
+                el.text = opt.display_name;
                 if(opt.value === currentValue) el.selected = true;
                 select.appendChild(el);
             });
@@ -229,7 +229,7 @@ export class Inspector {
             const real_kvs = [];
             Array.from(rowsContainer.children).forEach(row => {
                 real_kvs.push({
-                    label: row.key_input.value,
+                    display_name: row.key_input.value,
                     value: row.value_input.value
                 });
             });
@@ -278,7 +278,7 @@ export class Inspector {
         };
 
         // Init existing rows
-        (currentValue || []).forEach(kv => createRow(kv.label, kv.value));
+        (currentValue || []).forEach(kv => createRow(kv.display_name, kv.value));
 
         // Add Button
         const addBtn = document.createElement("button");
@@ -343,7 +343,7 @@ export class Inspector {
                 return widgetClass.allowedTypes.includes(tag.data_type) 
                     && widgetClass.allowedChannels.includes(tag.channel);
             });
-            const tagOptions = compatibleTags.map(tag => ({ value: tag.external_id, label: Inspector.getTagLabel(tag) }));
+            const tagOptions = compatibleTags.map(tag => ({ value: tag.external_id, display_name: Inspector.getTagLabel(tag) }));
 
             this.addField({ label: "Control Tag", type: "select", options: tagOptions }, widget.tag?.external_id, (newID) => {
                 widget.tag = serverCache.tags[newID];
@@ -395,7 +395,7 @@ export class Inspector {
         this.clear();
         const tagSelectSection = this.addSection();
 
-        const tagOptions = Object.values(serverCache.tags).map(tag => ({ value: tag.external_id, label: Inspector.getTagLabel(tag) }));
+        const tagOptions = Object.values(serverCache.tags).map(tag => ({ value: tag.external_id, display_name: Inspector.getTagLabel(tag) }));
         this.addField({ label: "Tag", type: "select", options: tagOptions }, tag?.external_id, (tagID) => {
             this.inspectTag(serverCache.tags[tagID])
         }, tagSelectSection);
@@ -407,7 +407,7 @@ export class Inspector {
         const description = this.addField({ label: "Description (optional)", type: "text" }, tag?.description, null, tagSection)
 
         const locationSection = this.addSection();
-        const deviceOptions = serverCache.devices.map(d => ({ value: d.alias, label: d.alias }));
+        const deviceOptions = serverCache.devices.map(d => ({ value: d.alias, display_name: d.alias }));
         const device = this.addField({ label: "Device", type: "select", options: deviceOptions }, tag?.device, null, locationSection);
         const bitIndex = this.addField({ label: "Bit Index (0-15)", type: "int" }, tag?.bit_index, tag?.bit_index, locationSection);
         const restrictedWriteField = this.addField({ label: "Restricted Write", type: "bool", description: "If the tag value should be protected from non-staff users"}, tag?.restricted_write, null, locationSection);
@@ -422,7 +422,7 @@ export class Inspector {
          */
         const onChannelChanged = (channelValue) => {
             dataTypeContainer.innerHTML = '';
-            let dataTypeOptions = serverCache.tagOptions.data_types;
+            let dataTypeOptions = serverCache.tagOptions?.actions?.POST?.data_type?.choices;
             let dataTypeValue = getDataTypeValue();
 
             // Only show data types that are compatible with the selected channel
@@ -453,7 +453,7 @@ export class Inspector {
             getDataTypeValue = newField.getValue;
         }
         
-        const channelOptions = serverCache.tagOptions.channels.map(o => ({ value: o.value, label: o.label }));
+        const channelOptions = serverCache.tagOptions?.actions?.POST?.channel?.choices;
         const channel = this.addField({ label: "Channel", type: "select", options: channelOptions }, tag?.channel, onChannelChanged, locationSection);
         onChannelChanged(tag?.channel) // Add data type field
         locationSection.appendChild(dataTypeContainer);
@@ -541,7 +541,7 @@ export class Inspector {
         this.clear();
         const alarmSelectSection = this.addSection();
 
-        const alarmOptions = Object.values(serverCache.alarms).map(alarm => ({ value: alarm.external_id, label: Inspector.getAlarmLabel(alarm) }));
+        const alarmOptions = Object.values(serverCache.alarms).map(alarm => ({ value: alarm.external_id, display_name: Inspector.getAlarmLabel(alarm) }));
         this.addField({ label: "Alarm", type: "select", options: alarmOptions }, alarm?.external_id, (alarmID) => {
             this.inspectAlarm(serverCache.alarms[alarmID])
         }, alarmSelectSection);
@@ -568,7 +568,8 @@ export class Inspector {
             if(!tag) return;
 
             // Show choices for trigger operator
-            let operatorChoices = serverCache.alarmOptions.operator_choices;
+            let operatorChoices = serverCache.alarmOptions?.actions?.POST?.operator?.choices;
+
             if(tag.data_type === "bool") 
                 operatorChoices = operatorChoices.filter(t => { return t.value === "equals" });
 
@@ -586,13 +587,13 @@ export class Inspector {
         }
         onTagChanged(alarm?.tag);
 
-        const tagOptions = Object.values(serverCache.tags).map(tag => ({ value: tag.external_id, label: Inspector.getTagLabel(tag)}));
+        const tagOptions = Object.values(serverCache.tags).map(tag => ({ value: tag.external_id, display_name: Inspector.getTagLabel(tag)}));
         const tag = this.addField({ label: "Control Tag", type: "select", options: tagOptions }, alarm?.tag, onTagChanged, alarmSection);
 
         alarmSection.appendChild(operatorContainer);
         alarmSection.appendChild(triggerContainer);
 
-        const threatLevelOptions = serverCache.alarmOptions.threat_levels.map(a => ({ value: a.value, label: a.label }));
+        const threatLevelOptions = serverCache.alarmOptions?.actions?.POST?.threat_level?.choices;
         const threatLevel = this.addField({ label: "Threat Level", type: "select", options: threatLevelOptions }, alarm?.threat_level, null, alarmSection);
 
         const message = this.addField({ label: "Message", type: "text", 
@@ -659,7 +660,7 @@ export class Inspector {
 
         const scheduleSelectSection = this.addSection();
 
-        const scheduleOptions = Object.values(serverCache.schedules).map(schedule => ({ value: schedule.external_id, label: schedule.alias }));
+        const scheduleOptions = Object.values(serverCache.schedules).map(schedule => ({ value: schedule.external_id, display_name: schedule.alias }));
         this.addField({ label: "Schedule", type: "select", options: scheduleOptions }, schedule?.external_id, (schID) => {
             this.inspectSchedule(serverCache.schedules[schID])
         }, scheduleSelectSection);
@@ -686,7 +687,7 @@ export class Inspector {
         onTagChanged(schedule?.tag);
         
         const writeableTags = Object.values(serverCache.tags).filter(tag => ["coil", "hr"].includes(tag.channel));
-        const tagOptions = writeableTags.map(tag => ({ value: tag.external_id, label: Inspector.getTagLabel(tag)}));
+        const tagOptions = writeableTags.map(tag => ({ value: tag.external_id, display_name: Inspector.getTagLabel(tag)}));
         const tag = this.addField({ label: "Control Tag", type: "select", options: tagOptions }, schedule?.tag, onTagChanged, tagSection);
         tagSection.appendChild(writeContainer);        
 

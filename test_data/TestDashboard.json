@@ -940,15 +940,15 @@
         "scale_y": 1,
         "dropdown_choices": [
           {
-            "label": "First Value",
+            "display_name": "First Value",
             "value": 0
           },
           {
-            "label": "Second Value",
+            "display_name": "Second Value",
             "value": 1
           },
           {
-            "label": "Third Value",
+            "display_name": "Third Value",
             "value": 2
           }
         ],
@@ -967,15 +967,15 @@
         "scale_y": 1,
         "label_values": [
           {
-            "label": "First Value",
+            "display_name": "First Value",
             "value": 0
           },
           {
-            "label": "Second Value",
+            "display_name": "Second Value",
             "value": 1
           },
           {
-            "label": "Third Value",
+            "display_name": "Third Value",
             "value": 2
           }
         ],

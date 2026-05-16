@@ -404,14 +404,14 @@ class DropdownWidget extends InputWidget {
         this.config.dropdown_choices.forEach(choice => {
             const opt = document.createElement('option');
             opt.value = choice.value;
-            opt.label = choice.label;
+            opt.label = choice.display_name;
             this.select.appendChild(opt);
         });
     }
 
     getConfirmMessage(val) {
         const kv = this.config.dropdown_choices.find(kv => kv.value == val);
-        return `Change ${this.tag.alias} to ${kv.label}?`;
+        return `Change ${this.tag.alias} to ${kv.display_name}?`;
     }
 
     onValue(val) {
@@ -579,7 +579,7 @@ class MultiLabelWidget extends Widget {
 
     onValue(val) {
         const kv = this.config.label_values.find(kv => kv.value == val);
-        this.text_elem.textContent = kv ? kv.label : `Unknown Value: ${val}`;
+        this.text_elem.textContent = kv ? kv.display_name : `Unknown Value: ${val}`;
         fitText(this.text_elem);
     }
 
@@ -682,16 +682,16 @@ class ChartWidget extends Widget {
         }, 
         { name: "chart_type", type: "select", default: "line", label: "Chart Type",
             options: [
-                { value: "line", label: "Line Chart" },
-                { value: "area", label: "Area Chart" },
-                { value: "bar", label: "Bar Chart" },
+                { value: "line", display_name: "Line Chart" },
+                { value: "area", display_name: "Area Chart" },
+                { value: "bar", display_name: "Bar Chart" },
             ]
         },
         { name: "plot_mode", type: "select", default: "lines", label: "Line Mode",
             options: [
-                { value: "lines", label: "Lines Only" },
-                { value: "markers", label: "Points Only" },
-                { value: "lines+markers", label: "Lines & Points" }
+                { value: "lines", display_name: "Lines Only" },
+                { value: "markers", display_name: "Points Only" },
+                { value: "lines+markers", display_name: "Lines & Points" }
             ]
         },
         { name: "line_color", type: "color", default: "#17BECF", label: "Line Color" },
@@ -917,12 +917,7 @@ class GaugeWidget extends Widget {
     }
 
     onValue(val) {
-        this.draw(val);
-    }
-
-    draw(val) {
-        const config = { responsive: true, displayModeBar: false };
-        Plotly.react(this.chartDiv, [this._getTrace(val)], this._getLayout(), config);
+        Plotly.react(this.chartDiv, [this._getTrace(val)], this._getLayout(), { responsive: true, displayModeBar: false });
     }
 
     clear() {
