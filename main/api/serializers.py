@@ -43,33 +43,35 @@ class DeviceSerializer(serializers.ModelSerializer):
 
 
 class AlarmConfigSerializer(serializers.ModelSerializer):
+    owner = serializers.HiddenField(default=serializers.CurrentUserDefault())
     tag = serializers.SlugRelatedField(slug_field='external_id', queryset=Tag.objects.all())
     notification_cooldown = DurationSecondsField(required=False, allow_null=True)
 
     class Meta:
         model = AlarmConfig
-        exclude = ["owner", "last_notified"]
+        exclude = ["last_notified"]
 
 
 class ScheduleSerializer(CleanedModelSerializer):
+    owner = serializers.HiddenField(default=serializers.CurrentUserDefault())
     tag = serializers.SlugRelatedField(slug_field='external_id', queryset=Tag.objects.all())
     time = serializers.TimeField(format='%H:%M:%S', input_formats=['%H:%M', '%I:%M%p', '%I:%M %p', '%H:%M:%S'])
 
     class Meta:
         model = Schedule
-        read_only_fields = ["owner"]
         exclude = ["last_run"]
 
 
 class TagSerializer(CleanedModelSerializer):
+    owner = serializers.HiddenField(default=serializers.CurrentUserDefault())
     device = serializers.SlugRelatedField( slug_field='alias',  queryset=Device.objects.all())
     history_retention = DurationSecondsField(required=False, allow_null=True)
     history_interval = DurationSecondsField(required=False, allow_null=True)
 
     class Meta:
         model = Tag
+        fields = "__all__"
         read_only_fields = ["external_id"]
-        exclude = ["owner"]
 
 
 class TagValueSerializer(serializers.ModelSerializer):
@@ -127,7 +129,6 @@ class ActivatedAlarmSerializer(serializers.ModelSerializer):
     class Meta:
         model = ActivatedAlarm
         fields = "__all__"
-        read_only_fields = ['config', 'timestamp', 'resolved_at', 'is_active', 'acknowledged', 'acknowledged_at', 'acknowledged_by']
 
 
 class DashboardSerializer(serializers.ModelSerializer):
@@ -140,7 +141,7 @@ class DashboardSerializer(serializers.ModelSerializer):
 
 
 class DashboardWidgetSerializer(serializers.ModelSerializer):
-    tag = serializers.SlugRelatedField( slug_field='external_id', queryset=Tag.objects.all())
+    tag = serializers.SlugRelatedField(slug_field='external_id', queryset=Tag.objects.all())
 
     class Meta:
         model = DashboardWidget

@@ -22,7 +22,7 @@ def dashboard_list(request):
 
 @login_required
 def dashboard_view(request, alias):
-    dashboard = get_object_or_404( Dashboard, alias=alias, owner=request.user)
+    dashboard = get_object_or_404(Dashboard, alias=alias, owner=request.user)
     return render(request, "dashboard.html", {
         "dashboard": dashboard,
         "widget_types": [choice for choice in DashboardWidget.WidgetTypeChoices],

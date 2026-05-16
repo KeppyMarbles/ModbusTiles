@@ -6,14 +6,14 @@
 /** @typedef {'bool' | 'int' | 'number' | 'text' | 'color' | 'select' | 'enum' | 'time'} InspectorDataType */
 
 /**
- * Object for storing an html option
+ * Object describing an html option
  * @typedef {Object} ChoiceObject
  * @property {string} value The choice value
  * @property {string} label The choice name
  */
 
 /**
- * Object for storting server data
+ * Object for storing server data
  * @typedef {Object} ServerCacheObject
  * @property {Record<string, TagObject>} tags All tags registered on the server
  * @property {Record<string, AlarmConfigObject>} alarms All alarms registered on the server
@@ -75,9 +75,26 @@
  * Object recieved from `api.serializers.TagValueSerializer` through `/api/values/tags=${tag1},${tag2}...`
  * @typedef {Object} TagValueObject
  * @property {string} id The UUID of the tag
- * @property {string|number|boolean} value The current value of the tag
+ * @property {string | number | boolean} value The current value of the tag
  * @property {number} age The age in seconds of the tag value
- * @property {string} alarm The alarm ID associated with this tag, if active
+ * @property {string} alarm The alarm config UUID associated with this tag, if active
+ */
+
+/**
+ * Object recieved from `api.serializers.TagHistoryEntrySerializer` through `/api/history/?tags={external_ids}&seconds={seconds}/`
+ * @typedef {Object} TagHistoryObject
+ * @property {string} timestamp
+ * @property {*} value
+ */
+
+/**
+ * Object recieved from `api.serializers.TagWriteRequestSerializer` through `/api/write-requests/`
+ * @typedef {Object} TagWriteRequestObject
+ * @property {string} tag,
+ * @property {*} value,
+ * @property {string} timestamp,
+ * @property {boolean} processed,
+ * @property {boolean} failed,
  */
 
 /**
@@ -94,7 +111,7 @@
  * @property {number} history_retention Number of seconds that the value is stored in the DB
  * @property {number} history_interval Number of seconds between history value stores
  * @property {boolean} is_active If the tag can read/write data
- * @property {boolean} restricted_write If the tag value should be protected from non-staff users
+ * @property {boolean} restricted_write If the tag value should be write protected from non-staff users
  */
 
 /**
@@ -105,6 +122,13 @@
  * @property {string} ip_address IP used for Modbus connection
  * @property {string} port Port used for Modbus connection
  * @property {DeviceWordOrder} word_order Endianness of multi-byte data in the device
+ */
+
+/**
+ * Object recieved from `api.views.DeviceMetadataView` through `/api/device-options/`
+ * @typedef {Object} DeviceOptionsObject
+ * @property {ChoiceObject[]} protocols Choices for device modbus protocols
+ * @property {ChoiceObject[]} word_orders Choices for device word orders
  */
 
 /**

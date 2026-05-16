@@ -165,7 +165,7 @@ async def _get_client(device: Device, base_backoff_seconds=2, max_backoff_second
     return conn
 
 
-def _build_read_blocks(tags: list[Tag], max_gap=8, max_size=128) -> list[ReadBlock]:
+def _build_read_blocks(tags: list[Tag], max_gap=8, max_size=125) -> list[ReadBlock]:
     """ Create blocks of contiguous registers in memory """
     #if not all(tag.device == tags[0].device for tag in tags):
     #    raise Exception("Tag device mismatch when building read block")

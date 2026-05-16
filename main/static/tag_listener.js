@@ -70,10 +70,8 @@ export class TagListener {
         const tagIds = Object.keys(this.tagMap).join(",");
         if (tagIds.length === 0) return;
 
-        await requestServer('/api/values/', 'GET', { tags: tagIds }, (response) => {
-            response.forEach(update => {
-                this.onUpdate(update);
-            });
+        await requestServer('/api/values/', 'GET', { tags: tagIds }, /** @param {TagValueObject[]} response **/ (response) => {
+            response.forEach(update => this.onUpdate(update));
         });
     }
 

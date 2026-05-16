@@ -14,6 +14,8 @@ Run the setup script or a similar command set. Start the server using `python ma
 
 You can also run the test scripts to create a mock dashboard and run the simulated PLC.
 
+See API guide [here](API.md).
+
 ## Screenshots
 <details>
 <summary>Example Dashboard</summary>

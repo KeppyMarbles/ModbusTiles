@@ -467,7 +467,7 @@ export class Inspector {
         //const readAmount = this.addField({label: "Read Amount", type: "int"}, 1, null, tagSection)
         const historySection = this.addSection();
         const historyRetention = this.addField({ label: "History Retention (Seconds)", type: "int", 
-                description: "The maximum age of this tag's history entries. Use 0 for no history" },
+                description: "The maximum age of this tag's history entries. Use 0 for no history, or -1 for infinite history" },
             tag?.history_retention || 0, null, historySection
         );
         const historyInterval = this.addField({ label: "History Write Interval (Seconds)", type: "int", 

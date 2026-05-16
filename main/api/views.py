@@ -1,6 +1,6 @@
 import json
 from datetime import timedelta
-from rest_framework.viewsets import ModelViewSet
+from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 from rest_framework.generics import ListAPIView
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -21,7 +21,7 @@ from rest_framework.request import HttpRequest
 #TODO should the metadata views all be one class?
 #TODO better docstrings
 
-class ReadOnlyViewSet(ModelViewSet):
+class StaffWriteOnlyViewSet(ModelViewSet):
     """ Restrict write perms to staff """
 
     def get_permissions(self):
@@ -30,9 +30,10 @@ class ReadOnlyViewSet(ModelViewSet):
         return [IsAuthenticated()]
 
 
-class DeviceViewSet(ReadOnlyViewSet):
+class DeviceViewSet(StaffWriteOnlyViewSet):
     queryset = Device.objects.all()
     serializer_class = DeviceSerializer
+    lookup_field = 'alias'
 
 
 class DeviceMetadataView(APIView):
@@ -46,12 +47,13 @@ class DeviceMetadataView(APIView):
         })
 
 
-class TagViewSet(ReadOnlyViewSet):
+class TagViewSet(StaffWriteOnlyViewSet):
     serializer_class = TagSerializer
     lookup_field = 'external_id'
+    queryset = Tag.objects.all()
 
     def get_queryset(self):
-        qs = Tag.objects.all()
+        qs = super().get_queryset()
 
         device_alias: str = self.request.query_params.get("device")
         if device_alias:
@@ -75,6 +77,10 @@ class TagWriteRequestViewSet(ModelViewSet):
     queryset = TagWriteRequest.objects.all()
     serializer_class = TagWriteRequestSerializer
 
+    def get_queryset(self):
+        # Only see own requests
+        return super().get_queryset().filter(owner=self.request.user)
+
     def perform_create(self, serializer: Serializer):
         tag: Tag = serializer.validated_data['tag']
         user = self.request.user
@@ -91,13 +97,14 @@ class TagWriteRequestViewSet(ModelViewSet):
 
 
 class DashboardViewSet(ModelViewSet):
-    lookup_field = 'alias' 
+    lookup_field = 'alias'
     serializer_class = DashboardSerializer
     permission_classes = [IsAuthenticated]
+    queryset = Dashboard.objects.all()
 
     def get_queryset(self):
         # Only see owned dashboards
-        return Dashboard.objects.filter(owner=self.request.user)
+        return super().get_queryset().filter(owner=self.request.user)
 
     @action(detail=True, methods=['post'], url_path='save-data')
     def save_data(self, request: HttpRequest, alias=None):
@@ -136,12 +143,7 @@ class DashboardViewSet(ModelViewSet):
             dashboard.widgets.all().delete()
             DashboardWidget.objects.bulk_create(
                 [
-                    DashboardWidget(
-                    dashboard=dashboard,
-                    tag=item.get("tag"),
-                    widget_type=item["widget_type"],
-                    config=item["config"],
-                    )
+                    DashboardWidget(dashboard=dashboard, tag=item.get("tag"), widget_type=item["widget_type"], config=item["config"])
                     for item in widget_serializer.validated_data
                 ]
             )
@@ -149,15 +151,16 @@ class DashboardViewSet(ModelViewSet):
         return dashboard
 
 
-class DashboardWidgetViewSet(ModelViewSet):
+class DashboardWidgetViewSet(ReadOnlyModelViewSet):
     serializer_class = DashboardWidgetSerializer
     permission_classes = [IsAuthenticated]
+    queryset = DashboardWidget.objects.all()
 
     dashboard_max_count = 99
 
     def get_queryset(self):
         # Only see owned widgets
-        qs = DashboardWidget.objects.filter(dashboard__owner=self.request.user)
+        qs = super().get_queryset().filter(dashboard__owner=self.request.user)
         
         dashboard_alias = self.request.query_params.get('dashboard')
         if dashboard_alias:
@@ -165,40 +168,31 @@ class DashboardWidgetViewSet(ModelViewSet):
             
         return qs
 
-    def perform_create(self, serializer: Serializer):
-        dashboard: Dashboard = serializer.validated_data["dashboard"]
 
-        if dashboard.owner != self.request.user:
-            raise PermissionDenied("Not your dashboard")
-
-        if DashboardWidget.objects.filter(dashboard=dashboard).count() >= self.dashboard_max_count:
-            raise ValidationError("Max widgets reached for dashboard")
-        
-        serializer.save()
-
-
-class ScheduleViewSet(ModelViewSet):
+class ScheduleViewSet(StaffWriteOnlyViewSet):
     serializer_class = ScheduleSerializer
     lookup_field = 'external_id'
     permission_classes = [IsAuthenticated]
+    queryset = Schedule.objects.all()
 
-    def get_queryset(self): #TODO actually use this? not used in AlarmConfig either
-        qs = Schedule.objects.all()
+    def get_queryset(self):
+        qs = super().get_queryset()
 
         # Get schedules for a specified tag
-        tag_id = self.request.query_params.get("tag")
+        tag_id = self.request.query_params.get("tag") #TODO actually use this? not used in AlarmConfig either
         if tag_id:
             qs = qs.filter(tag__external_id=tag_id)
 
         return qs
 
 
-class AlarmConfigViewSet(ReadOnlyViewSet):
+class AlarmConfigViewSet(StaffWriteOnlyViewSet):
     serializer_class = AlarmConfigSerializer
     lookup_field = 'external_id'
+    queryset = AlarmConfig.objects.all()
 
     def get_queryset(self):
-        qs = AlarmConfig.objects.all()
+        qs = super().get_queryset()
 
         # Get alarms for a specified tag
         tag_id = self.request.query_params.get("tag")
@@ -208,7 +202,7 @@ class AlarmConfigViewSet(ReadOnlyViewSet):
         return qs
 
 
-class ActivatedAlarmViewSet(ModelViewSet):
+class ActivatedAlarmViewSet(ReadOnlyModelViewSet):
     queryset = ActivatedAlarm.objects.all()
     serializer_class = ActivatedAlarmSerializer
     permission_classes = [IsAuthenticated]
@@ -263,9 +257,10 @@ class TagMultiValueView(APIView):
 class TagHistoryView(ListAPIView):
     serializer_class = TagHistoryEntrySerializer
     permission_classes = [IsAuthenticated]
+    queryset = TagHistoryEntry.objects.all()
 
     def get_queryset(self):
-        qs = TagHistoryEntry.objects.order_by("timestamp")
+        qs = super().get_queryset().order_by("timestamp")
 
         tags: str = self.request.query_params.get("tags")
         if tags:

@@ -1,5 +1,5 @@
 import { requestServer, serverCache } from "./global.js";
-/** @import { TagObject, TagValueObject, AlarmConfigObject, InspectorFieldDefinition, ChannelType, DataType } from "./types.js" */
+/** @import { TagObject, TagHistoryObject, TagValueObject, AlarmConfigObject, InspectorFieldDefinition, ChannelType, DataType } from "./types.js" */
 
 /**
  * Abstract class for dashboard widgets.
@@ -488,7 +488,7 @@ class SliderWidget extends InputWidget {
 
     _updateDisplayValue(val) {
         if(this.config.display_value)
-            this.value_label.textContent = this.config.prefix + "Value: " + val + this.config.suffix; //TODO decimals
+            this.value_label.textContent = this.config.prefix + val + this.config.suffix; //TODO decimals
         else
             this.value_label.textContent = "";
     }
@@ -554,7 +554,7 @@ class MeterWidget extends Widget {
 
     _updateDisplayValue(val) {
         if(this.config.display_value)
-            this.value_label.textContent = this.config.prefix + "Value: " + val + this.config.suffix; //TODO decimals
+            this.value_label.textContent = this.config.prefix + val + this.config.suffix; //TODO decimals
         else
             this.value_label.textContent = "";
     }
@@ -750,13 +750,8 @@ class ChartWidget extends Widget {
 
         this.initializing = true;
 
-        try {
-            // Fetch real history data
-            const response = await fetch(`/api/history/?tags=${this.tag.external_id}&seconds=${this.config.history_seconds}`);
-            if (!response.ok) 
-                throw new Error("History fetch failed");
-
-            const data = await response.json();
+        const payload = { tags: this.tag.external_id,seconds: this.config.history_seconds };
+        if(!await requestServer('/api/history/', 'GET', payload, /** @param {TagHistoryObject[]} data */ async (data) => {
             const timestamps = data.map(e => e.timestamp);
             const values = data.map(e => e.value);
 
@@ -764,14 +759,12 @@ class ChartWidget extends Widget {
 
             await Plotly.newPlot(this.chartDiv, [this._getTrace(timestamps, values)], this._getLayout(), config);
             this.realData = true;
-        } 
-        catch (err) {
+        })) {
             console.error("Error initializing chart:", err);
             this.chartDiv.innerHTML = `<div class="error-msg">Error loading chart</div>`;
         }
-        finally {
-            this.initializing = false;
-        }        
+
+        this.initializing = false;    
     }
 
     /**
