@@ -5,11 +5,7 @@ from abc import ABC
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
 from pymodbus.server import StartTcpServer
-from pymodbus.datastore import (
-    ModbusSequentialDataBlock,
-    ModbusDeviceContext,
-    ModbusServerContext
-)
+from pymodbus.datastore import ModbusSequentialDataBlock, ModbusDeviceContext, ModbusServerContext
 from pymodbus.client.base import ModbusBaseClient
 from ...models import Tag # Imported for Channel/DataType constants only
 

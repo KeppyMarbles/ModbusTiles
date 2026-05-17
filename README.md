@@ -10,11 +10,36 @@ Interact with your PLCs through a web browser.
 - Data persistence for tag values, tag writes, and alarm activations
 
 ## Usage
-Run the setup script or a similar command set. Start the server using `python manage.py run_server` in the venv, then visit the admin page to register a device running on your local network. Go to the home page to create a new dashboard.
+Run the setup script or a similar command set. Start the server in the venv, then visit the admin page to register a device running on your local network. Go to the home page to create a new dashboard.
 
 You can also run the test scripts to create a mock dashboard and run the simulated PLC.
 
 See API guide [here](API.md).
+
+#### Custom commands
+```
+python manage.py run_server [OPTIONS]
+
+Description: start the server and PLC poller service.
+Options:
+    --port
+        The port to use for the Django server. [Default: 8000]
+    --poll-interval
+        Target loop period (in seconds) for reading data from registered PLCs and sending it to clients. [Default: 0.25]
+        Lower values increase dashboard responsiveness but creates more traffic.
+    --cleanup-interval
+        Target loop period (in seconds) for deleting expired entries from the database. [Default: 60]
+```
+```
+python manage.py run_simulation [OPTIONS]
+
+Description: start a pymodbus soft PLC for testing.
+Options:
+    --interval
+        Target tick period. Does nothing on the default simulator. [Default: 0.1]
+    --size
+        Amount of bytes to allocate for each channel. [Default: 8192]
+```
 
 ## Screenshots
 <details>

@@ -10,9 +10,6 @@ List all devices or create a device in the form of [DeviceObject](#deviceobject)
 ### `GET`, `PUT`, `PATCH`, `DELETE` /api/devices/{alias}/
 Get or update a specific device in the form of [DeviceObject](#deviceobject).
 
-### `GET` /api/tag-options/
-Retrieve valid choices for the choice fields of Device in the form of [DeviceOptionsObject](#deviceoptionsobject).
-
 ## Tag
 Requires authentication. Writes require admin.
 Read-only fields: `external_id`
@@ -25,9 +22,6 @@ Create a tag in the form of [TagObject](#tagobject).
 
 ### `GET`, `PUT`, `PATCH`, `DELETE` /api/tags/{external_id}/
 Get or update a specific tag in the form of [TagObject](#tagobject).
-
-### `GET` /api/tag-options/
-Retrieve valid choices for the choice fields of Tag in the form of [TagOptionsObject](#tagoptionsobject).
 
 ### `GET` /api/values/?tags={external_ids}
 Retrieve a list of values for the specified tags in the form of [TagValueObject](#tagvalueobject)[].
@@ -81,9 +75,6 @@ Create an alarm config in the form of [AlarmConfigObject](#alarmconfigobject).
 
 ### `GET`, `PUT`, `PATCH`, `DELETE` /api/alarms/{external_id}/
 Get or update a specific alarm config in the form of [AlarmConfigObject](#alarmconfigobject).
-
-### `GET` /api/alarm-options/
-Retrieve valid choices for the choice fields of Alarm Config in the form of [AlarmOptionsObject](#alarmoptionsobject).
 
 ## Activated Alarm
 Requires authentication.

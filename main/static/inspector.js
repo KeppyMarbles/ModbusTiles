@@ -569,7 +569,6 @@ export class Inspector {
 
             // Show choices for trigger operator
             let operatorChoices = serverCache.alarmOptions?.actions?.POST?.operator?.choices;
-
             if(tag.data_type === "bool") 
                 operatorChoices = operatorChoices.filter(t => { return t.value === "equals" });
 
