@@ -126,7 +126,7 @@ async def _poll_device(device: Device, context: PollContext):
         logger.warning(f"Couldn't connect to device {device}: {e}")
         return
     
-    await _process_writes(client, device)
+    await _process_writes(client, device, context)
     
     tags: list[Tag] = [t for t in device.tags.all() if t.is_active]
 
@@ -278,7 +278,7 @@ async def _process_block(block: ReadBlock, client: ModbusBaseClient, context: Po
             logger.error(f"Error processing tag {tag.alias}: {e}")
 
 
-async def _process_writes(client, device: Device):
+async def _process_writes(client, device: Device, context: PollContext):
     """ Queries all PLC write requests and attempts to fullfill them """
 
     @database_sync_to_async
@@ -308,6 +308,7 @@ async def _process_writes(client, device: Device):
         except Exception as e:
             logger.error(f"Write failed for {req.tag}: {e}")
             req.failed = True
+            context.updated_tags.append(req.tag)
 
         # Mark as done
         req.processed = True

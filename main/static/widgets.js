@@ -243,11 +243,11 @@ class InputWidget extends Widget {
      */
     onValue(val) {
         this.lastValue = val;
-        if(this.lastSubmitted !== null && val == this.lastSubmitted) {
-            // Value changed successfully!
-            flashBool(this.elem, true);
+        console.log("on value", val);
+        if(this.lastSubmitted !== null) {
+            flashBool(this.elem, val == this.lastSubmitted);
             this.lastSubmitted = null;
-        } //TODO flash bool if not the correct value? would need to make it so the server sends the tag update if failed
+        }
         this.elem.classList.remove('pending');
     }
 }
