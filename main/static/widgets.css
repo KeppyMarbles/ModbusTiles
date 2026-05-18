@@ -53,11 +53,11 @@
     100% { box-shadow: 0 0 0 5px rgba(231, 76, 60, 0); }
 }
 
-.dashboard-widget.flash-success {
+.flash-success {
     animation: flash-green 700ms ease-out;
 }
 
-.dashboard-widget.flash-error {
+.flash-error {
     animation: flash-red 700ms ease-out;
 }
 
@@ -65,6 +65,11 @@
     opacity: 0.6;
     pointer-events: none;
     cursor: wait;
+}
+
+.widget-label {
+    font-size: 12px;
+    margin-bottom: 2px;
 }
 
 /* --- Alarms --- */
@@ -111,41 +116,52 @@
     background-color: #ffffff;
 }
 
-/* --- Switch Widget --- */
-
 .dashboard-widget.switch {
+    container-type: size;
     position: relative;
-    display: inline-block;
-    width: 50px;
-    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
 }
 
 .dashboard-widget.switch input {
     opacity: 0;
     width: 0;
     height: 0;
+    position: absolute;
+}
+
+.dashboard-widget.switch label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
 }
 
 .switch_slider {
-    position: absolute;
+    position: relative;
     cursor: pointer;
     background-color: #ccc;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    border-radius: 24px;
+    height: 50cqmin; 
+    width: 100cqmin; 
+    border-radius: 50cqmin; 
+    transition: background-color 0.4s;
 }
 
 .switch_slider:before {
     position: absolute;
     content: "";
-    height: 18px;
-    width: 18px;
-    left: 3px;
-    bottom: 3px;
+    
+    height: 80%; 
+    width: 40%;
+    left: 5%; 
+    bottom: 10%;
+    
     background-color: white;
-    transition: 0.2s;
+    transition: transform 0.2s;
     border-radius: 50%;
 }
 
@@ -154,7 +170,7 @@ input:checked + .switch_slider {
 }
 
 input:checked + .switch_slider:before {
-    transform: translateX(26px);
+    transform: translateX(125%); 
 }
 
 /* --- Slider/Meter Widget ---*/
@@ -162,32 +178,32 @@ input:checked + .switch_slider:before {
 .dashboard-widget.slider,
 .dashboard-widget.meter {
     display: flex;
-    flex-direction: column;
-    justify-content: center;
+    flex-direction: row;
     align-items: center;
     width: 100%;
     height: 100%;
     padding-left: 10px;
     padding-right: 10px;
+    gap: 10px;
+}
+
+.value-label {
+    flex: 0 0 auto;
+    white-space: nowrap;
 }
 
 .meter-row {
     display: flex;
     flex-direction: row;
     align-items: center;
-    justify-content: space-between;
-    width: 100%;
     gap: 8px;
+    flex: 1;
+    min-width: 0;
 }
 
 .meter-bar,
 .slider-input {
-    flex-grow: 1;
-    width: auto;
-}
-
-.value-label {
-    text-align: center;
+    flex: 1;
     width: 100%;
 }
 
@@ -196,8 +212,7 @@ input:checked + .switch_slider:before {
 .dashboard-widget.label,
 .dashboard-widget.bool_label,
 .dashboard-widget.multi_label,
-.dashboard-widget.number_label,
-.dashboard-widget.dropdown {
+.dashboard-widget.number_label {
     container-type: size;
     width: 100%;
     height: 100%;
@@ -216,18 +231,61 @@ input:checked + .switch_slider:before {
     text-align: center;
     width: 100%;
     
-    word-wrap: break-word;
+    word-wrap: normal;
     white-space: pre-wrap;
+}
+
+.dashboard-widget.dropdown {
+    container-type: size;
+    width: 100%;
+    height: 100%;
+    padding: 5%;
+    display: flex;
+    flex-direction: row;
+    align-items: stretch; /* Forces input and button to fill the height */
+    justify-content: center;
+}
+
+.dashboard-widget.dropdown .form-input {
+    box-sizing: border-box;
+    padding: 2px;
+    /* Scales font based on the smallest container dimension */
+    font-size: 50cqmin;
 }
 
 /* --- Number Input Widget ---*/
 
 .dashboard-widget.number-input {
+    container-type: size;
+    width: 100%;
+    height: 100%;
     display: flex;
     flex-direction: row;
-    align-items: center;
+    align-items: stretch;
     justify-content: center;
     gap: 5px;
+    box-sizing: border-box;
+    padding: 5%;
+}
+
+.dashboard-widget.number-input > div:first-child {
+    flex: 1 1 auto; 
+    min-width: 0;
+}
+
+.dashboard-widget.number-input .button {
+    flex: 0 0 auto; 
+    display: flex; 
+    align-items: stretch;
+}
+
+.dashboard-widget.number-input .form-input,
+.dashboard-widget.number-input .form-button {
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    font-size: 40cqmin;
+    margin: 0;
 }
 
 @keyframes spin {
@@ -243,6 +301,8 @@ input:checked + .switch_slider:before {
 }
 .dashboard-widget.chart .form-button {
     float: right;
+    margin-top: -10px;
+    margin-right: -10px;
 }
 
 /* --- Gauge --- */

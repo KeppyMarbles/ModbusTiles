@@ -115,6 +115,7 @@ export class Dashboard {
             float: true,
             acceptWidgets: true,
             dragIn: '.palette-item',
+            animate: false,
             //removable: "#editor-sidebar",
         });
         GridStack.setupDragIn('#palette .palette-item', { appendTo: 'body', helper: 'clone' });
@@ -164,7 +165,6 @@ export class Dashboard {
         this.canvasGridStack.on('removed', (event, items) => {
             items.forEach(item => {
                 if(item.el.widgetInstance == this.selectedWidget) {
-                    console.log("unselecting")
                     this.selectWidget(null);
                 }
             });
@@ -300,9 +300,11 @@ export class Dashboard {
         const columns = this.canvasGridStack.opts.column; 
         const cellWidth = width / columns;
 
+        this.canvasGridStack.setAnimation(false);
         this.canvasGridStack.cellHeight(cellWidth);
         gridEl.style.setProperty('--cell-size', `${cellWidth}px`);
         this.canvasGridStack.onResize();
+        this.canvasGridStack.setAnimation(this.editMode); // TODO? kinda hacky. Might not be performant
     }
 
     /**

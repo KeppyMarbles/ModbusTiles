@@ -17,8 +17,8 @@ body.screenshot-mode * {
 }
 
 #dashboard-container {
-    min-height: 800px;
-    min-width: 800px;
+    min-height: 1200px;
+    min-width: 1200px;
     position: relative;
 }
 
@@ -39,7 +39,6 @@ body.screenshot-mode * {
     display: flex;
     flex-direction: column;
     flex-grow: 1;
-    min-width: 0;
     align-items: center;
     justify-content: center;
     gap: 1px;
@@ -48,6 +47,11 @@ body.screenshot-mode * {
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     border-radius: 4px;
     overflow: hidden !important;
+}
+
+.grid-stack-item {
+    min-width: 50px;
+    min-height: 50px;
 }
 
 .edit-mode .dashboard-widget { pointer-events: none; }

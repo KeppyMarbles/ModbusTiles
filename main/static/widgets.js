@@ -245,7 +245,7 @@ class InputWidget extends Widget {
     onValue(val) {
         this.lastValue = val;
         if(this.lastSubmitted !== null) {
-            flashBool(this.elem, val == this.lastSubmitted);
+            flashBool(this.elem.parentElement, val == this.lastSubmitted);
             this.lastSubmitted = null;
         }
         this.elem.classList.remove('pending');
@@ -395,7 +395,10 @@ class DropdownWidget extends InputWidget {
     constructor(gridElem, config, tag) {
         super(gridElem, config, tag);
         this.select = this.elem.querySelector(".form-input"); //TODO?
-        this.select.addEventListener("change", async () => this.trySubmit(Number(this.select.value)));
+        this.select.addEventListener("change", async () => {
+            this.trySubmit(Number(this.select.value));
+            //fitText(this.elem);
+        });
     }
 
     applyConfig() {
@@ -407,6 +410,7 @@ class DropdownWidget extends InputWidget {
             opt.label = choice.display_name;
             this.select.appendChild(opt);
         });
+        //fitText(this.elem);
     }
 
     getConfirmMessage(val) {
@@ -968,7 +972,21 @@ class GaugeWidget extends Widget {
  * @param {HTMLElement} elem 
  */
 function fitText(elem) {
-    const amt = Math.round(elem.textContent.length / 3) * 3;
+    let textLen = 0;
+
+    switch(elem.tagName) {
+        case 'SELECT':
+            const opt = elem.options[elem.selectedIndex];
+            textLen = opt ? opt.text.length : 1;
+            break;
+        case 'INPUT':
+            textLen = elem.value.toString().length || 1;
+            break;
+        default:
+            textLen = elem.textContent.length || 1;
+    }
+
+    const amt = Math.round(textLen / 3) * 3 || 3; // Fallback to 3 to prevent divide by zero
     const k = 100;
 
     // measure container
