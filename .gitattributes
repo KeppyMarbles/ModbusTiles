@@ -1,1 +1,2 @@
 **/migrations/*.py linguist-generated=true
+**/static/lib/* linguist-generated=true

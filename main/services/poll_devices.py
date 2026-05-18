@@ -167,8 +167,6 @@ async def _get_client(device: Device, base_backoff_seconds=2, max_backoff_second
 
 def _build_read_blocks(tags: list[Tag], max_gap=8, max_size=125) -> list[ReadBlock]:
     """ Create blocks of contiguous registers in memory """
-    #if not all(tag.device == tags[0].device for tag in tags):
-    #    raise Exception("Tag device mismatch when building read block")
 
     # Group tags by channel
     grouped_tags = defaultdict(list[Tag])
@@ -308,7 +306,7 @@ async def _process_writes(client, device: Device, context: PollContext):
         except Exception as e:
             logger.error(f"Write failed for {req.tag}: {e}")
             req.failed = True
-            context.updated_tags.append(req.tag)
+            context.updated_tags.append(req.tag) # Send the client an update so their value is reset
 
         # Mark as done
         req.processed = True
@@ -360,13 +358,3 @@ async def _write_value(client: ModbusBaseClient, tag: Tag, values):
     
     if result.isError():
         raise Exception(f"Modbus error: {result}")
-    
-    
-def _get_modbus_reader(client: ModbusBaseClient, tag: Tag):
-    """ Returns the function needed for reading a tag """
-    return {
-        Tag.ChannelChoices.COIL: client.read_coils,
-        Tag.ChannelChoices.DISCRETE_INPUT: client.read_discrete_inputs,
-        Tag.ChannelChoices.HOLDING_REGISTER: client.read_holding_registers,
-        Tag.ChannelChoices.INPUT_REGISTER: client.read_input_registers,
-    }[tag.channel]

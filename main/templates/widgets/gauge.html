@@ -1,7 +1,17 @@
 <div class="palette-item grid-stack-item size-3w size-2h" gs-w="5" gs-h="3" data-type="gauge" title="Radial Gauge">
     <div class="grid-stack-item-content preview-widget">
         <div class="dashboard-widget chart">
-            <div class="chart-container">Gauge</div>
+            <div class="chart-container gauge-container">
+                <div class="gauge-title"></div>
+                <svg class="gauge-svg" viewBox="0 0 100 60">
+                    <path class="gauge-bg-path" d="M 10 50 A 40 40 0 0 1 90 50" />
+                    <path class="gauge-zone safe-zone" d="M 10 50 A 40 40 0 0 1 90 50" />
+                    <path class="gauge-zone warning-zone" d="M 10 50 A 40 40 0 0 1 90 50" />
+                    <path class="gauge-zone critical-zone" d="M 10 50 A 40 40 0 0 1 90 50" />
+                    <path class="gauge-value-path" d="M 10 50 A 40 40 0 0 1 90 50" />  
+                    <text class="gauge-value-text" x="50" y="45" text-anchor="middle">0</text>
+                </svg>
+            </div>
         </div>
         <span class="widget-label"></span>
     </div>

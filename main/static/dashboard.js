@@ -1,6 +1,7 @@
 import { WidgetRegistry } from "./widgets.js";
 import { TagListener } from "./tag_listener.js";
-import { GridStack } from 'https://cdn.jsdelivr.net/npm/gridstack@12.3.3/+esm'
+import { GridStack } from "./lib/gridstack.js";
+import html2canvas from "./lib/html2canvas.esm.js";
 import { refreshData, requestServer, serverCache } from "./global.js";
 import { Inspector } from "./inspector.js";
 /** @import { DashboardWidgetInfoObject, DashboardConfigObject, DashboardObject } from "./types.js" */

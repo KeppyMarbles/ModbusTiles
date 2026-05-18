@@ -1,4 +1,5 @@
 import { requestServer, serverCache } from "./global.js";
+import uPlot from "./lib/uPlot.esm.js";
 /** @import { TagObject, TagHistoryObject, TagValueObject, AlarmConfigObject, InspectorFieldDefinition, ChannelType, DataType } from "./types.js" */
 
 /**
@@ -243,7 +244,6 @@ class InputWidget extends Widget {
      */
     onValue(val) {
         this.lastValue = val;
-        console.log("on value", val);
         if(this.lastSubmitted !== null) {
             flashBool(this.elem, val == this.lastSubmitted);
             this.lastSubmitted = null;
@@ -680,23 +680,8 @@ class ChartWidget extends Widget {
         { name: "history_seconds", type: "number", default: 60, label: "History Length (s)",
             description: "The amount of time that the chart should display.",
         }, 
-        { name: "chart_type", type: "select", default: "line", label: "Chart Type",
-            options: [
-                { value: "line", display_name: "Line Chart" },
-                { value: "area", display_name: "Area Chart" },
-                { value: "bar", display_name: "Bar Chart" },
-            ]
-        },
-        { name: "plot_mode", type: "select", default: "lines", label: "Line Mode",
-            options: [
-                { value: "lines", display_name: "Lines Only" },
-                { value: "markers", display_name: "Points Only" },
-                { value: "lines+markers", display_name: "Lines & Points" }
-            ]
-        },
         { name: "line_color", type: "color", default: "#17BECF", label: "Line Color" },
         { name: "line_width", type: "number", default: 2, label: "Line Width" },
-        { name: "show_grid", type: "bool", default: true, label: "Show Grid" },
         { name: "y_min", type: "number", default: null, label: "Y Min" },
         { name: "y_max", type: "number", default: null, label: "Y Max" },
     ]
@@ -706,38 +691,43 @@ class ChartWidget extends Widget {
         this.chartDiv = this.elem.querySelector(".chart-container");
         this.pauseButton = this.elem.querySelector(".form-button");
         this.textColor = getComputedStyle(document.body).getPropertyValue('--text-main');
+        
         this.realData = false;
+        this.uplot = null;
+        this.xData = [];
+        this.yData = [];
+        
         this.initPreview();
 
-        this.resizeObserver = throttledResizeObserver(this.elem, () => {
-            Plotly.Plots.resize(this.chartDiv);
-        }, 100);
+        this.resizeObserver = new ResizeObserver(() => {
+            if (this.uplot) {
+                this.uplot.setSize({
+                    width: this.chartDiv.clientWidth,
+                    height: this.chartDiv.clientHeight
+                });
+            }
+        });
+        this.resizeObserver.observe(this.elem);
 
         this.pauseButton.addEventListener("click", () => {
             this.togglePaused();
-        })
-        this.chartDiv.innerText = "";
+        });
     }
 
     /**
      * Populate the chart with generated data
      */
     initPreview() {
-        const now = new Date();
-        const x = [], y = [];
+        const nowSec = Math.floor(Date.now() / 1000);
+        this.xData = [];
+        this.yData = [];
+        
         for(let i=0; i<20; i++) {
-            x.push(new Date(now.getTime() - (20-i)*1000).toISOString());
-            y.push(Math.sin(i/3) * 10);
+            this.xData.push(nowSec - (20-i));
+            this.yData.push(Math.sin(i/3) * 10);
         }
 
-        // Store as "last" data so applyConfig has something to work with
-        this.lastX = x;
-        this.lastY = y;
-
-        const config = { responsive: true, displayModeBar: false, staticPlot: true }; // Static plot for editor
-        
-        Plotly.newPlot(this.chartDiv, [this._getTrace(x, y)], this._getLayout(), config);
-
+        this._renderPlot();
         this.realData = false;
     }
 
@@ -745,22 +735,22 @@ class ChartWidget extends Widget {
      * Populate the chart with actual data from the server
      */
     async initHistory() {
-        if(this.initializing)
-            return;
+        if(this.initializing) return;
 
         this.initializing = true;
 
-        const payload = { tags: this.tag.external_id,seconds: this.config.history_seconds };
-        if(!await requestServer('/api/history/', 'GET', payload, /** @param {TagHistoryObject[]} data */ async (data) => {
-            const timestamps = data.map(e => e.timestamp);
-            const values = data.map(e => e.value);
+        const payload = { tags: this.tag.external_id, seconds: this.config.history_seconds };
+        const success = await requestServer('/api/history/', 'GET', payload, /** @param {TagHistoryObject[]} data */ async (data) => {
+            // uPlot requires UNIX timestamps in seconds
+            this.xData = data.map(e => new Date(e.timestamp).getTime() / 1000);
+            this.yData = data.map(e => e.value);
 
-            const config = { responsive: true, displayModeBar: false, staticPlot: false };
-
-            await Plotly.newPlot(this.chartDiv, [this._getTrace(timestamps, values)], this._getLayout(), config);
+            this._renderPlot();
             this.realData = true;
-        })) {
-            console.error("Error initializing chart:", err);
+        });
+
+        if (!success) {
+            console.error("Error initializing chart data.");
             this.chartDiv.innerHTML = `<div class="error-msg">Error loading chart</div>`;
         }
 
@@ -774,110 +764,101 @@ class ChartWidget extends Widget {
         this.paused = !this.paused;
         this.pauseButton.innerText = this.paused ? "⏵︎" : "⏸︎";
         this.pauseButton.title = this.paused ? "Play" : "Pause";
-        if(!this.paused && this.realData)
+        if(!this.paused && this.realData) {
             this.initHistory();
+        }
     }
 
     applyConfig() {
         super.applyConfig();
-        
-        // If the chart exists, update layout/style without full re-fetch
-        Plotly.react(this.chartDiv, [this._getTrace(this.lastX || [], this.lastY || [])], this._getLayout(), { 
-            responsive: true, displayModeBar: false 
-        });
+        this._renderPlot();
     }
 
-    onValue(val, time) { 
-        if(!this.realData) {
+    onValue(val, time) {
+        if (!this.realData) {
             this.initHistory();
             return;
         }
-        if(this.paused) {
+
+        if (this.paused) {
             return;
         }
 
-        const updateTime = new Date(time);
-        const timeStr = updateTime.toISOString();
-        const startTime = new Date(updateTime.getTime() - (this.config.history_seconds * 1000));
+        const timeSec = new Date(time).getTime() / 1000;
 
-        const traces = { 
-            x: [[timeStr]], 
-            y: [[val]] 
-        };
+        this.xData.push(timeSec);
+        this.yData.push(val);
 
-        Plotly.extendTraces(this.chartDiv, traces, [0]);
+        const cutoff = timeSec - this.config.history_seconds;
 
-        Plotly.relayout(this.chartDiv, {
-            'xaxis.range': [startTime.toISOString(), timeStr]
-        });
+        while (this.xData.length > 0 && this.xData[0] < cutoff) {
+            this.xData.shift();
+            this.yData.shift();
+        }
+
+        if (this.uplot) {
+            this.uplot.setData([this.xData, this.yData]);
+
+            // snap window to whole seconds
+            const max = Math.ceil(timeSec);
+            const min = max - this.config.history_seconds;
+
+            this.uplot.setScale("x", {
+                min,
+                max
+            });
+        }
     }
 
     clear() {
-        if(!this.realData)
-            return;
-        
+        if(!this.realData) return;
         this.initPreview();
     }
 
-    _getLayout() {
-        const gridColor = this.config.show_grid ? 'rgba(128, 128, 128, 0.2)' : 'rgba(0,0,0,0)';
-
-        const yAxis = {
-            gridcolor: gridColor,
-            linecolor: this.textColor,
-            tickfont: { color: this.textColor },
-            autorange: (this.config.y_min == null || this.config.y_max == null),
-        };
-
-        if(!yAxis.autorange)
-            yAxis.range = [this.config.y_min, this.config.y_max];
-
-        return {
-            title: {
-                text: this.config.title,
-                font: { color: this.textColor }
-            },
-            autosize: true,
-            margin: { l: 40, r: 10, b: 30, t: 40, pad: 4 },
-            xaxis: {
-                type: 'date',
-                gridcolor: gridColor,
-                linecolor: this.textColor,
-                tickfont: { color: this.textColor }
-            },
-            yaxis: yAxis,
-            paper_bgcolor: 'rgba(0,0,0,0)',
-            plot_bgcolor: 'rgba(0,0,0,0)',
-        };
-    }
-
-    _getTrace(xData, yData) {
-        // Default to scatter
-        let traceType = 'scatter';
-        let fillMode = 'none';
-
-        // Handle specific Chart Types
-        if (this.config.chart_type === 'bar') {
-            traceType = 'bar';
-        } 
-        else if (this.config.chart_type === 'area') {
-            fillMode = 'tozeroy'; // Fills space under the line
+    _renderPlot() {
+        if (this.uplot) {
+            this.uplot.destroy();
         }
 
-        return {
-            x: xData,
-            y: yData,
-            type: traceType,
-            mode: this.config.plot_mode, // Only affects 'scatter' type
-            fill: fillMode,              // Only affects 'scatter' type
-            marker: {                    // Used for 'bar' and 'scatter' points
-                color: this.config.line_color
+        this.chartDiv.innerHTML = "";
+
+        const yAxisAuto = (this.config.y_min == null || this.config.y_max == null);
+        
+        const opts = {
+            title: this.config.title,
+            width: this.chartDiv.clientWidth || 300,
+            height: this.chartDiv.clientHeight || 200,
+            cursor: {
+                drag: { x: true, y: true },
             },
-            line: { 
-                color: this.config.line_color,
-                width: this.config.line_width 
-            }
+            legend: { show: false },
+            axes: [
+                {
+                    stroke: this.textColor,
+                    grid: { stroke: "rgba(128, 128, 128, 0.2)" }
+                },
+                {
+                    stroke: this.textColor,
+                    grid: { stroke: "rgba(128, 128, 128, 0.2)" }
+                }
+            ],
+            scales: {
+                x: { time: true },
+                y: {
+                    auto: yAxisAuto,
+                    range: yAxisAuto ? undefined : [this.config.y_min, this.config.y_max]
+                }
+            },
+            series: [
+                {},
+                {
+                    stroke: this.config.line_color,
+                    width: this.config.line_width
+                }
+            ]
         };
+
+        this.uplot = new uPlot(opts, [this.xData, this.yData], this.chartDiv);
     }
 }
 
@@ -890,10 +871,10 @@ class GaugeWidget extends Widget {
         { name: "min_value", type: "number", default: 0, label: "Min Value" },
         { name: "max_value", type: "number", default: 100, label: "Max Value" },
         { name: "warning_threshold", type: "number", default: 75, label: "Warning Start",
-            description: "Minimum value of warning color. Purely visual."
+            description: "Minimum value for the warning color."
         },
         { name: "critical_threshold", type: "number", default: 90, label: "Critical Start",
-            description: "Minimum value of critical color. Purely visual."
+            description: "Minimum value for the critical color."
         },
         { name: "prefix", type: "text", default: "", label: "Value Prefix" },
         { name: "suffix", type: "text", default: "", label: "Value Suffix" },
@@ -901,87 +882,85 @@ class GaugeWidget extends Widget {
 
     constructor(gridElem, config, tag) {
         super(gridElem, config, tag);
-        this.chartDiv = this.elem.querySelector(".chart-container");
-        this.textColor = getComputedStyle(document.body).getPropertyValue('--text-main');
 
-        this.resizeObserver = throttledResizeObserver(this.elem, () => {
-            Plotly.Plots.resize(this.chartDiv);
-        }, 100);
+        console.log(this.elem);
+        
+        // Grab the elements directly from the existing HTML structure
+        this.valuePath = this.elem.querySelector('.gauge-value-path');
+        this.valueText = this.elem.querySelector('.gauge-value-text');
+        this.titleDiv = this.elem.querySelector('.gauge-title');
 
-        this.chartDiv.innerText = "";
+        // Grab the new zone paths
+        this.safeZone = this.elem.querySelector('.safe-zone');
+        this.warnZone = this.elem.querySelector('.warning-zone');
+        this.critZone = this.elem.querySelector('.critical-zone');
     }
 
     applyConfig() {
         super.applyConfig();
-        this.clear();
+        if (this.titleDiv) {
+            this.titleDiv.textContent = this.config.title;
+        }
+
+        const range = this.config.max_value - this.config.min_value;
+
+        if (range > 0) {
+            // Calculate percentages (clamped between 0 and 1)
+            let warnP = Math.max(0, Math.min(1, (this.config.warning_threshold - this.config.min_value) / range));
+            let critP = Math.max(0, Math.min(1, (this.config.critical_threshold - this.config.min_value) / range));
+            
+            // Ensure warning doesn't overlap critical if configured backwards
+            if (warnP > critP) warnP = critP;
+
+            const totalLength = this.safeZone.getTotalLength();
+
+            const safeLen = warnP * totalLength;
+            const warnLen = (critP - warnP) * totalLength;
+            const critLen = (1 - critP) * totalLength;
+
+            // helper to apply a segment
+            const setSegment = (el, len, offset) => {
+                el.style.strokeDasharray = `${len} ${totalLength}`;
+                el.style.strokeDashoffset = `-${offset}`;
+            };
+
+            setSegment(this.safeZone, safeLen, 0);
+            setSegment(this.warnZone, warnLen, safeLen);
+            setSegment(this.critZone, critLen, safeLen + warnLen);
+        }
     }
 
     onValue(val) {
-        Plotly.react(this.chartDiv, [this._getTrace(val)], this._getLayout(), { responsive: true, displayModeBar: false });
+        // Clamp the value so the arc doesn't break if it exceeds bounds
+        const clampedVal = Math.max(this.config.min_value, Math.min(this.config.max_value, val));
+        
+        // Calculate the percentage of the range
+        const range = this.config.max_value - this.config.min_value;
+        const percent = range === 0 ? 0 : (clampedVal - this.config.min_value) / range;
+
+        const pathLength = this.safeZone.getTotalLength();
+        const offset = pathLength - (percent * pathLength);
+        
+        // Update SVG path offset and text
+        this.valuePath.style.strokeDashoffset = offset;
+        
+        // Format decimal display if needed
+        const displayVal = (typeof val === 'number' && val % 1 !== 0) ? parseFloat(val).toFixed(2) : val;
+        this.valueText.textContent = `${this.config.prefix}${displayVal}${this.config.suffix}`;
+        
+        // Update colors based on config thresholds
+        if (val >= this.config.critical_threshold) {
+            this.valuePath.style.stroke = "#e74c3c"; // Red
+        } else if (val >= this.config.warning_threshold) {
+            this.valuePath.style.stroke = "#f1c40f"; // Yellow
+        } else {
+            this.valuePath.style.stroke = "#2ecc71"; // Green
+        }
     }
 
     clear() {
         this.onValue(this.config.min_value);
     }
-
-    _getTrace(val) {
-        return {
-            type: "indicator",
-            mode: "gauge+number",
-            value: val,
-            number: { 
-                prefix: this.config.prefix,
-                suffix: this.config.suffix,
-                font: { color: this.textColor, size: 20 }
-            },
-            gauge: {
-                axis: { 
-                    range: [this.config.min_value, this.config.max_value],
-                    tickwidth: 1, 
-                    tickcolor: this.textColor 
-                },
-                bar: { color: "darkblue" }, // TODO more customizations here?
-                bgcolor: "rgba(0,0,0,0)",
-                borderwidth: 2,
-                bordercolor: "gray",
-                steps: [
-                    { range: [this.config.min_value, this.config.warning_threshold], color: "#2ecc71" },
-                    { range: [this.config.warning_threshold, this.config.critical_threshold], color: "#f1c40f" },
-                    { range: [this.config.critical_threshold, this.config.max_value], color: "#e74c3c" }
-                ],
-                threshold: {
-                    line: { color: "red", width: 4 },
-                    thickness: 0.75,
-                    value: this.config.critical_threshold
-                }
-            }
-        };
-    }
-
-    _getLayout() {
-        return {
-            title: { text: this.config.title, font: { size: 16, color: this.textColor } },
-            margin: { t: 40, b: 0, l: 30, r: 30 },
-            paper_bgcolor: "rgba(0,0,0,0)",
-            font: { color: this.textColor }
-        };
-    }
-}
-
-/**
- * Call a function a given time after an element has stopped resizing
- * @param {HTMLElement} elem 
- * @param {()} cb 
- * @param {number} time 
- */
-function throttledResizeObserver(elem, cb, time) {
-    let resizeTimeout;
-    const resizeObserver = new ResizeObserver(() => {
-        clearTimeout(resizeTimeout);
-        resizeTimeout = setTimeout(cb, time);
-    });
-    resizeObserver.observe(elem);
-    return resizeObserver;
 }
 
 /**

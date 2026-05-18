@@ -18,8 +18,6 @@ from django.utils import timezone
 from django.db import transaction
 from rest_framework.request import HttpRequest
 
-#TODO should the metadata views all be one class?
-#TODO better docstrings
 
 class StaffWriteOnlyViewSet(ModelViewSet):
     """ Restrict write perms to staff """
@@ -119,12 +117,10 @@ class DashboardViewSet(ModelViewSet):
 
         with transaction.atomic():
             dashboard.widgets.all().delete()
-            DashboardWidget.objects.bulk_create(
-                [
-                    DashboardWidget(dashboard=dashboard, tag=item.get("tag"), widget_type=item["widget_type"], config=item["config"])
-                    for item in widget_serializer.validated_data
-                ]
-            )
+            DashboardWidget.objects.bulk_create([
+                DashboardWidget(dashboard=dashboard, tag=item.get("tag"), widget_type=item["widget_type"], config=item["config"])
+                for item in widget_serializer.validated_data
+            ])
 
         return dashboard
 

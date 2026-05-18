@@ -244,3 +244,72 @@ input:checked + .switch_slider:before {
 .dashboard-widget.chart .form-button {
     float: right;
 }
+
+/* --- Gauge --- */
+
+.gauge-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding-top: 8px;
+    height: 100%;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.gauge-title {
+    font-size: 14px;
+    color: var(--text-main, inherit);
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.gauge-svg {
+    width: 100%;
+    flex: 1;
+    min-height: 0;
+    margin-top: auto;
+    margin-bottom: auto;
+    overflow: visible;
+}
+
+.gauge-bg-path {
+    fill: none;
+    stroke: rgba(128, 128, 128, 0.2);
+    stroke-width: 12;
+    stroke-linecap: butt;
+}
+
+.gauge-value-path {
+    fill: none;
+    stroke-width: 12;
+    stroke-linecap: butt;
+    stroke-dasharray: 125.66;
+    stroke-dashoffset: 125.66; /* Default hidden state */
+    stroke: #2ecc71; /* Default starting color */
+    transition: stroke-dashoffset 0.4s ease-out, stroke 0.4s ease;
+}
+
+.gauge-value-text {
+    font-size: 14px;
+    fill: var(--text-main, inherit);
+}
+
+.gauge-zone {
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: butt;
+}
+
+.safe-zone {
+    stroke: rgba(46, 204, 113, 0.6);
+}
+
+.warning-zone {
+    stroke: rgba(241, 196, 15, 0.6);
+}
+
+.critical-zone {
+    stroke: rgba(231, 76, 60, 0.6);
+}
