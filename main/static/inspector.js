@@ -186,7 +186,7 @@ export class Inspector {
                 break;
 
             case "color":
-                input.type = "color";
+                input.type = "color"; //TODO add clear button?
                 getValue = () => input.value;
                 break;
 

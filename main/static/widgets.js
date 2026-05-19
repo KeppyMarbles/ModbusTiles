@@ -29,6 +29,9 @@ export class Widget {
     static defaultFields = [
         { name: "locked", type: "bool", default: false, label: "Position Locked" },
         { name: "showTagName", type: "bool", default: true, label: "Show Tag Name" },
+        { name: "background_color", type: "color", default: "", label: "Background Color" },
+        { name: "outline_color", type: "color", default: "", label: "Outline Color" },
+        { name: "text_color", type: "color", default: "", label: "Text Color" },
     ];
 
     /**
@@ -57,7 +60,7 @@ export class Widget {
                 config[field.name] = field.default;
         });
 
-        /**@type {TagObject} meta describing the tag this widget should use */
+        /** @type {TagObject} meta describing the tag this widget should use */
         this.tag = tag;
 
         /** The entries for defaultFields, customFields, etc. Fields not provided are set to default */
@@ -74,13 +77,18 @@ export class Widget {
         /** @type {number} Age in ms the widget's value can be before displaying as stale  */
         this.valueTimeout = 5000;
 
+        /** @type {HTMLElement?} Displays a symbol for an alarm, if active for the widget's tag */
         this.alarmIndicator = gridElem.querySelector(".alarm-indicator");
+
+        /** @type {HTMLElement?} Displays the widget's tag alias */
         this.tagLabel = this.elem.parentNode?.querySelector(".widget-label");
 
-        // Apply visual updates after construction
-        setTimeout(() => {
-            this.applyConfig();
-        }, 0);
+        /** @type {ResizeObserver} */
+        this.resizeObserver = new ResizeObserver(() => this.onResize());
+        this.resizeObserver.observe(this.elem);
+
+        // Apply visual updates after child class construction
+        setTimeout(() => this.applyConfig(), 0);
     }
 
     /**
@@ -161,6 +169,9 @@ export class Widget {
             }
         }
         this.elem.title = this.tag ? this.tag.alias : "";
+        this.elem.parentElement.style.backgroundColor = this.config.background_color;
+        this.gridElem.style.backgroundColor = this.config.outline_color;
+        this.gridElem.style.color = this.config.text_color;
     }
 
     /**
@@ -169,6 +180,13 @@ export class Widget {
      * @param {string} time
      */
     onValue(val, time) {
+        return;
+    }
+
+    /**
+     * Called when the size of the widget element changes
+     */
+    onResize() {
         return;
     }
 
@@ -269,6 +287,10 @@ class LabelWidget extends Widget { //TODO font size, formatting?
         this.text_elem.textContent = this.config.text;
         fitText(this.text_elem);
     }
+
+    onResize() {
+        fitText(this.text_elem);
+    }
 }
 
 // -------- Boolean Widgets --------
@@ -298,6 +320,10 @@ class BoolLabelWidget extends Widget {
 
     onValue(val) {
         this.text_elem.textContent = val ? this.config.text_on : this.config.text_off;
+        fitText(this.text_elem);
+    }
+
+    onResize() {
         fitText(this.text_elem);
     }
 
@@ -364,7 +390,7 @@ class ButtonWidget extends InputWidget {
     static allowedTypes = ["bool", "int16", "uint16", "int32", "uint32", "int64", "uint64", "float32", "float64", "string"];
     static customFields = [
         { name: "button_text", type: "text", default: "Button Text", label: "Button Text" },
-        { name: "confirmation", type: "bool", default: false, label: "Prompt Confirmation" },
+        { name: "button_color", type: "color", default: "", label: "Button Color" },
     ]
     static tagTypedFields = [
         { name: "submit_value", default: "", label: "Submit Value",
@@ -381,6 +407,12 @@ class ButtonWidget extends InputWidget {
     applyConfig() {
         super.applyConfig();
         this.button.innerText = this.config.button_text;
+        this.button.style.backgroundColor = this.config.button_color;
+        fitText(this.button);
+    }
+
+    onResize() {
+        fitText(this.button);
     }
 }
 
@@ -389,16 +421,12 @@ class DropdownWidget extends InputWidget {
     static allowedTypes = ["int16", "uint16", "int32", "uint32", "int64", "uint64", "float32", "float64"];
     static customFields = [
         { name: "dropdown_choices", type: "enum", default: [], label: "Dropdown Choices" },
-        { name: "confirmation", type: "bool", default: false, label: "Prompt Confirmation" },
     ]
 
     constructor(gridElem, config, tag) {
         super(gridElem, config, tag);
         this.select = this.elem.querySelector(".form-input"); //TODO?
-        this.select.addEventListener("change", async () => {
-            this.trySubmit(Number(this.select.value));
-            //fitText(this.elem);
-        });
+        this.select.addEventListener("change", async () => this.trySubmit(Number(this.select.value)));
     }
 
     applyConfig() {
@@ -410,7 +438,6 @@ class DropdownWidget extends InputWidget {
             opt.label = choice.display_name;
             this.select.appendChild(opt);
         });
-        //fitText(this.elem);
     }
 
     getConfirmMessage(val) {
@@ -587,6 +614,10 @@ class MultiLabelWidget extends Widget {
         fitText(this.text_elem);
     }
 
+    onResize() {
+        fitText(this.text_elem);
+    }
+
     clear() {
         this.text_elem.textContent = "Multi-Value Label";
     }
@@ -617,6 +648,10 @@ class NumberLabelWidget extends Widget {
         fitText(this.text_elem);
     }
 
+    onResize() {
+        fitText(this.text_elem);
+    }
+
     clear() {
         this.onValue(0);
     }
@@ -630,6 +665,7 @@ class NumberInputWidget extends InputWidget {
         { name: "step", type: "number", default: 1, label: "Step" },
         { name: "min", type: "number", default: 0, label: "Minimum Value" },
         { name: "max", type: "number", default: 100, label: "Maximum Value" },
+        { name: "button_color", type: "color", default: "", label: "Button Color" },
     ]
 
     constructor(gridElem, config, tag) {
@@ -656,6 +692,7 @@ class NumberInputWidget extends InputWidget {
         this.input.step = this.config.step;
         this.input.min = this.config.min;
         this.input.max = this.config.max;
+        this.button.style.backgroundColor = this.config.button_color;
     }
 
     getConfirmMessage(val) {
@@ -702,16 +739,6 @@ class ChartWidget extends Widget {
         this.yData = [];
         
         this.initPreview();
-
-        this.resizeObserver = new ResizeObserver(() => {
-            if (this.uplot) {
-                this.uplot.setSize({
-                    width: this.chartDiv.clientWidth,
-                    height: this.chartDiv.clientHeight
-                });
-            }
-        });
-        this.resizeObserver.observe(this.elem);
 
         this.pauseButton.addEventListener("click", () => {
             this.togglePaused();
@@ -814,6 +841,15 @@ class ChartWidget extends Widget {
         }
     }
 
+    onResize() {
+        if (this.uplot) {
+            this.uplot.setSize({
+                width: this.chartDiv.clientWidth,
+                height: this.chartDiv.clientHeight
+            });
+        }
+    }
+
     clear() {
         if(!this.realData) return;
         this.initPreview();
@@ -886,8 +922,6 @@ class GaugeWidget extends Widget {
 
     constructor(gridElem, config, tag) {
         super(gridElem, config, tag);
-
-        console.log(this.elem);
         
         // Grab the elements directly from the existing HTML structure
         this.valuePath = this.elem.querySelector('.gauge-value-path');
@@ -972,35 +1006,35 @@ class GaugeWidget extends Widget {
  * @param {HTMLElement} elem 
  */
 function fitText(elem) {
-    let textLen = 0;
+    const parent = elem.parentElement;
+    if (!parent) return;
 
-    switch(elem.tagName) {
-        case 'SELECT':
-            const opt = elem.options[elem.selectedIndex];
-            textLen = opt ? opt.text.length : 1;
-            break;
-        case 'INPUT':
-            textLen = elem.value.toString().length || 1;
-            break;
-        default:
-            textLen = elem.textContent.length || 1;
+    const cs = window.getComputedStyle(parent);
+    
+    const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+    const maxH = parent.clientHeight - padY;
+    const maxW = elem.clientWidth; 
+
+    let low = 6;
+    let high = 96;
+    let optimalSize = low;
+
+    while (low <= high) {
+        const mid = Math.floor((low + high) / 2);
+        elem.style.fontSize = mid + "px";
+
+        if (elem.scrollWidth <= maxW + 1 && elem.scrollHeight <= maxH + 1) {
+            optimalSize = mid; // Fits, try larger
+            low = mid + 1;
+        } else {
+            high = mid - 1; // Too big (either wraps too many lines, or a word overflows horizontally)
+        }
     }
 
-    const amt = Math.round(textLen / 3) * 3 || 3; // Fallback to 3 to prevent divide by zero
-    const k = 100;
-
-    // measure container
-    const rect = elem.parentElement.getBoundingClientRect();
-    const aspect = rect.width / rect.height;
-
-    // width assist factor (>= 1)
-    const widthBoost = Math.min(1.75, Math.sqrt(aspect));
-    const textScale = (k / Math.sqrt(amt));
-    
-    // Set font size
-    elem.style.fontSize = `clamp(0.75rem, calc(${textScale} * ${widthBoost} * 1cqh), 5rem)`;
+    // Apply the final optimal size
+    optimalSize *= 0.8;
+    elem.style.fontSize = optimalSize + "px";
 }
-
 /**
  * Create a red or green pulse on an element
  * @param {HTMLElement} elem 

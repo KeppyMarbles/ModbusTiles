@@ -124,6 +124,7 @@
     justify-content: center;
     width: 100%;
     height: 100%;
+    padding: 5px;
 }
 
 .dashboard-widget.switch input {
@@ -223,14 +224,13 @@ input:checked + .switch_slider:before {
     align-items: center;
     flex-grow: 1;
     
-    padding: 2px;
+    padding: 5px;
     overflow: hidden; 
 }
 .dashboard-widget .label_text {
     line-height: 1;
     text-align: center;
     width: 100%;
-    
     word-wrap: normal;
     white-space: pre-wrap;
 }
@@ -265,7 +265,7 @@ input:checked + .switch_slider:before {
     justify-content: center;
     gap: 5px;
     box-sizing: border-box;
-    padding: 5%;
+    padding: 5px;
 }
 
 .dashboard-widget.number-input > div:first-child {
@@ -273,7 +273,7 @@ input:checked + .switch_slider:before {
     min-width: 0;
 }
 
-.dashboard-widget.number-input .button {
+.dashboard-widget.number-input .number-input-button {
     flex: 0 0 auto; 
     display: flex; 
     align-items: stretch;
@@ -290,6 +290,21 @@ input:checked + .switch_slider:before {
 
 @keyframes spin {
     to { transform: rotate(360deg); }
+}
+
+/* --- Button Widget ---*/
+
+.dashboard-widget.button-input {
+    container-type: size;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    padding: 10px;
+}
+
+.dashboard-widget.button-input .form-button {
+    width: 100%;
+    height: 100%;
 }
 
 /* --- Chart --- */

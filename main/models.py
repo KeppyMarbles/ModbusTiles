@@ -416,6 +416,7 @@ class Dashboard(models.Model):
     column_count = models.PositiveSmallIntegerField(default=20) #TODO use small integer field more often?
     #external_id = models.UUIDField(default=uuid.uuid4, unique=True)
     #TODO permitted users?
+    #TODO we should probably change the basic dashboard properties to one json field
     #created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

@@ -24,6 +24,9 @@ export class Dashboard {
         /** @type {Widget | null} */
         this.selectedWidget = null;
 
+        /** @type {Set<Widget>} */
+        this.widgets = new Set();
+
         /** @type {TagListener} The WebSocket listener to register Widgets to */
         this.listener = new TagListener();
 
@@ -41,6 +44,9 @@ export class Dashboard {
 
         /** @type {HTMLButtonElement} */
         this.fileInput = null;
+
+        this.resizeObserver = new ResizeObserver(() => this.updateSquareCells());
+        this.resizeObserver.observe(this.widgetGrid);
 
         // Init
         this._setupEvents();
@@ -72,9 +78,7 @@ export class Dashboard {
         });
 
         // Buttons
-        this.editButton.addEventListener('click', () => {
-            this.toggleEdit(!this.editMode);
-        });
+        this.editButton.addEventListener('click', () => this.toggleEdit(!this.editMode));
 
         // Import file
         this.fileInput = document.getElementById('importFile');
@@ -86,10 +90,7 @@ export class Dashboard {
         });
 
         // Window events
-        window.addEventListener('resize', () => {
-            this.updateSquareCells();
-        });
-
+        //window.addEventListener('resize', () => this.updateSquareCells());
         window.addEventListener("beforeunload", (event) => {
             if (this.isDirty) {
                 event.preventDefault();
@@ -120,54 +121,36 @@ export class Dashboard {
         });
         GridStack.setupDragIn('#palette .palette-item', { appendTo: 'body', helper: 'clone' });
 
-        // Handle drag and drop
-        this.canvasGridStack.on('added change', (event, items) => {
+        // Handle drag and drop, deletion
+        this.canvasGridStack.on('added change removed', (event, items) => {
             items.forEach(item => {
                 /** @type {Widget} */
                 let widget = item.el.widgetInstance;
-                if (!widget) {
-                    const type = item.el.dataset.type; // Set by Django
-                    widget = new WidgetRegistry[type](item.el);
-                }
-                widget.config.position_x = item.x;
-                widget.config.position_y = item.y;
-                widget.config.scale_x = item.w;
-                widget.config.scale_y = item.h;
-            });
-            if(this.editMode) {
-                this.isDirty = true;
-            }
-        });
+                switch(event.type) {
+                    case 'added':
+                        if(!widget) { // If the widget was added using the palette (TODO? this is a bit weird)
+                            const type = item.el.dataset.type; // Set by Django
+                            widget = new WidgetRegistry[type](item.el);
+                        }
+                        this.widgets.add(widget);
+                        // Fall-through
 
-        // Handle shift-dragging
-        /** @type {Widget | null} */
-        let newWidget = null;
+                    case 'change': 
+                        widget.config.position_x = item.x;
+                        widget.config.position_y = item.y;
+                        widget.config.scale_x = item.w;
+                        widget.config.scale_y = item.h;
+                        break;
 
-        this.canvasGridStack.on('dragstart', (event, el) => {
-            if (event.shiftKey && el && el.widgetInstance) {
-                const config = JSON.parse(JSON.stringify(el.widgetInstance.config));
-                config.locked = true;
-                this.canvasGridStack.batchUpdate();
-                newWidget = this.createWidget(el.dataset.type, el.widgetInstance.tag, config);
-                this.canvasGridStack.update(newWidget.gridElem, { locked: true }); //TODO this is kinda irritating... cuz widget doesn't set config immediately
-                this.canvasGridStack.commit();
-            }
-        });
-
-        this.canvasGridStack.on('dragstop', (event, el) => {
-            if(newWidget) {
-                newWidget.config.locked = false; //dumb
-                newWidget.applyConfig();
-            }
-        });
-
-        // Handle delete
-        this.canvasGridStack.on('removed', (event, items) => {
-            items.forEach(item => {
-                if(item.el.widgetInstance == this.selectedWidget) {
-                    this.selectWidget(null);
+                    case 'removed':
+                        this.widgets.delete(widget);
+                        if(widget == this.selectedWidget)
+                            this.selectWidget(null);
+                        break;
                 }
             });
+            if(this.editMode)
+                this.isDirty = true; // Prompt page exit
         });
 
         // Set grid 1:1 aspect ratio
@@ -180,17 +163,14 @@ export class Dashboard {
      * @param {number} columnCount
      */
     async setupWidgets(widgetData, columnCount) {
-        this.canvasGridStack ?
-            this.setColumnCount(columnCount) :
-            this._setupGridStack(columnCount);
+        this.canvasGridStack ? this.setColumnCount(columnCount) : this._setupGridStack(columnCount);
 
         this.canvasGridStack.removeAll();
         this.listener.clear();
 
-        console.log("Widgets:", widgetData);
-
         // Add widgets to the gridstack grid
         widgetData.forEach(wData => this.createWidget(wData.widget_type, serverCache.tags[wData.tag], wData.config));
+        console.log("Widgets:", this.widgets);
     }
 
     /**
@@ -246,7 +226,7 @@ export class Dashboard {
             
             this.canvasGridStack.setStatic(false); // Enable Drag/Drop
 
-            this._getWidgets().forEach(widget => {
+            this.widgets.forEach(widget => {
                 widget.clear();
                 widget.setAlarm(null); //TODO add to clear()?
             });
@@ -257,12 +237,9 @@ export class Dashboard {
 
             this.canvasGridStack.setStatic(true);
 
-            this._getWidgets().forEach(widget => this.listener.registerWidget(widget));
+            this.widgets.forEach(widget => this.listener.registerWidget(widget));
             this.listener.connect();
         }
-
-        const animInterval = setInterval(() => this.updateSquareCells(), 13);
-        setTimeout(() => clearInterval(animInterval), 500);
     }
 
     /**
@@ -295,6 +272,9 @@ export class Dashboard {
      * Resize the GridStack cell width to maintain 1:1 aspect ratio
      */
     updateSquareCells() {
+        if(!this.canvasGridStack)
+            return;
+
         const gridEl = this.canvasGridStack.el;
         const width = gridEl.clientWidth;
         const columns = this.canvasGridStack.opts.column; 
@@ -342,7 +322,7 @@ export class Dashboard {
                 this.toggleEdit(true);
             }
             else {
-                this._getWidgets().forEach(widget => this.listener.registerWidget(widget));
+                this.widgets.forEach(widget => this.listener.registerWidget(widget));
                 await this.listener.connect();
             }
 
@@ -429,21 +409,12 @@ export class Dashboard {
      */
     _getFullConfig() {
         return { ...this.config,
-            widgets: this._getWidgets().map(widget => ({ //TODO widget method or nah?
+            widgets: [...this.widgets].map(widget => ({
                 tag: widget.tag?.external_id || null,
                 widget_type: widget.gridElem.dataset.type,
                 config: widget.config
             }))
         };
-    }
-
-    /**
-     * @returns {Widget[]}
-     */
-    _getWidgets() {
-        return Array.from(this.widgetGrid.querySelectorAll('.grid-stack-item'))
-            .map(item => item.widgetInstance)
-            .filter(Boolean);
     }
 
     /**
@@ -470,7 +441,6 @@ export class Dashboard {
         this.widgetGrid.style.height = `${CAPTURE_HEIGHT}px`;
         this.widgetGrid.style.overflow = 'hidden';
         this.updateSquareCells(); 
-        //this.canvasGridStack.onResize();
 
         try {
             // Capture
@@ -495,7 +465,6 @@ export class Dashboard {
                 this.canvasGridStack.setStatic(false);
             }
             this.updateSquareCells();
-            //this.canvasGridStack.onResize();
             document.body.classList.remove("screenshot-mode");
         }
     }
