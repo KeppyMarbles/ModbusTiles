@@ -113,7 +113,7 @@ export class Inspector {
 
         // Delegate rendering strategy
         if (def.type === "select")
-            inputObj = this._createSelect(def.options, currentValue);
+            inputObj = this._createSelect(def.options, currentValue, def.default);
         else if (def.type === "enum")
             inputObj = this._createEnum(currentValue, onChange);
         else
@@ -138,15 +138,16 @@ export class Inspector {
      * 
      * @param {ChoiceObject[]} options 
      * @param {*} currentValue
+     * @param {*} defaultValue
      */
-    _createSelect(options, currentValue) {
+    _createSelect(options, currentValue, defaultValue) {
         const select = document.createElement("select");
         select.classList.add("form-input");
         
         // Default "Select" option
         const defaultOpt = document.createElement('option');
         defaultOpt.text = "Select";
-        defaultOpt.value = "";
+        defaultOpt.value = defaultValue;
         select.appendChild(defaultOpt);
 
         if (options) {

@@ -171,7 +171,7 @@ export class Widget {
         this.elem.title = this.tag ? this.tag.alias : "";
         this.elem.parentElement.style.backgroundColor = this.config.background_color;
         this.gridElem.style.backgroundColor = this.config.outline_color;
-        this.gridElem.style.color = this.config.text_color;
+        this.gridElem.style.color = this.config.text_color; //TODO !important?
     }
 
     /**
@@ -191,7 +191,7 @@ export class Widget {
     }
 
     /**
-     * Handles new value from `onData`
+     * Return the widget to default. Called when entering edit mode
      */
     clear() {
         return;
@@ -270,6 +270,95 @@ class InputWidget extends Widget {
     }
 }
 
+/**
+ * Abstract class for a widget that uses tag history values.
+ * 
+ * @abstract
+ */
+class HistoryWidget extends Widget {
+    static defaultFields = [ ...Widget.defaultFields,
+        { name: "history_seconds", type: "number", default: 60, label: "History Length (s)",
+            description: "The amount of time that the chart should display.",
+        },
+    ];
+
+    constructor(gridElem, config, tag) {
+        super(gridElem, config, tag);
+
+        /** @type {number[]} Timestamps for yData (seconds since epoch) */
+        this.xData = [];
+
+        /** @type {*[]} Tag values over time */
+        this.yData = [];
+
+        //setTimeout(() => this.initPreview(), 0);
+    }
+
+    /**
+     * Populate `xData` and `yData` with data from the server
+     */
+    async initHistory() {
+        if(this._initializing) return;
+
+        this._initializing = true;
+
+        const payload = { tags: this.tag.external_id, seconds: this.config.history_seconds };
+        const success = await requestServer('/api/history/', 'GET', payload, /** @param {TagHistoryObject[]} data */ async (data) => {
+            // uPlot requires UNIX timestamps in seconds
+            this.xData = data.map(e => new Date(e.timestamp).getTime() / 1000);
+            this.yData = data.map(e => e.value);
+
+            this.onHistoryRecieved();
+            this._realData = true;
+        });
+
+        if (!success) {
+            console.error("Error initializing chart data.");
+            this.chartDiv.innerHTML = `<div class="error-msg">Error loading chart</div>`;
+        }
+
+        this._initializing = false;    
+    }
+
+    /**
+     * Called when initHistory is successful
+     */
+    onHistoryRecieved() {
+        return;
+    }
+
+    /**
+     * 
+     * Adds the value to `xData`/`yData`
+     * @inheritdoc
+     */
+    onValue(val, time) {
+        if (!this._realData) {
+            this.initHistory();
+            return;
+        }
+
+        const timeSec = new Date(time).getTime() / 1000;
+
+        this.xData.push(timeSec);
+        this.yData.push(val);
+
+        const cutoff = timeSec - this.config.history_seconds;
+
+        while (this.xData.length > 0 && this.xData[0] < cutoff) {
+            this.xData.shift();
+            this.yData.shift();
+        }
+    }
+
+    clear() {
+        //if(!this.realData) return;
+        this.xData = [];
+        this.yData = [];
+        this._realData = false;
+    }
+}
+
 // -------- Static Widgets --------
 
 class LabelWidget extends Widget { //TODO font size, formatting?
@@ -315,7 +404,6 @@ class BoolLabelWidget extends Widget {
     applyConfig() {
         super.applyConfig();
         this.onValue(false);
-        fitText(this.text_elem);
     }
 
     onValue(val) {
@@ -640,11 +728,86 @@ class NumberLabelWidget extends Widget {
     applyConfig() {
         super.applyConfig();
         this.clear();
-        fitText(this.text_elem);
     }
 
     onValue(val) {
         this.text_elem.textContent = this.config.prefix + val.toFixed(this.config.precision) + this.config.suffix;
+        fitText(this.text_elem);
+    }
+
+    onResize() {
+        fitText(this.text_elem);
+    }
+
+    clear() {
+        this.onValue(0);
+    }
+}
+
+class TimeLabelWidget extends Widget {
+    static allowedChannels = ["hr", "ir"];
+    static allowedTypes = ["int16", "uint16", "int32", "uint32"];
+    static _unitDisplayOptions = [
+        { display_name: "Always", value: "always" },
+        { display_name: "Auto", value: "auto" },
+        { display_name: "None", value: "" },
+    ];
+    static customFields = [
+        { name: "factor", type: "select", default: "0.001", label: "Input Format", options: [
+            { display_name: "Hours", value: "3600" },
+            { display_name: "Minutes", value: "60" },
+            { display_name: "Seconds", value: "1" },
+            { display_name: "Deciseconds", value: "0.1" },
+            { display_name: "Centiseconds", value: "0.01" },
+            { display_name: "Milliseconds", value: "0.001" },
+            { display_name: "Microseconds", value: "0.000001" },
+        ], description: "The expected time unit of the tag value." },
+        { name: "style", type: "select", default: "digital", label: "Output Format", options: [
+            { display_name: "Long", value: "long" },
+            { display_name: "Short", value: "short" },
+            { display_name: "Narrow", value: "narrow" },
+            { display_name: "Digital", value: "digital" },
+        ], description: "The style of the displayed time." },
+        { name: "hours", type: "select", default: "always", label: "Hours Display", options: TimeLabelWidget._unitDisplayOptions },
+        { name: "minutes", type: "select", default: "always", label: "Minutes Display", options: TimeLabelWidget._unitDisplayOptions },
+        { name: "seconds", type: "select", default: "always", label: "Seconds Display", options: TimeLabelWidget._unitDisplayOptions },
+        { name: "milliseconds", type: "select", default: "auto", label: "Milliseconds Display", options: TimeLabelWidget._unitDisplayOptions },
+        { name: "prefix", type: "text", default: "", label: "Value Prefix" },
+        { name: "suffix", type: "text", default: "", label: "Value Suffix" },
+    ];
+
+    constructor(gridElem, config, tag) {
+        super(gridElem, config, tag);
+        this.text_elem = this.elem.querySelector(".label_text");
+    }
+
+    applyConfig() {
+        super.applyConfig();
+        this.clear();
+    }
+
+    onValue(val) {
+        const totalSeconds = val * Number(this.config.factor);
+
+        const duration = { 
+            hours: this.config.hours ? Math.floor(totalSeconds / 3600) : undefined,
+            minutes: this.config.minutes ? Math.floor((totalSeconds % 3600) / 60) : undefined,
+            seconds: this.config.seconds ? Math.floor(totalSeconds % 60) : undefined,
+            milliseconds: this.config.milliseconds ? Math.floor(totalSeconds * 1000) % 1000 : undefined,
+        };
+        const style = {
+            style: this.config.style,
+            hoursDisplay: this.config.hours || undefined,
+            minutesDisplay: this.config.minutes || undefined,
+            secondsDisplay: this.config.seconds || undefined,
+            // Digital format requires fractionalDigits to force milliseconds, while the rest can use millisecondsDisplay
+            millisecondsDisplay: this.config.style !== "digital" ? this.config.milliseconds || undefined : undefined,
+            fractionalDigits: this.config.style === "digital" && this.config.milliseconds === "always" ? 3 : undefined,
+        }
+
+        const format = new Intl.DurationFormat("en-US", style);
+        this.text_elem.textContent = this.config.prefix + format.format(duration) + this.config.suffix;
+
         fitText(this.text_elem);
     }
 
@@ -713,7 +876,7 @@ class NumberInputWidget extends InputWidget {
     }
 }
 
-class ChartWidget extends Widget { 
+class ChartWidget extends HistoryWidget { 
     static allowedChannels = ["hr", "ir"]; 
     static allowedTypes = ["int16", "uint16", "int32", "uint32", "int64", "uint64", "float32", "float64"];
     static customFields = [
@@ -732,60 +895,12 @@ class ChartWidget extends Widget {
         this.chartDiv = this.elem.querySelector(".chart-container");
         this.pauseButton = this.elem.querySelector(".form-button");
         this.textColor = getComputedStyle(document.body).getPropertyValue('--text-main');
-        
-        this.realData = false;
         this.uplot = null;
-        this.xData = [];
-        this.yData = [];
-        
-        this.initPreview();
-
-        this.pauseButton.addEventListener("click", () => {
-            this.togglePaused();
-        });
+        this.pauseButton.addEventListener("click", () => this.togglePaused());
     }
 
-    /**
-     * Populate the chart with generated data
-     */
-    initPreview() {
-        const nowSec = Math.floor(Date.now() / 1000);
-        this.xData = [];
-        this.yData = [];
-        
-        for(let i=0; i<20; i++) {
-            this.xData.push(nowSec - (20-i));
-            this.yData.push(Math.sin(i/3) * 10);
-        }
-
+    onHistoryRecieved() {
         this._renderPlot();
-        this.realData = false;
-    }
-
-    /**
-     * Populate the chart with actual data from the server
-     */
-    async initHistory() {
-        if(this.initializing) return;
-
-        this.initializing = true;
-
-        const payload = { tags: this.tag.external_id, seconds: this.config.history_seconds };
-        const success = await requestServer('/api/history/', 'GET', payload, /** @param {TagHistoryObject[]} data */ async (data) => {
-            // uPlot requires UNIX timestamps in seconds
-            this.xData = data.map(e => new Date(e.timestamp).getTime() / 1000);
-            this.yData = data.map(e => e.value);
-
-            this._renderPlot();
-            this.realData = true;
-        });
-
-        if (!success) {
-            console.error("Error initializing chart data.");
-            this.chartDiv.innerHTML = `<div class="error-msg">Error loading chart</div>`;
-        }
-
-        this.initializing = false;    
     }
 
     /**
@@ -795,43 +910,27 @@ class ChartWidget extends Widget {
         this.paused = !this.paused;
         this.pauseButton.innerText = this.paused ? "⏵︎" : "⏸︎";
         this.pauseButton.title = this.paused ? "Play" : "Pause";
-        if(!this.paused && this.realData) {
+        if(!this.paused && this._realData) {
             this.initHistory();
         }
     }
 
     applyConfig() {
         super.applyConfig();
-        this._renderPlot();
+        this.clear();
     }
 
     onValue(val, time) {
-        if (!this.realData) {
-            this.initHistory();
+        if (this.paused)
             return;
-        }
 
-        if (this.paused) {
-            return;
-        }
-
-        const timeSec = new Date(time).getTime() / 1000;
-
-        this.xData.push(timeSec);
-        this.yData.push(val);
-
-        const cutoff = timeSec - this.config.history_seconds;
-
-        while (this.xData.length > 0 && this.xData[0] < cutoff) {
-            this.xData.shift();
-            this.yData.shift();
-        }
+        super.onValue(val, time);
 
         if (this.uplot) {
             this.uplot.setData([this.xData, this.yData]);
 
             // snap window to whole seconds
-            const max = Math.ceil(timeSec);
+            const max = Math.ceil(this.xData.at(-1));
             const min = max - this.config.history_seconds;
 
             this.uplot.setScale("x", {
@@ -842,23 +941,25 @@ class ChartWidget extends Widget {
     }
 
     onResize() {
-        if (this.uplot) {
-            this.uplot.setSize({
-                width: this.chartDiv.clientWidth,
-                height: this.chartDiv.clientHeight
-            });
-        }
+        this.uplot?.setSize({
+            width: this.chartDiv.clientWidth,
+            height: this.chartDiv.clientHeight
+        });
     }
 
     clear() {
-        if(!this.realData) return;
-        this.initPreview();
+        super.clear();
+        const nowSec = Math.floor(Date.now() / 1000);        
+        for(let i=0; i<20; i++) {
+            this.xData.push(nowSec - (20-i));
+            this.yData.push(Math.sin(i/3) * 10); // TODO use config max/min? idk
+        }
+        this._renderPlot();
     }
 
     _renderPlot() {
-        if (this.uplot) {
+        if (this.uplot)
             this.uplot.destroy();
-        }
 
         this.chartDiv.innerHTML = "";
 
@@ -1001,6 +1102,115 @@ class GaugeWidget extends Widget {
     }
 }
 
+class TrendWidget extends HistoryWidget { 
+    static allowedChannels = ["hr", "ir"]; 
+    static allowedTypes = ["int16", "uint16", "int32", "uint32", "int64", "uint64", "float32", "float64"];
+    static customFields = [
+        { name: "history_seconds", type: "number", default: 60, label: "History Length (s)",
+            description: "The time window used to calculate the rate of change trend.",
+        }, 
+        { name: "max_roc", type: "number", default: 10, label: "Max Rate (units per Rate Unit)",
+            description: "The rate of change that represents 100% magnitude (full arrow tilt)."
+        },
+        { name: "color_up", type: "color", default: "#2ecc71", label: "Rise Color" },
+        { name: "color_down", type: "color", default: "#e74c3c", label: "Fall Color" },
+        { name: "precision", type: "int", default: 2, label: "Decimal Places" },
+        { name: "rate_unit", type: "select", default: "min", label: "Rate Unit", options: [
+            { display_name: "Hours", value: "hour" },
+            { display_name: "Minutes", value: "min" },
+            { display_name: "Seconds", value: "sec" },
+        ], description: "The time unit used to display the rate of change." },
+        { name: "prefix", type: "text", default: "", label: "Value Prefix" },
+        { name: "suffix", type: "text", default: "", label: "Value Suffix" },
+    ]
+
+    constructor(gridElem, config, tag) {
+        super(gridElem, config, tag);
+        this.arrow = this.elem.querySelector(".trend-arrow");
+        this.rocLabel = this.elem.querySelector(".roc-label");
+    }
+
+    onHistoryRecieved() {
+        this.updateTrend();
+    }
+
+    applyConfig() {
+        super.applyConfig();
+        this.clear();
+    }
+
+    onValue(val, time) {
+        super.onValue(val, time);
+        this.updateTrend();
+    }
+
+    onResize() {
+        fitText(this.rocLabel.parentElement);
+        fitText(this.arrow.parentElement);
+    }
+
+    /**
+     * Computes the slope over all active points using Ordinary Least Squares
+     */
+    updateTrend() {
+        const n = this.xData.length;
+        if (n < 2) return;
+
+        let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+        
+        // Using a baseline (the oldest point) keeps numeric precision high for timestamps
+        const x0 = this.xData[0]; 
+
+        for (let i = 0; i < n; i++) {
+            const x = this.xData[i] - x0;
+            const y = this.yData[i];
+            sumX += x;
+            sumY += y;
+            sumXY += x * y;
+            sumXX += x * x;
+        }
+
+        const denominator = (n * sumXX - sumX * sumX);
+        
+        // If all points have the exact same timestamp, slope is vertical/undefined
+        if (denominator === 0) return;
+
+        // Slope per second (dx/dt)
+        const slopePerSecond = (n * sumXY - sumX * sumY) / denominator;
+
+        const roc = 
+            this.config.rate_unit === "sec" ? slopePerSecond : 
+            this.config.rate_unit === "min" ? slopePerSecond * 60 :
+            this.config.rate_unit === "hour" ? slopePerSecond * 3600 : 0;
+
+        this.setTrend(roc);
+    }
+
+    /**
+     * Updates the text label, rotates the arrow tangent to the slope, and updates color
+     */
+    setTrend(roc) {
+        // RoC label
+        const pct = Math.max(-1, Math.min(1, roc / this.config.max_roc));
+        const sign = roc > 0 ? "+" : "";
+        const rocStr = `${this.config.prefix}${sign}${roc.toFixed(this.config.precision)}${this.config.suffix}`
+        this.rocLabel.textContent = `${rocStr} / ${this.config.rate_unit}`;
+        fitText(this.rocLabel.parentElement);
+
+        // Arrow color & transform
+        const angle = pct * -90 + 90;
+        this.arrow.style.transform = `rotate(${angle}deg)`;
+        this.arrow.style.color = 
+            Math.abs(pct) < 0.05 ? "var(--text-main, #ffffff)" :
+            pct > 0 ? this.config.color_up : this.config.color_down;
+    }
+
+    clear() {
+        super.clear();
+        this.setTrend(0);
+    }
+}
+
 /**
  * Attempt to update an element font size to fit its parent rect
  * @param {HTMLElement} elem 
@@ -1016,7 +1226,7 @@ function fitText(elem) {
     const maxW = elem.clientWidth; 
 
     let low = 6;
-    let high = 96;
+    let high = 196;
     let optimalSize = low;
 
     while (low <= high) {
@@ -1057,9 +1267,11 @@ export const WidgetRegistry = {
     "bool_label" : BoolLabelWidget,
     "multi_label" : MultiLabelWidget,
     "number_label" : NumberLabelWidget,
+    "time_label" : TimeLabelWidget,
     "number_input" : NumberInputWidget,
     "chart": ChartWidget,
     "button" : ButtonWidget,
     "dropdown" : DropdownWidget,
     "gauge" : GaugeWidget,
+    "trend" : TrendWidget,
 };

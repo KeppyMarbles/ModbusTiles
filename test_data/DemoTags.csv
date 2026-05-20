@@ -10,3 +10,4 @@ SimulatedAHU,Supply Temp Setpoint,Target Supply Temperature,hr,float32,2,0,True,
 SimulatedAHU,HVAC Mode,HVAC Mode (Off/Cool/Heat),hr,uint16,4,0,True,False,0:00:01,0:00:00,c6905f17-3385-4b08-81c8-e52760100eb7
 SimulatedAHU,Fan Running Status,Feedback from fan VFD,di,bool,0,0,True,False,0:00:01,0:00:00,849d5fef-b201-4748-bc48-9afdaf4d43c7
 SimulatedAHU,Freeze Stat Alarm,Low temperature safety trip,di,bool,1,0,True,False,0:00:01,0:00:00,8bfd8281-55e9-40ae-acd1-4b29e32d27dd
+SimulatedAHU,Fan Runtime,Runtime of the fan in seconds,ir,uint32,10,0,True,False,0:00:01,0:00:00,f7c4a9df-7fa1-4fe8-90e3-8c38d9850d88

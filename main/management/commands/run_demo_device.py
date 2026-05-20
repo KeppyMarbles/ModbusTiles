@@ -84,6 +84,7 @@ class Command(BaseModbusSimulator):
             
             # Filter dirties over time
             self.filter_dirt += 0.0005
+            self.fan_runtime += self.interval
 
         else:
             supply_temp += (room_temp - supply_temp) * 0.2
@@ -107,6 +108,7 @@ class Command(BaseModbusSimulator):
 
         if fan_enable:
             self.write_tag(self.duct_pressure_tag, static_pressure)
+            self.write_tag(self.fan_runtime_tag, int(self.fan_runtime))
 
     def setup_simulation(self):
         user = BaseModbusSimulator.ensure_testuser()
@@ -139,6 +141,7 @@ class Command(BaseModbusSimulator):
         self.duct_pressure_tag = Tag.objects.get(alias="Duct Static Pressure")
         self.freeze_alarm_tag = Tag.objects.get(alias="Freeze Stat Alarm")
         self.mode_tag = Tag.objects.get(alias="HVAC Mode")
+        self.fan_runtime_tag = Tag.objects.get(alias="Fan Runtime")
 
         self.write_tag(self.supply_temp_tag, 75)
         self.write_tag(self.outdoor_temp_tag, 85)
@@ -147,6 +150,8 @@ class Command(BaseModbusSimulator):
         self.write_tag(self.cooling_valve_tag, 50)
         self.write_tag(self.heating_valve_tag, 50)
         self.write_tag(self.mode_tag, 1)
+        self.write_tag(self.fan_runtime_tag, 0)
 
         self.filter_dirt = 0.5
         self.cooling_active = False
+        self.fan_runtime = 0

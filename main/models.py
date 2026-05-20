@@ -460,6 +460,7 @@ class DashboardWidget(models.Model):
         BOOL_LABEL = "bool_label", "Boolean Label"
         MULTI_LABEL = "multi_label", "Multi-Value Label"
         NUMBER_LABEL = "number_label", "Number Label"
+        TIME_LABEL = "time_label", "Time Label"
         NUMBER_INPUT = "number_input", "Number Input"
         LINE_CHART = "chart", "Time-Series Chart"
         BUTTON = "button", "Button"
@@ -469,6 +470,7 @@ class DashboardWidget(models.Model):
         SLIDER = "slider", "Slider"
         DROPDOWN = "dropdown", "Dropdown"
         GAUGE = "gauge", "Radial Gauge"
+        TREND = "trend", "Trend Arrow"
 
     dashboard = models.ForeignKey(Dashboard, on_delete=models.CASCADE, related_name="widgets")
 

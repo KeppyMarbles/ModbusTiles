@@ -14,7 +14,10 @@
         "scale_x": 24,
         "scale_y": 1,
         "locked": false,
-        "showTagName": true
+        "showTagName": true,
+        "background_color": "",
+        "outline_color": "",
+        "text_color": ""
       }
     },
     {
@@ -28,7 +31,10 @@
         "color_on": "green",
         "color_off": "gray",
         "showTagName": true,
-        "locked": false
+        "locked": false,
+        "background_color": "",
+        "outline_color": "",
+        "text_color": ""
       }
     },
     {
@@ -42,7 +48,10 @@
         "scale_x": 2,
         "scale_y": 1,
         "locked": false,
-        "showTagName": false
+        "showTagName": false,
+        "background_color": "",
+        "outline_color": "",
+        "text_color": ""
       }
     },
     {
@@ -59,7 +68,11 @@
         "locked": false,
         "showTagName": true,
         "confirmation": false,
-        "precision": 2
+        "precision": 2,
+        "background_color": "",
+        "outline_color": "",
+        "text_color": "",
+        "button_color": ""
       }
     },
     {
@@ -79,7 +92,10 @@
         "step": 1,
         "prefix": "",
         "display_range": true,
-        "display_value": true
+        "display_value": true,
+        "background_color": "#cce5ff",
+        "outline_color": "",
+        "text_color": "#000000"
       }
     },
     {
@@ -98,7 +114,10 @@
         "suffix": "F",
         "locked": false,
         "showTagName": true,
-        "prefix": ""
+        "prefix": "",
+        "background_color": "",
+        "outline_color": "",
+        "text_color": ""
       }
     },
     {
@@ -119,7 +138,10 @@
         "showTagName": true,
         "plot_mode": "lines",
         "line_width": 2,
-        "show_grid": true
+        "show_grid": true,
+        "background_color": "",
+        "outline_color": "",
+        "text_color": ""
       }
     },
     {
@@ -128,11 +150,14 @@
       "config": {
         "text": "Maintenance / Diagnostics",
         "position_x": 0,
-        "position_y": 7,
+        "position_y": 11,
         "scale_x": 24,
         "scale_y": 1,
         "locked": false,
-        "showTagName": true
+        "showTagName": true,
+        "background_color": "",
+        "outline_color": "",
+        "text_color": ""
       }
     },
     {
@@ -145,7 +170,7 @@
         "low_value": 1,
         "optimum_value": 0,
         "position_x": 0,
-        "position_y": 8,
+        "position_y": 12,
         "scale_x": 8,
         "scale_y": 2,
         "suffix": " in.WC",
@@ -153,7 +178,10 @@
         "locked": false,
         "showTagName": true,
         "prefix": "",
-        "display_range": true
+        "display_range": true,
+        "background_color": "",
+        "outline_color": "",
+        "text_color": ""
       }
     },
     {
@@ -163,11 +191,14 @@
         "color_on": "red",
         "color_off": "gray",
         "position_x": 8,
-        "position_y": 8,
+        "position_y": 12,
         "scale_x": 2,
         "scale_y": 2,
         "locked": false,
-        "showTagName": true
+        "showTagName": true,
+        "background_color": "",
+        "outline_color": "",
+        "text_color": ""
       }
     },
     {
@@ -179,10 +210,13 @@
         "precision": 2,
         "prefix": "Outdoor Temperature: ",
         "suffix": "F",
-        "position_x": 11,
+        "position_x": 9,
         "position_y": 5,
         "scale_x": 4,
-        "scale_y": 1
+        "scale_y": 1,
+        "background_color": "",
+        "outline_color": "",
+        "text_color": ""
       }
     },
     {
@@ -195,7 +229,10 @@
         "position_x": 20,
         "position_y": 1,
         "scale_x": 4,
-        "scale_y": 1
+        "scale_y": 1,
+        "background_color": "",
+        "outline_color": "",
+        "text_color": ""
       }
     },
     {
@@ -215,7 +252,10 @@
         "position_x": 20,
         "position_y": 4,
         "scale_x": 4,
-        "scale_y": 1
+        "scale_y": 1,
+        "background_color": "#ffdba8",
+        "outline_color": "",
+        "text_color": ""
       }
     },
     {
@@ -242,7 +282,10 @@
         "position_x": 20,
         "position_y": 2,
         "scale_x": 2,
-        "scale_y": 1
+        "scale_y": 1,
+        "background_color": "",
+        "outline_color": "",
+        "text_color": ""
       }
     },
     {
@@ -254,9 +297,58 @@
         "precision": 2,
         "prefix": "Room Temperature: ",
         "suffix": "F",
-        "position_x": 15,
+        "position_x": 13,
         "position_y": 5,
         "scale_x": 4,
+        "scale_y": 1,
+        "background_color": "",
+        "outline_color": "",
+        "text_color": ""
+      }
+    },
+    {
+      "tag": "586f0e20-306e-4f1e-a0a6-7d6a74b652d8",
+      "widget_type": "trend",
+      "config": {
+        "locked": false,
+        "showTagName": true,
+        "background_color": "",
+        "outline_color": "",
+        "text_color": "",
+        "history_seconds": 20,
+        "max_roc": 2,
+        "color_up": "#ff6600",
+        "color_down": "#424fff",
+        "precision": 2,
+        "position_x": 17,
+        "position_y": 5,
+        "scale_x": 2,
+        "scale_y": 2,
+        "rate_unit": "sec",
+        "prefix": "",
+        "suffix": "F"
+      }
+    },
+    {
+      "tag": "f7c4a9df-7fa1-4fe8-90e3-8c38d9850d88",
+      "widget_type": "time_label",
+      "config": {
+        "locked": false,
+        "showTagName": true,
+        "background_color": "",
+        "outline_color": "",
+        "text_color": "",
+        "factor": "1",
+        "style": "narrow",
+        "hours": "always",
+        "minutes": "always",
+        "seconds": "always",
+        "milliseconds": "auto",
+        "prefix": "",
+        "suffix": "",
+        "position_x": 0,
+        "position_y": 4,
+        "scale_x": 2,
         "scale_y": 1
       }
     }
