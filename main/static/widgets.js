@@ -41,12 +41,6 @@ export class Widget {
     static customFields = [];
 
     /**
-     * Subclass-specific fields which change form input based on tag datatype
-     * @type {InspectorFieldDefinition[]}
-     */
-    static tagTypedFields = [];
-
-    /**
      * @param {HTMLElement} gridElem 
      * @param {Object} config 
      * @param {TagObject} tag 
@@ -54,7 +48,7 @@ export class Widget {
     constructor(gridElem, config, tag) {      
         // Apply defaults
         if(!config) config = {};
-        const allFields = [...(new.target.defaultFields), ...(new.target.customFields), ...(new.target.tagTypedFields)];
+        const allFields = [...(new.target.defaultFields), ...(new.target.customFields)];
         allFields.forEach(field => {
             if(config[field.name] === undefined)
                 config[field.name] = field.default;
@@ -244,7 +238,7 @@ class InputWidget extends Widget {
         else {
             // Write request submission failed
             this.onValue(this.lastValue);
-            flashBool(this.elem, false);
+            flashBool(this.elem.parentElement, false);
         }
     }
 
@@ -273,12 +267,14 @@ class InputWidget extends Widget {
 /**
  * Abstract class for a widget that uses tag history values.
  * 
+ * Populates `xData` and `yData` arrays as values arrive from the server.
+ * Automatically shifts this data to the `history_seconds` window.
  * @abstract
  */
 class HistoryWidget extends Widget {
     static defaultFields = [ ...Widget.defaultFields,
         { name: "history_seconds", type: "number", default: 60, label: "History Length (s)",
-            description: "The amount of time that the chart should display.",
+            description: "The maximum age of values that this widget should use.",
         },
     ];
 
@@ -333,7 +329,7 @@ class HistoryWidget extends Widget {
      * @inheritdoc
      */
     onValue(val, time) {
-        if (!this._realData) {
+        if (!this._realData) { // Add the previous values first, if we don't have them
             this.initHistory();
             return;
         }
@@ -351,6 +347,12 @@ class HistoryWidget extends Widget {
         }
     }
 
+    /**
+     * 
+     * Clears `xData` and `yData`. 
+     * Fake data can be safely added here, as it will be discarded the next time values are recieved.
+     * @inheritdoc
+     */
     clear() {
         //if(!this.realData) return;
         this.xData = [];
@@ -477,19 +479,23 @@ class ButtonWidget extends InputWidget {
     static allowedChannels = ["coil", "hr"];
     static allowedTypes = ["bool", "int16", "uint16", "int32", "uint32", "int64", "uint64", "float32", "float64", "string"];
     static customFields = [
+        { name: "submit_value", type: "text", default: "", label: "Submit Value", 
+            description: "The value to write to the tag when clicked. Use 'true' or 'false' for boolean values."
+        },
         { name: "button_text", type: "text", default: "Button Text", label: "Button Text" },
         { name: "button_color", type: "color", default: "", label: "Button Color" },
-    ]
-    static tagTypedFields = [
-        { name: "submit_value", default: "", label: "Submit Value",
-            description: "The value to write to the tag when clicked."
-        }
     ]
 
     constructor(gridElem, config, tag) {
         super(gridElem, config, tag);
         this.button = this.elem.querySelector(".form-button");
-        this.button.addEventListener("click", async () => this.trySubmit(this.config.submit_value));
+        this.button.addEventListener("click", async () => {
+            if(this.config.submit_value === "" || this.config.submit_value === undefined) return;
+            this.trySubmit(this.tag.data_type === "bool" 
+                ? ["true", "1"].includes(this.config.submit_value.toLowerCase())  
+                : Number(this.config.submit_value)
+            );
+        });
     }
 
     applyConfig() {
@@ -881,9 +887,6 @@ class ChartWidget extends HistoryWidget {
     static allowedTypes = ["int16", "uint16", "int32", "uint32", "int64", "uint64", "float32", "float64"];
     static customFields = [
         { name: "title", type: "text", default: "Tag History", label: "Title" },
-        { name: "history_seconds", type: "number", default: 60, label: "History Length (s)",
-            description: "The amount of time that the chart should display.",
-        }, 
         { name: "line_color", type: "color", default: "#17BECF", label: "Line Color" },
         { name: "line_width", type: "number", default: 2, label: "Line Width" },
         { name: "y_min", type: "number", default: null, label: "Y Min" },
@@ -933,10 +936,7 @@ class ChartWidget extends HistoryWidget {
             const max = Math.ceil(this.xData.at(-1));
             const min = max - this.config.history_seconds;
 
-            this.uplot.setScale("x", {
-                min,
-                max
-            });
+            this.uplot.setScale("x", { min, max });
         }
     }
 
@@ -1106,9 +1106,6 @@ class TrendWidget extends HistoryWidget {
     static allowedChannels = ["hr", "ir"]; 
     static allowedTypes = ["int16", "uint16", "int32", "uint32", "int64", "uint64", "float32", "float64"];
     static customFields = [
-        { name: "history_seconds", type: "number", default: 60, label: "History Length (s)",
-            description: "The time window used to calculate the rate of change trend.",
-        }, 
         { name: "max_roc", type: "number", default: 10, label: "Max Rate (units per Rate Unit)",
             description: "The rate of change that represents 100% magnitude (full arrow tilt)."
         },
@@ -1245,6 +1242,7 @@ function fitText(elem) {
     optimalSize *= 0.8;
     elem.style.fontSize = optimalSize + "px";
 }
+
 /**
  * Create a red or green pulse on an element
  * @param {HTMLElement} elem 

@@ -99,8 +99,9 @@ export class Inspector {
      * @param {*} currentValue The value to set in the input
      * @param {(val: *)} [onChange] The callback that recieves the new data when input changes
      * @param {HTMLElement} [section] The element to append the field to, typically from `addSection`
+     * @param {boolean} [isMixed] Whether the field has divergent values across multiple widgets
      */
-    addField(def, currentValue, onChange, section) {
+    addField(def, currentValue, onChange, section, isMixed = false) {
         const wrapper = document.createElement('div');
         wrapper.className = "input-group";
 
@@ -113,18 +114,24 @@ export class Inspector {
 
         // Delegate rendering strategy
         if (def.type === "select")
-            inputObj = this._createSelect(def.options, currentValue, def.default);
+            inputObj = this._createSelect(def.options, currentValue, def.default, isMixed, def.label);
         else if (def.type === "enum")
-            inputObj = this._createEnum(currentValue, onChange);
+            inputObj = this._createEnum(currentValue, onChange, isMixed);
         else
-            inputObj = this._createSimpleInput(def.type, currentValue);
+            inputObj = this._createSimpleInput(def.type, currentValue, isMixed);
 
         if (def.type === "bool")
             label.classList.add("bool");
 
         // Hook up change listeners
-        if (onChange)
-            inputObj.element.addEventListener('change', () => onChange(inputObj.getValue()));
+        if (onChange && def.type !== "enum") {
+            inputObj.element.addEventListener('change', () => {
+                if (def.type === "bool") {
+                    inputObj.element.indeterminate = false;
+                }
+                onChange(inputObj.getValue());
+            });
+        }
 
         // Add elements
         label.appendChild(inputObj.element);
@@ -139,23 +146,30 @@ export class Inspector {
      * @param {ChoiceObject[]} options 
      * @param {*} currentValue
      * @param {*} defaultValue
+     * @param {boolean} isMixed
+     * @param {string} label
      */
-    _createSelect(options, currentValue, defaultValue) {
+    _createSelect(options, currentValue, defaultValue, isMixed, label) {
         const select = document.createElement("select");
         select.classList.add("form-input");
         
-        // Default "Select" option
-        const defaultOpt = document.createElement('option');
-        defaultOpt.text = "Select";
-        defaultOpt.value = defaultValue;
-        select.appendChild(defaultOpt);
+        const defaultOption = document.createElement('option');
+        if (isMixed) {
+            defaultOption.text = "— Mixed Values —";
+            defaultOption.value = "";
+            defaultOption.selected = true;
+        } else {
+            defaultOption.text = "Select";
+            defaultOption.value = defaultValue;
+        }
+        select.appendChild(defaultOption);
 
         if (options) {
             options.forEach(opt => {
                 const el = document.createElement('option');
                 el.value = opt.value;
                 el.text = opt.display_name;
-                if(opt.value === currentValue) el.selected = true;
+                if (!isMixed && opt.value === currentValue) el.selected = true;
                 select.appendChild(el);
             });
         }
@@ -170,11 +184,16 @@ export class Inspector {
      * 
      * @param {string} type 
      * @param {*} currentValue 
+     * @param {boolean} isMixed
      */
-    _createSimpleInput(type, currentValue) {
+    _createSimpleInput(type, currentValue, isMixed) {
         const input = document.createElement("input");
         input.classList.add("form-input");
-        input.value = currentValue ?? "";
+        input.value = isMixed ? "" : (currentValue ?? "");
+
+        if (isMixed && type !== "bool") {
+            input.placeholder = "— Mixed Values —";
+        }
 
         let getValue;
 
@@ -182,7 +201,11 @@ export class Inspector {
             case "bool":
                 input.classList.add("bool");
                 input.type = 'checkbox';
-                input.checked = currentValue;
+                if (isMixed) {
+                    input.indeterminate = true;
+                } else {
+                    input.checked = !!currentValue;
+                }
                 getValue = () => input.checked;
                 break;
 
@@ -219,9 +242,10 @@ export class Inspector {
      * Create an entry for managing multiple key/value pairs
      * @param {*} currentValue 
      * @param {(val: *)} onChange 
+     * @param {boolean} isMixed
      * @returns 
      */
-    _createEnum(currentValue, onChange) {
+    _createEnum(currentValue, onChange, isMixed) {
         const container = document.createElement('div');
         const rowsContainer = document.createElement('div');
 
@@ -229,10 +253,12 @@ export class Inspector {
             /** @type {ChoiceObject[]} */
             const real_kvs = [];
             Array.from(rowsContainer.children).forEach(row => {
-                real_kvs.push({
-                    display_name: row.key_input.value,
-                    value: row.value_input.value
-                });
+                if (row.key_input && row.value_input) {
+                    real_kvs.push({
+                        display_name: row.key_input.value,
+                        value: row.value_input.value
+                    });
+                }
             });
             return real_kvs;
         };
@@ -278,14 +304,28 @@ export class Inspector {
             rowsContainer.appendChild(row);
         };
 
-        // Init existing rows
-        (currentValue || []).forEach(kv => createRow(kv.display_name, kv.value));
+        if (isMixed) {
+            const placeholder = document.createElement('div');
+            placeholder.style.color = "var(--text-muted, gray)";
+            placeholder.innerText = "— Mixed Choices —";
+            rowsContainer.appendChild(placeholder);
+        } else {
+            // Init existing rows
+            (currentValue || []).forEach(kv => createRow(kv.display_name, kv.value));
+        }
 
         // Add Button
         const addBtn = document.createElement("button");
         addBtn.className = "form-input";
         addBtn.innerText = "+";
-        addBtn.onclick = () => { createRow("", ""); onChange(getValue()); };
+        addBtn.onclick = () => {
+            if (isMixed) {
+                rowsContainer.innerHTML = '';
+                isMixed = false;
+            }
+            createRow("", "");
+            if (onChange) onChange(getValue());
+        };
 
         container.appendChild(rowsContainer);
         container.appendChild(addBtn);
@@ -294,75 +334,96 @@ export class Inspector {
     }
 
     /**
-     * Populate the form with properties of a given widget
-     * @param {Widget} widget 
+     * Populate the form with intersecting properties of multiple widgets
+     * @param {Widget[]} widgets 
      */
-    inspectWidget(widget) {
-        /** @type {typeof Widget} */
-        const widgetClass = widget.constructor;
-
+    inspectWidgets(widgets) {
         this.clear();
-        this.addTitle(widget.gridElem.title);
+        if (!widgets || widgets.length === 0) return;
 
-        /**
-         * Helper to add widget config related fields
-         * @param {InspectorFieldDefinition} field 
-         * @param {HTMLElement} section 
-         */
-        const createConfigField = (field, section) => {
-            this.addField(field, widget.config[field.name], (newVal) => {
-                widget.config[field.name] = newVal;
-                widget.applyConfig(); // Visual update
-            }, section);
-        }
+        this.addTitle(widgets.length > 1 ? `Editing ${widgets.length} Widgets` : `Editing ${widgets[0].gridElem.title}`);
 
-        // Add tag section
-        if(widgetClass.allowedChannels.length > 0) {
+        const widgetClasses = widgets.map(w => w.constructor);
+        const firstClass = widgetClasses[0];
+
+        // Find channels allowed by ALL selected widgets
+        const sharedChannels = firstClass.allowedChannels.filter(channel =>
+            widgetClasses.every(wClass => wClass.allowedChannels.includes(channel))
+        );
+
+        // Find data types allowed by ALL selected widgets
+        const sharedTypes = firstClass.allowedTypes.filter(type =>
+            widgetClasses.every(wClass => wClass.allowedTypes.includes(type))
+        );
+
+        // Only render the tag dropdown if there is a common baseline for compatibility
+        if (sharedChannels.length > 0 && sharedTypes.length > 0) {
             const tagSection = this.addSection();
-            const tagTypedFieldsContainer = document.createElement('div');
 
-            /**
-             * Helper to create tag-dependent fields
-             * @param {TagObject} tag 
-             */
-            const createTagTypedFields = (tag) => {
-                tagTypedFieldsContainer.innerHTML = "";
-
-                if(!tag || widgetClass.tagTypedFields.length === 0)
-                    return;
-                
-                // Add new inputs
-                const newFieldType = Inspector.getFieldType(tag.data_type);
-                
-                widgetClass.tagTypedFields.forEach(field => {
-                    createConfigField({ ...field, "type": newFieldType }, tagTypedFieldsContainer);
-                });
-            }
-
-            // Create dropdown with tags that are compatible with this widget
+            // Filter global tags down to only those matching the shared criteria
             const compatibleTags = Object.values(serverCache.tags).filter(tag => {
-                return widgetClass.allowedTypes.includes(tag.data_type) 
-                    && widgetClass.allowedChannels.includes(tag.channel);
+                return sharedTypes.includes(tag.data_type) && sharedChannels.includes(tag.channel);
             });
-            const tagOptions = compatibleTags.map(tag => ({ value: tag.external_id, display_name: Inspector.getTagLabel(tag) }));
 
-            this.addField({ label: "Control Tag", type: "select", options: tagOptions }, widget.tag?.external_id, (newID) => {
-                widget.tag = serverCache.tags[newID];
-                widget.applyConfig();
-                createTagTypedFields(widget.tag); // Update the tag based fields
-            }, tagSection);
+            const tagOptions = compatibleTags.map(tag => ({
+                value: tag.external_id,
+                display_name: Inspector.getTagLabel(tag)
+            }));
+
+            // Determine if they currently share the same tag, or if it's mixed
+            const firstTagID = widgets[0].tag?.external_id;
+            const isTagMixed = !widgets.every(w => w.tag?.external_id === firstTagID);
+            const currentTagValue = isTagMixed ? "" : firstTagID;
             
-            // Add tag-dependent fields
-            createTagTypedFields(widget.tag);
-            tagSection.appendChild(tagTypedFieldsContainer);
+            const tagDef = { label: "Control Tag", type: "select", options: tagOptions };
+            const onChange = (newID) => {
+                const selectedTag = serverCache.tags[newID];
+                widgets.forEach(w => {
+                    w.tag = selectedTag;
+                    w.applyConfig();
+                });
+            };
+
+            this.addField(tagDef, currentTagValue, onChange, tagSection, isTagMixed);
         }
 
-        // Add rest of fields
-        const customFieldsSection = this.addSection();
-        widgetClass.customFields.forEach(field => { createConfigField(field, customFieldsSection) });
+        // Compute intersecting fields across all selected widgets
+        const getSharedFields = (fieldKey) => {
+            return (firstClass[fieldKey] || []).filter(field =>
+                widgetClasses.every(wc => (wc[fieldKey] || []).some(f => f.name === field.name))
+            );
+        };
 
-        const defaultFieldsSection = this.addSection();
-        widgetClass.defaultFields.forEach(field => { createConfigField(field, defaultFieldsSection) });
+        // Helper to check mixed values and render intersecting fields
+        const renderFields = (fields, section) => {
+            fields.forEach(field => {
+                // Gather values for this field across all selected widgets
+                const values = widgets.map(w => w.config[field.name]);
+                const uniqueValues = new Set(values.map(v => typeof v === 'object' ? JSON.stringify(v) : v));
+                const isMixed = uniqueValues.size > 1;
+                const currentValue = isMixed ? "" : values[0];
+
+                const onChange = (newVal) => {
+                    widgets.forEach(w => {
+                        w.config[field.name] = newVal;
+                        w.applyConfig();
+                    });
+                };
+
+                this.addField(field, currentValue, onChange, section, isMixed);
+            });
+        };
+
+        // Render fields into their respective sections
+        const customSection = this.addSection();
+        const defaultSection = this.addSection();
+
+        renderFields(getSharedFields('customFields'), customSection);
+        renderFields(getSharedFields('defaultFields'), defaultSection);
+
+        // Clean up empty section wrappers if no fields intersected
+        if (customSection.children.length === 0) customSection.remove();
+        if (defaultSection.children.length === 0) defaultSection.remove();
     }
 
     /**

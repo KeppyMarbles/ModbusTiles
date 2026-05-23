@@ -21,11 +21,14 @@ export class Dashboard {
         /** @type {boolean} */
         this.isDirty = false;
 
-        /** @type {Widget | null} */
-        this.selectedWidget = null;
+        ///** @type {Widget | null} */
+        //this.selectedWidget = null;
 
         /** @type {Set<Widget>} */
         this.widgets = new Set();
+
+        /** @type {Set<Widget>} */
+        this.selectedWidgets = new Set();
 
         /** @type {TagListener} The WebSocket listener to register Widgets to */
         this.listener = new TagListener();
@@ -51,20 +54,42 @@ export class Dashboard {
         // Init
         this._setupEvents();
         this.load(alias);
+
+        this.testWidgets = [];
     }
 
     _setupEvents() {
         // Widget selection
         this.widgetGrid.addEventListener('click', (e) => {
             if(!this.editMode) return;
+            if(e.target.classList.contains("ui-resizable-handle")) return;
 
-            const gridEl = e.target.closest('.palette-item');
+            /** @type {Widget?} */
+            const widget = e.target.closest('.palette-item')?.widgetInstance;
 
-            if(gridEl && gridEl.widgetInstance)
-                this.selectWidget(gridEl.widgetInstance);
+            if(widget) {
+                if(e.shiftKey) {
+                    if(this.selectedWidgets.has(widget))
+                        this.selectedWidgets.delete(widget);
+                    else
+                        this.selectedWidgets.add(widget);
+                }
+                else {
+                    this.selectedWidgets.clear();
+                    this.selectedWidgets.add(widget);
+                }
+                if(dashboardEdit) // TODO this is weird
+                    activateTab(document.getElementById('inspect-button'));
+            }
+            else {
+                this.selectedWidgets.clear();
+            }
+            this.widgets.forEach(w => w.gridElem.classList.toggle("selected", this.selectedWidgets.has(w)));
 
-            else if(this.selectedWidget)
-                this.selectWidget(null);
+            if(this.selectedWidgets.size > 0)
+                this.inspector.inspectWidgets([...this.selectedWidgets]);
+            else
+                this.inspector.inspectDashboard(this);
         });
 
         // Widget deletion
@@ -218,7 +243,6 @@ export class Dashboard {
 
         this.editMode = flag;
         this.listener.clear();
-        this.selectWidget(null);
 
         if(this.editMode) {
             document.body.classList.add('edit-mode');
@@ -239,32 +263,6 @@ export class Dashboard {
 
             this.widgets.forEach(widget => this.listener.registerWidget(widget));
             this.listener.connect();
-        }
-    }
-
-    /**
-     * Highlight and inspect the widget, or deselect and inspect the dashboard if already selected
-     * @param {Widget} widget 
-     * @returns 
-     */
-    selectWidget(widget) {
-        if(this.selectedWidget) {
-            this.selectedWidget.gridElem.classList.remove("selected");
-            if(this.selectedWidget === widget) {
-                this.selectWidget(null);
-                return;
-            }
-        }
-        this.selectedWidget = widget;
-
-        if(widget) {
-            widget.gridElem.classList.add("selected")
-            this.inspector.inspectWidget(widget);
-            if(dashboardEdit)
-                activateTab(document.getElementById('inspect-button'));
-        }
-        else {
-            this.inspector.inspectDashboard(this);
         }
     }
 
@@ -495,25 +493,19 @@ alarmForm.inspectAlarm();
 const scheduleForm = new Inspector(document.getElementById('schedule-form'));
 scheduleForm.inspectSchedule();
 
+const alias = document.getElementById('dashboard-container').dataset.alias; // Set by Django
+const dashboard = new Dashboard(alias);
+
 let dashboardEdit = true;
 
 document.getElementById("context-button").addEventListener('click', () => {
     dashboardEdit = !dashboardEdit;
-    if(dashboardEdit) {
-        document.getElementById("dashboard-tabs").classList.remove("hidden");
-        document.getElementById("system-tabs").classList.add("hidden");
-        document.getElementById("editor-name").innerText = "Dashboard Editor";
-        document.getElementById("context-button").innerText = ">";
-        activateTab(document.getElementById("add-button"));
-    }
-    else {
-        document.getElementById("dashboard-tabs").classList.add("hidden");
-        document.getElementById("system-tabs").classList.remove("hidden");
-        document.getElementById("editor-name").innerText = "System Editor";
-        document.getElementById("context-button").innerText = "<";
-        activateTab(document.getElementById("tag-button"));
-    }
+    document.getElementById("dashboard-tabs").classList.toggle("hidden", !dashboardEdit);
+    document.getElementById("system-tabs").classList.toggle("hidden", dashboardEdit);
+    document.getElementById("editor-name").innerText = dashboardEdit ? "Dashboard Editor" : "System Editor";
+    document.getElementById("context-button").innerText = dashboardEdit ? ">" : "<";
+    activateTab(dashboardEdit ? 
+        dashboard.selectedWidgets.size === 0 ? document.getElementById("add-button") : document.getElementById("inspect-button") :
+        document.getElementById("tag-button")
+    )
 })
-
-const alias = document.getElementById('dashboard-container').dataset.alias; // Set by Django
-const dashboard = new Dashboard(alias);

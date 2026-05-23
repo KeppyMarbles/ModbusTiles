@@ -353,7 +353,7 @@
         "position_y": 4,
         "scale_x": 2,
         "scale_y": 1,
-        "submit_value": true,
+        "submit_value": "true",
         "confirmation": true,
         "button_text": "Test Button",
         "locked": false,
