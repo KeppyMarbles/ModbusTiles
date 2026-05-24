@@ -438,6 +438,7 @@ export class Inspector {
 
         const dashboardPropertiesSection = this.addSection();
         this.addField({ label: "Columns", type: "int" }, dashboard.config.column_count, (value) => dashboard.setColumnCount(value), dashboardPropertiesSection);
+        this.addField({ label: "Background Color", type: "color" }, dashboard.config.background_color, (value) => dashboard.setColor(value), dashboardPropertiesSection);
 
         const saveSection = this.addSection();
         this.addButton("Save Dashboard", () => dashboard.save(), saveSection);

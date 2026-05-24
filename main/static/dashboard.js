@@ -333,6 +333,8 @@ export class Dashboard {
             this.config = meta.config || { column_count: 20, description: "", title: "" };
 
             // Set up recieved info
+            if(this.config.backgroundColor)
+                this.setColor(this.config.backgroundColor);
             this.setupWidgets(widgets, this.config.column_count);
 
             if(widgets.length === 0) {
@@ -552,6 +554,11 @@ export class Dashboard {
         this.undoStack.push(this.getState());
         const nextState = this.redoStack.pop();
         this.restoreState(nextState);
+    }
+
+    setColor(value) {
+        document.body.style.backgroundColor = value;
+        this.config.backgroundColor = value;
     }
 }
 
