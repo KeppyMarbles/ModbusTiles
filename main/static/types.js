@@ -147,4 +147,10 @@
  * @typedef {DashboardObject & { widgets: DashboardWidgetInfoObject[] }} DashboardConfigObject
  */
 
+/**
+ * @typedef {Object} DashboardStateObject
+ * @property {DashboardConfigObject} config
+ * @property {string[]} selection
+ */
+
 export {};

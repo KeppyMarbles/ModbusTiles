@@ -114,7 +114,7 @@ export class Inspector {
 
         // Delegate rendering strategy
         if (def.type === "select")
-            inputObj = this._createSelect(def.options, currentValue, def.default, isMixed, def.label);
+            inputObj = this._createSelect(def.options, currentValue, def.default, isMixed);
         else if (def.type === "enum")
             inputObj = this._createEnum(currentValue, onChange, isMixed);
         else
@@ -124,14 +124,8 @@ export class Inspector {
             label.classList.add("bool");
 
         // Hook up change listeners
-        if (onChange && def.type !== "enum") {
-            inputObj.element.addEventListener('change', () => {
-                if (def.type === "bool") {
-                    inputObj.element.indeterminate = false;
-                }
-                onChange(inputObj.getValue());
-            });
-        }
+        if (onChange)
+            inputObj.element.addEventListener('change', () => onChange(inputObj.getValue()));
 
         // Add elements
         label.appendChild(inputObj.element);
@@ -147,9 +141,8 @@ export class Inspector {
      * @param {*} currentValue
      * @param {*} defaultValue
      * @param {boolean} isMixed
-     * @param {string} label
      */
-    _createSelect(options, currentValue, defaultValue, isMixed, label) {
+    _createSelect(options, currentValue, defaultValue, isMixed) {
         const select = document.createElement("select");
         select.classList.add("form-input");
         
@@ -336,8 +329,9 @@ export class Inspector {
     /**
      * Populate the form with intersecting properties of multiple widgets
      * @param {Widget[]} widgets 
+     * @param {()} [onFieldChanged]
      */
-    inspectWidgets(widgets) {
+    inspectWidgets(widgets, onFieldChanged) {
         this.clear();
         if (!widgets || widgets.length === 0) return;
 
@@ -377,6 +371,8 @@ export class Inspector {
             
             const tagDef = { label: "Control Tag", type: "select", options: tagOptions };
             const onChange = (newID) => {
+                if(onFieldChanged)
+                    onFieldChanged();
                 const selectedTag = serverCache.tags[newID];
                 widgets.forEach(w => {
                     w.tag = selectedTag;
@@ -404,6 +400,8 @@ export class Inspector {
                 const currentValue = isMixed ? "" : values[0];
 
                 const onChange = (newVal) => {
+                    if(onFieldChanged)
+                        onFieldChanged();
                     widgets.forEach(w => {
                         w.config[field.name] = newVal;
                         w.applyConfig();

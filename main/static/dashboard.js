@@ -4,7 +4,7 @@ import { GridStack } from "./lib/gridstack.js";
 import html2canvas from "./lib/html2canvas.esm.js";
 import { refreshData, requestServer, serverCache } from "./global.js";
 import { Inspector } from "./inspector.js";
-/** @import { DashboardWidgetInfoObject, DashboardConfigObject, DashboardObject } from "./types.js" */
+/** @import { DashboardWidgetInfoObject, DashboardConfigObject, DashboardObject, DashboardStateObject } from "./types.js" */
 /** @import { Widget } from "./widgets.js" */
 
 /**
@@ -20,9 +20,6 @@ export class Dashboard {
 
         /** @type {boolean} */
         this.isDirty = false;
-
-        ///** @type {Widget | null} */
-        //this.selectedWidget = null;
 
         /** @type {Set<Widget>} */
         this.widgets = new Set();
@@ -48,14 +45,19 @@ export class Dashboard {
         /** @type {HTMLButtonElement} */
         this.fileInput = null;
 
+        /** @type {ResizeObserver} */
         this.resizeObserver = new ResizeObserver(() => this.updateSquareCells());
         this.resizeObserver.observe(this.widgetGrid);
+
+        /** @type {DashboardStateObject[]} */
+        this.undoStack = [];
+
+        /** @type {DashboardStateObject[]} */
+        this.redoStack = [];
 
         // Init
         this._setupEvents();
         this.load(alias);
-
-        this.testWidgets = [];
     }
 
     _setupEvents() {
@@ -84,20 +86,30 @@ export class Dashboard {
             else {
                 this.selectedWidgets.clear();
             }
-            this.widgets.forEach(w => w.gridElem.classList.toggle("selected", this.selectedWidgets.has(w)));
 
-            if(this.selectedWidgets.size > 0)
-                this.inspector.inspectWidgets([...this.selectedWidgets]);
-            else
-                this.inspector.inspectDashboard(this);
+            this.updateSelection();
         });
 
-        // Widget deletion
+        // Hotkeys
         document.addEventListener('keydown', (e) => {
-            if (this.editMode && this.selectedWidget) {
+            if (this.editMode) {
+                if (e.ctrlKey) {
+                    if(e.key === 'z') {
+                        e.preventDefault();
+                        this.undo();
+                    }
+                    if(e.key === 'y') {
+                        e.preventDefault();
+                        this.redo();
+                    }
+                    else if(e.key === 's') {
+                        e.preventDefault();
+                        this.save();
+                    }
+                }
                 if (e.key === 'Delete') {
-                    e.preventDefault(); 
-                    this.canvasGridStack.removeWidget(this.selectedWidget.gridElem); //TODO how to guarantee widget class instance is deleted?
+                    e.preventDefault();
+                    this.deleteSelection();
                 }
             }
         });
@@ -115,7 +127,6 @@ export class Dashboard {
         });
 
         // Window events
-        //window.addEventListener('resize', () => this.updateSquareCells());
         window.addEventListener("beforeunload", (event) => {
             if (this.isDirty) {
                 event.preventDefault();
@@ -148,6 +159,10 @@ export class Dashboard {
 
         // Handle drag and drop, deletion
         this.canvasGridStack.on('added change removed', (event, items) => {
+            console.log('something changing...');
+            if(!this._settingUp) {
+                this.pushState();
+            }
             items.forEach(item => {
                 /** @type {Widget} */
                 let widget = item.el.widgetInstance;
@@ -169,13 +184,13 @@ export class Dashboard {
 
                     case 'removed':
                         this.widgets.delete(widget);
-                        if(widget == this.selectedWidget)
-                            this.selectWidget(null);
                         break;
                 }
             });
+
             if(this.editMode)
                 this.isDirty = true; // Prompt page exit
+
         });
 
         // Set grid 1:1 aspect ratio
@@ -187,15 +202,19 @@ export class Dashboard {
      * @param {DashboardWidgetInfoObject[]} widgetData 
      * @param {number} columnCount
      */
-    async setupWidgets(widgetData, columnCount) {
+    setupWidgets(widgetData, columnCount) {
+        this._settingUp = true;
+        
         this.canvasGridStack ? this.setColumnCount(columnCount) : this._setupGridStack(columnCount);
-
         this.canvasGridStack.removeAll();
         this.listener.clear();
 
         // Add widgets to the gridstack grid
+        this.canvasGridStack.batchUpdate();
         widgetData.forEach(wData => this.createWidget(wData.widget_type, serverCache.tags[wData.tag], wData.config));
-        console.log("Widgets:", this.widgets);
+        this.canvasGridStack.batchUpdate(false);
+
+        this._settingUp = false;
     }
 
     /**
@@ -314,7 +333,7 @@ export class Dashboard {
             this.config = { alias: alias, title: meta.title, description: meta.description, column_count: meta.column_count };
 
             // Set up recieved info
-            await this.setupWidgets(widgets, this.config.column_count);
+            this.setupWidgets(widgets, this.config.column_count);
 
             if(widgets.length === 0) {
                 this.toggleEdit(true);
@@ -343,7 +362,7 @@ export class Dashboard {
         const formData = new FormData();
 
         // Add meta
-        const config = this._getFullConfig();
+        const config = this.getFullConfig();
 
         formData.append('title', config.title);
         formData.append('description', config.description);
@@ -351,7 +370,7 @@ export class Dashboard {
         formData.append('widgets', JSON.stringify(config.widgets));
 
         // Get image data
-        const imageBlob = await this._getPreview(); //TODO only do if widgets changed? Would need a better dirty flag system
+        const imageBlob = await this.getPreview(); //TODO only do if widgets changed? Would need a better dirty flag system
         if (imageBlob) formData.append('preview_image', imageBlob, 'preview.jpg');
 
         requestServer(`/api/dashboards/${this.config.alias}/save-data/`, 'POST', formData, (data) => {
@@ -370,7 +389,7 @@ export class Dashboard {
      */
     exportFile() {
         try {
-            const json = JSON.stringify(this._getFullConfig(), null, 2);
+            const json = JSON.stringify(this.getFullConfig(), null, 2);
             const blob = new Blob([json], { type: "application/json" });
             const url = URL.createObjectURL(blob);
 
@@ -405,12 +424,12 @@ export class Dashboard {
     /**
      * @returns {DashboardConfigObject} All data needed to recreate this dashboard
      */
-    _getFullConfig() {
+    getFullConfig() {
         return { ...this.config,
             widgets: [...this.widgets].map(widget => ({
                 tag: widget.tag?.external_id || null,
                 widget_type: widget.gridElem.dataset.type,
-                config: widget.config
+                config: structuredClone(widget.config)
             }))
         };
     }
@@ -419,7 +438,7 @@ export class Dashboard {
      * Returns an image of the current dashboard. Enters screenshot mode for the capture then restores when done
      * @returns {Promise<Blob>}
      */
-    async _getPreview() {
+    async getPreview() {
         const CAPTURE_WIDTH = 1300; 
         const ASPECT_RATIO = 260 / 160; 
         const CAPTURE_HEIGHT = CAPTURE_WIDTH / ASPECT_RATIO; // Result: 800px
@@ -465,6 +484,72 @@ export class Dashboard {
             this.updateSquareCells();
             document.body.classList.remove("screenshot-mode");
         }
+    }
+
+    deleteSelection() {
+        this.canvasGridStack.batchUpdate();
+        this.selectedWidgets.forEach(w => this.canvasGridStack.removeWidget(w.gridElem));
+        this.canvasGridStack.batchUpdate(false);
+        this.inspector.inspectDashboard(this);
+    }
+
+    updateSelection() {
+        this.widgets.forEach(w => w.gridElem.classList.toggle("selected", this.selectedWidgets.has(w)));
+
+        if(this.selectedWidgets.size > 0)
+            this.inspector.inspectWidgets([...this.selectedWidgets], () => this.pushState());
+        else
+            this.inspector.inspectDashboard(this);
+    }
+
+    /**
+     * @returns {DashboardStateObject}
+     */
+    getState() {
+        return {
+            config: this.getFullConfig(),
+            selection: [...this.selectedWidgets].map(w => `${w.config.position_x}x${w.config.position_y}y`),
+        };
+    }
+
+    /** 
+     * @param {DashboardStateObject} state 
+     */
+    restoreState(state) {
+        this.setupWidgets(state.config.widgets, state.config.column_count);
+
+        this.selectedWidgets.clear();
+
+        const widgets = Object.fromEntries(
+            [...this.widgets].map(w => [`${w.config.position_x}x${w.config.position_y}y`, w])
+        );
+
+        state.selection.forEach(key => {
+            if (widgets[key])
+                this.selectedWidgets.add(widgets[key]);
+        });
+
+        this.updateSelection();
+    }
+
+    pushState() {
+        this.undoStack.push(this.getState());
+        this.redoStack = [];
+        this.isDirty = true;
+    }
+
+    undo() {
+        if (this.undoStack.length === 0) return;
+        this.redoStack.push(this.getState());
+        const previousState = this.undoStack.pop();
+        this.restoreState(previousState);
+    }
+
+    redo() {
+        if (this.redoStack.length === 0) return;
+        this.undoStack.push(this.getState());
+        const nextState = this.redoStack.pop();
+        this.restoreState(nextState);
     }
 }
 
