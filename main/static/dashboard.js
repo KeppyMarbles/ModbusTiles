@@ -159,7 +159,6 @@ export class Dashboard {
 
         // Handle drag and drop, deletion
         this.canvasGridStack.on('added change removed', (event, items) => {
-            console.log('something changing...');
             if(!this._settingUp) {
                 this.pushState();
             }

@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.decorators import action
 from rest_framework.serializers import Serializer
+from rest_framework.pagination import LimitOffsetPagination
 from .serializers import TagSerializer, TagValueSerializer, TagWriteRequestSerializer, TagHistoryEntrySerializer
 from .serializers import AlarmConfigSerializer, ActivatedAlarmSerializer
 from .serializers import ScheduleSerializer
@@ -174,15 +175,52 @@ class AlarmConfigViewSet(StaffWriteOnlyViewSet):
             qs = qs.filter(tag__external_id=tag_id)
 
         return qs
+    
+
+class ActivatedAlarmPagination(LimitOffsetPagination):
+    default_limit = 20
+    max_limit = 100
+
+    def paginate_queryset(self, queryset, request, view=None):
+        limit = request.query_params.get(self.limit_query_param)
+        if limit is None:
+            return None
+        return super().paginate_queryset(queryset, request, view)
 
 
 class ActivatedAlarmViewSet(ReadOnlyModelViewSet):
     queryset = ActivatedAlarm.objects.all()
     serializer_class = ActivatedAlarmSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = ActivatedAlarmPagination
 
     def get_queryset(self):
-        return super().get_queryset().select_related('config', 'config__tag', 'acknowledged_by')
+        qs = super().get_queryset().select_related('config', 'config__tag', 'acknowledged_by')
+
+        is_active = self.request.query_params.get('is_active')
+        if is_active is not None:
+            is_active_val = is_active.lower() in ['true', '1', 'yes']
+            qs = qs.filter(is_active=is_active_val)
+
+        threat_level = self.request.query_params.get('threat_level')
+        if threat_level:
+            qs = qs.filter(config__threat_level=threat_level)
+
+        acknowledged = self.request.query_params.get('acknowledged')
+        if acknowledged is not None:
+            ack_val = acknowledged.lower() in ['true', '1', 'yes']
+            qs = qs.filter(acknowledged=ack_val)
+
+        search = self.request.query_params.get('search')
+        if search:
+            from django.db.models import Q
+            qs = qs.filter(
+                Q(config__message__icontains=search) | 
+                Q(config__tag__alias__icontains=search) |
+                Q(config__tag__description__icontains=search)
+            )
+
+        return qs
 
     @action(detail=True, methods=['post'])
     def acknowledge(self, request, pk=None):

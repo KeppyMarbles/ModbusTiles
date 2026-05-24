@@ -13,8 +13,32 @@
             </h1>
         </div>
     </header>
-    <main class="app-layout" style="display: block; padding: 20px; overflow-y: auto;">
-        <div style="max-width: 1200px; margin: 0 auto;">
+    <main class="app-layout alarm-page">
+        <div class="alarm-container">
+            <div class="filter-bar">
+                <div class="filter-group search-group">
+                    <label for="alarm-search" class="filter-label-text">Search</label>
+                    <input type="text" id="alarm-search" placeholder="Search by tag or message..." class="filter-input">
+                </div>
+                <div class="filter-group">
+                    <label for="threat-filter" class="filter-label-text">Threat Level</label>
+                    <select id="threat-filter" class="filter-select">
+                        <option value="">All Levels</option>
+                        <option value="low">🔔 Low</option>
+                        <option value="high">⚠️ High</option>
+                        <option value="crit">‼️ Critical</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="ack-filter" class="filter-label-text">Status</label>
+                    <select id="ack-filter" class="filter-select">
+                        <option value="">All Statuses</option>
+                        <option value="false">🔴 Unacknowledged</option>
+                        <option value="true">🟢 Acknowledged</option>
+                    </select>
+                </div>
+            </div>
+
             <h2 class="form-title">Active Incidents</h2>
             <table class="alarm-table" id="active-alarms-table">
                 <thead>
@@ -28,10 +52,26 @@
                 </thead>
                 <tbody></tbody>
             </table>
+
             <h2 class="form-title resolved-title">Resolved Incidents</h2>
             <table class="alarm-table resolved" id="resolved-alarms-table">
+                <thead>
+                    <tr>
+                        <th>Threat Level</th>
+                        <th>Time Activated</th>
+                        <th>Tag</th>
+                        <th>Message</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
                 <tbody></tbody>
             </table>
+
+            <!-- Pagination Controls -->
+            <div class="pagination-container" id="pagination-controls">
+                <span class="pagination-status" id="pagination-status">Showing 0 of 0 resolved incidents</span>
+                <button class="form-button load-more-btn" id="load-more-btn">Load More</button>
+            </div>
         </div>
     </main>
 </body>

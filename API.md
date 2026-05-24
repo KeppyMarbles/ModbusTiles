@@ -79,8 +79,31 @@ Get or update a specific alarm config in the form of [AlarmConfigObject](#alarmc
 ## Activated Alarm
 Requires authentication.
 
-### `GET`, /api/activated-alarms/
-List all activated alarms in the form of [ActivatedAlarmObject](#activatedalarmobject)[].
+### `GET` /api/activated-alarms/
+List activated alarms.
+
+**Query Parameters:**
+- `is_active` (boolean string: `true` | `false`): Filter active or resolved alarms.
+- `threat_level` ('low' | 'high' | 'crit'): Filter by alarm config threat level.
+- `acknowledged` (boolean string: `true` | `false`): Filter by acknowledgment status.
+- `search` (string): Case-insensitive search on alarm message, tag alias, or tag description.
+- `limit` (number): Pagination page size.
+- `offset` (number): Pagination offset.
+
+**Response:**
+- If the `limit` query parameter is not provided, pagination is bypassed and it returns:
+  ```typescript
+  ActivatedAlarmObject[]
+  ```
+- If the `limit` query parameter is provided, returns a paginated result list:
+  ```typescript
+  {
+      count: number,
+      next: string | null,
+      previous: string | null,
+      results: ActivatedAlarmObject[]
+  }
+  ```
 
 ### `GET`, /api/activated-alarms/active_count/
 Get the number of currently active alarms. Response:
