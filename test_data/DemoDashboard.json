@@ -1,12 +1,13 @@
 {
   "alias": "main-office-hvac",
-  "title": "Main Office HVAC",
-  "description": "",
-  "column_count": 24,
+  "config": {
+    "title": "Main Office HVAC",
+    "description": "",
+    "column_count": 24
+  },
   "widgets": [
     {
       "tag": null,
-      "widget_type": "label",
       "config": {
         "text": "System Overview",
         "position_x": 0,
@@ -17,12 +18,12 @@
         "showTagName": true,
         "background_color": "",
         "outline_color": "",
-        "text_color": ""
+        "text_color": "",
+        "widget_type": "label"
       }
     },
     {
       "tag": "849d5fef-b201-4748-bc48-9afdaf4d43c7",
-      "widget_type": "led",
       "config": {
         "position_x": 0,
         "position_y": 1,
@@ -34,12 +35,12 @@
         "locked": false,
         "background_color": "",
         "outline_color": "",
-        "text_color": ""
+        "text_color": "",
+        "widget_type": "led"
       }
     },
     {
       "tag": "849d5fef-b201-4748-bc48-9afdaf4d43c7",
-      "widget_type": "bool_label",
       "config": {
         "text_on": "Fan On",
         "text_off": "Fan Off",
@@ -51,12 +52,12 @@
         "showTagName": false,
         "background_color": "",
         "outline_color": "",
-        "text_color": ""
+        "text_color": "",
+        "widget_type": "bool_label"
       }
     },
     {
       "tag": "554df4b1-b7e0-4ca1-8fca-af0f13879742",
-      "widget_type": "number_input",
       "config": {
         "position_x": 22,
         "position_y": 2,
@@ -72,12 +73,12 @@
         "background_color": "",
         "outline_color": "",
         "text_color": "",
-        "button_color": ""
+        "button_color": "",
+        "widget_type": "number_input"
       }
     },
     {
       "tag": "14aa6017-7f87-4ab9-9892-e0849f141a80",
-      "widget_type": "slider",
       "config": {
         "position_x": 20,
         "position_y": 3,
@@ -95,12 +96,12 @@
         "display_value": true,
         "background_color": "#cce5ff",
         "outline_color": "",
-        "text_color": "#000000"
+        "text_color": "#000000",
+        "widget_type": "slider"
       }
     },
     {
       "tag": "4631df82-bd77-43d1-bd96-3131f09a7cf2",
-      "widget_type": "gauge",
       "config": {
         "title": "Supply Air Temp",
         "min_value": 40,
@@ -117,12 +118,12 @@
         "prefix": "",
         "background_color": "",
         "outline_color": "",
-        "text_color": ""
+        "text_color": "",
+        "widget_type": "gauge"
       }
     },
     {
       "tag": "586f0e20-306e-4f1e-a0a6-7d6a74b652d8",
-      "widget_type": "chart",
       "config": {
         "title": "Return Air History",
         "history_seconds": 60,
@@ -141,12 +142,12 @@
         "show_grid": true,
         "background_color": "",
         "outline_color": "",
-        "text_color": ""
+        "text_color": "",
+        "widget_type": "chart"
       }
     },
     {
       "tag": null,
-      "widget_type": "label",
       "config": {
         "text": "Maintenance / Diagnostics",
         "position_x": 0,
@@ -157,12 +158,12 @@
         "showTagName": true,
         "background_color": "",
         "outline_color": "",
-        "text_color": ""
+        "text_color": "",
+        "widget_type": "label"
       }
     },
     {
       "tag": "4bf3a75d-a96e-4c9f-81bc-08a9edc7c87e",
-      "widget_type": "meter",
       "config": {
         "min_value": 0,
         "max_value": 2,
@@ -181,12 +182,12 @@
         "display_range": true,
         "background_color": "",
         "outline_color": "",
-        "text_color": ""
+        "text_color": "",
+        "widget_type": "meter"
       }
     },
     {
       "tag": "8bfd8281-55e9-40ae-acd1-4b29e32d27dd",
-      "widget_type": "led",
       "config": {
         "color_on": "red",
         "color_off": "gray",
@@ -198,12 +199,12 @@
         "showTagName": true,
         "background_color": "",
         "outline_color": "",
-        "text_color": ""
+        "text_color": "",
+        "widget_type": "led"
       }
     },
     {
       "tag": "7f189b33-c587-4f3a-bd19-cd73cf96401e",
-      "widget_type": "number_label",
       "config": {
         "locked": false,
         "showTagName": false,
@@ -216,12 +217,12 @@
         "scale_y": 1,
         "background_color": "",
         "outline_color": "",
-        "text_color": ""
+        "text_color": "",
+        "widget_type": "number_label"
       }
     },
     {
       "tag": null,
-      "widget_type": "label",
       "config": {
         "locked": false,
         "showTagName": true,
@@ -232,12 +233,12 @@
         "scale_y": 1,
         "background_color": "",
         "outline_color": "",
-        "text_color": ""
+        "text_color": "",
+        "widget_type": "label"
       }
     },
     {
       "tag": "76ef2ac8-e0cf-40c3-97c4-f7ad3d26e9d1",
-      "widget_type": "slider",
       "config": {
         "locked": false,
         "showTagName": true,
@@ -255,12 +256,12 @@
         "scale_y": 1,
         "background_color": "#ffdba8",
         "outline_color": "",
-        "text_color": ""
+        "text_color": "",
+        "widget_type": "slider"
       }
     },
     {
       "tag": "c6905f17-3385-4b08-81c8-e52760100eb7",
-      "widget_type": "dropdown",
       "config": {
         "locked": false,
         "showTagName": true,
@@ -285,12 +286,12 @@
         "scale_y": 1,
         "background_color": "",
         "outline_color": "",
-        "text_color": ""
+        "text_color": "",
+        "widget_type": "dropdown"
       }
     },
     {
       "tag": "586f0e20-306e-4f1e-a0a6-7d6a74b652d8",
-      "widget_type": "number_label",
       "config": {
         "locked": false,
         "showTagName": false,
@@ -303,12 +304,12 @@
         "scale_y": 1,
         "background_color": "",
         "outline_color": "",
-        "text_color": ""
+        "text_color": "",
+        "widget_type": "number_label"
       }
     },
     {
       "tag": "586f0e20-306e-4f1e-a0a6-7d6a74b652d8",
-      "widget_type": "trend",
       "config": {
         "locked": false,
         "showTagName": true,
@@ -326,12 +327,12 @@
         "scale_y": 2,
         "rate_unit": "sec",
         "prefix": "",
-        "suffix": "F"
+        "suffix": "F",
+        "widget_type": "trend"
       }
     },
     {
       "tag": "f7c4a9df-7fa1-4fe8-90e3-8c38d9850d88",
-      "widget_type": "time_label",
       "config": {
         "locked": false,
         "showTagName": true,
@@ -349,7 +350,8 @@
         "position_x": 0,
         "position_y": 4,
         "scale_x": 2,
-        "scale_y": 1
+        "scale_y": 1,
+        "widget_type": "time_label"
       }
     }
   ]

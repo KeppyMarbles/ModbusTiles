@@ -136,21 +136,20 @@ class DashboardSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Dashboard
-        exclude = ["preview_image"]
+        fields = ["id", "alias", "owner", "config"]
         read_only_fields = ["alias"]
 
 
 class DashboardWidgetSerializer(serializers.ModelSerializer):
-    tag = serializers.SlugRelatedField(slug_field='external_id', queryset=Tag.objects.all())
+    tag = serializers.SlugRelatedField(slug_field='external_id', queryset=Tag.objects.all(), allow_null=True)
 
     class Meta:
         model = DashboardWidget
-        fields = ["tag", "widget_type", "config"]
+        fields = ["tag", "config"]
 
 
 class DashboardWidgetBulkSerializer(serializers.Serializer):
     """ Used for the Save Dashboard payload """
     
     tag = serializers.SlugRelatedField(slug_field='external_id', queryset=Tag.objects.all(), required=False, allow_null=True)
-    widget_type = serializers.ChoiceField(choices=DashboardWidget.WidgetTypeChoices.choices)
     config = serializers.JSONField()

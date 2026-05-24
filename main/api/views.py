@@ -85,33 +85,32 @@ class DashboardViewSet(ModelViewSet):
 
     @action(detail=True, methods=['post'], url_path='save-data')
     def save_data(self, request: HttpRequest, alias=None):
-        dashboard = DashboardViewSet.update_dashboard(dashboard=self.get_object(), data=request.data, files=request.FILES, request=request)
+        dashboard = DashboardViewSet.update_dashboard(dashboard=self.get_object(), data=request.data, request=request)
         return Response({"new_alias": dashboard.alias})
+
+    @action(detail=True, methods=['post'], url_path='upload-preview')
+    def upload_preview(self, request: HttpRequest, alias=None):
+        dashboard = self.get_object()
+        preview_image = request.FILES.get("preview_image")
+        if preview_image:
+            dashboard.preview_image = preview_image
+            dashboard.save(update_fields=["preview_image"])
+        return Response({"status": "preview uploaded"})
     
     @staticmethod #TODO figure out best place for this
-    def update_dashboard(*, dashboard: Dashboard, data: dict, files: dict | None = None, request=None) -> Dashboard:
+    def update_dashboard(*, dashboard: Dashboard, data: dict, request=None) -> Dashboard:
+        # Clone data dict so we can safely mutate it
+        data = dict(data)
+
         # --- Meta ---
         meta_serializer = DashboardSerializer(dashboard, data=data, partial=True, context={"request": request})
         meta_serializer.is_valid(raise_exception=True)
         dashboard = meta_serializer.save()
 
-        # --- Preview image ---
-        if files and "preview_image" in files:
-            dashboard.preview_image = files["preview_image"]
-            dashboard.save(update_fields=["preview_image"])
-
         # --- Widgets ---
-        raw_widgets = data.get("widgets")
-        if not raw_widgets:
+        widgets_data = data.get("widgets")
+        if widgets_data is None:
             return dashboard
-
-        if isinstance(raw_widgets, str):
-            try:
-                widgets_data = json.loads(raw_widgets)
-            except json.JSONDecodeError:
-                raise ValidationError("Invalid JSON format in 'widgets'")
-        else:
-            widgets_data = raw_widgets
 
         widget_serializer = DashboardWidgetBulkSerializer(data=widgets_data, many=True)
         widget_serializer.is_valid(raise_exception=True)
@@ -119,7 +118,7 @@ class DashboardViewSet(ModelViewSet):
         with transaction.atomic():
             dashboard.widgets.all().delete()
             DashboardWidget.objects.bulk_create([
-                DashboardWidget(dashboard=dashboard, tag=item.get("tag"), widget_type=item["widget_type"], config=item["config"])
+                DashboardWidget(dashboard=dashboard, tag=item.get("tag"), config=item["config"])
                 for item in widget_serializer.validated_data
             ])
 

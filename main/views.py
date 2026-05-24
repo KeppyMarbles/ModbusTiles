@@ -1,4 +1,6 @@
-from .models import Dashboard, DashboardWidget
+import os
+from .models import Dashboard
+from django.conf import settings
 from django.shortcuts import render
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.decorators import login_required
@@ -20,12 +22,24 @@ def dashboard_list(request):
     })
 
 
+def get_widget_types():
+    """ Scan templates/widgets directory and return sorted widget type names """
+    widgets_dir = os.path.join(settings.BASE_DIR, 'main', 'templates', 'widgets')
+    if not os.path.exists(widgets_dir):
+        return []
+    return sorted([
+        os.path.splitext(f)[0]
+        for f in os.listdir(widgets_dir)
+        if f.endswith('.html')
+    ])
+
+
 @login_required
 def dashboard_view(request, alias):
     dashboard = get_object_or_404(Dashboard, alias=alias, owner=request.user)
     return render(request, "dashboard.html", {
         "dashboard": dashboard,
-        "widget_types": [choice for choice in DashboardWidget.WidgetTypeChoices],
+        "widget_types": get_widget_types(),
     })
 
 

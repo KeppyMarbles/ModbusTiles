@@ -1,12 +1,13 @@
 {
   "alias": "test-dashboard",
-  "title": "Test Dashboard",
-  "description": "",
-  "column_count": 20,
+  "config": {
+    "title": "Test Dashboard",
+    "description": "",
+    "column_count": 20
+  },
   "widgets": [
     {
       "tag": null,
-      "widget_type": "label",
       "config": {
         "position_x": 0,
         "position_y": 0,
@@ -14,12 +15,12 @@
         "scale_y": 1,
         "text": "Test Coils",
         "locked": false,
-        "showTagName": true
+        "showTagName": true,
+        "widget_type": "label"
       }
     },
     {
       "tag": "4f0d8964-bf89-5fe5-af1c-545b400902ae",
-      "widget_type": "led",
       "config": {
         "position_x": 0,
         "position_y": 1,
@@ -28,12 +29,12 @@
         "color_on": "green",
         "color_off": "red",
         "locked": false,
-        "showTagName": true
+        "showTagName": true,
+        "widget_type": "led"
       }
     },
     {
       "tag": "4f0d8964-bf89-5fe5-af1c-545b400902ae",
-      "widget_type": "bool_label",
       "config": {
         "position_x": 0,
         "position_y": 2,
@@ -42,12 +43,12 @@
         "text_on": "On",
         "text_off": "Off",
         "showTagName": false,
-        "locked": false
+        "locked": false,
+        "widget_type": "bool_label"
       }
     },
     {
       "tag": "4f0d8964-bf89-5fe5-af1c-545b400902ae",
-      "widget_type": "switch",
       "config": {
         "position_x": 0,
         "position_y": 3,
@@ -55,12 +56,12 @@
         "scale_y": 1,
         "showTagName": false,
         "locked": false,
-        "confirmation": false
+        "confirmation": false,
+        "widget_type": "switch"
       }
     },
     {
       "tag": "394a794c-cb45-58cb-9ec4-88433bd77f7f",
-      "widget_type": "led",
       "config": {
         "position_x": 1,
         "position_y": 1,
@@ -69,12 +70,12 @@
         "color_on": "green",
         "color_off": "red",
         "locked": false,
-        "showTagName": true
+        "showTagName": true,
+        "widget_type": "led"
       }
     },
     {
       "tag": "394a794c-cb45-58cb-9ec4-88433bd77f7f",
-      "widget_type": "bool_label",
       "config": {
         "position_x": 1,
         "position_y": 2,
@@ -83,12 +84,12 @@
         "text_on": "On",
         "text_off": "Off",
         "showTagName": false,
-        "locked": false
+        "locked": false,
+        "widget_type": "bool_label"
       }
     },
     {
       "tag": "394a794c-cb45-58cb-9ec4-88433bd77f7f",
-      "widget_type": "switch",
       "config": {
         "position_x": 1,
         "position_y": 3,
@@ -96,12 +97,12 @@
         "scale_y": 1,
         "showTagName": false,
         "locked": false,
-        "confirmation": false
+        "confirmation": false,
+        "widget_type": "switch"
       }
     },
     {
       "tag": "68ed55f9-49a0-5a7b-b678-e3785b803f2f",
-      "widget_type": "led",
       "config": {
         "position_x": 2,
         "position_y": 1,
@@ -110,12 +111,12 @@
         "color_on": "green",
         "color_off": "red",
         "locked": false,
-        "showTagName": true
+        "showTagName": true,
+        "widget_type": "led"
       }
     },
     {
       "tag": "68ed55f9-49a0-5a7b-b678-e3785b803f2f",
-      "widget_type": "bool_label",
       "config": {
         "position_x": 2,
         "position_y": 2,
@@ -124,12 +125,12 @@
         "text_on": "On",
         "text_off": "Off",
         "showTagName": false,
-        "locked": false
+        "locked": false,
+        "widget_type": "bool_label"
       }
     },
     {
       "tag": "68ed55f9-49a0-5a7b-b678-e3785b803f2f",
-      "widget_type": "switch",
       "config": {
         "position_x": 2,
         "position_y": 3,
@@ -137,12 +138,12 @@
         "scale_y": 1,
         "showTagName": false,
         "locked": false,
-        "confirmation": false
+        "confirmation": false,
+        "widget_type": "switch"
       }
     },
     {
       "tag": "a55739ca-a88d-5e40-82dc-1994787199b6",
-      "widget_type": "led",
       "config": {
         "position_x": 3,
         "position_y": 1,
@@ -151,12 +152,12 @@
         "color_on": "green",
         "color_off": "red",
         "locked": false,
-        "showTagName": true
+        "showTagName": true,
+        "widget_type": "led"
       }
     },
     {
       "tag": "a55739ca-a88d-5e40-82dc-1994787199b6",
-      "widget_type": "bool_label",
       "config": {
         "position_x": 3,
         "position_y": 2,
@@ -165,12 +166,12 @@
         "text_on": "On",
         "text_off": "Off",
         "showTagName": false,
-        "locked": false
+        "locked": false,
+        "widget_type": "bool_label"
       }
     },
     {
       "tag": "a55739ca-a88d-5e40-82dc-1994787199b6",
-      "widget_type": "switch",
       "config": {
         "position_x": 3,
         "position_y": 3,
@@ -178,12 +179,12 @@
         "scale_y": 1,
         "showTagName": false,
         "locked": false,
-        "confirmation": false
+        "confirmation": false,
+        "widget_type": "switch"
       }
     },
     {
       "tag": "a9453495-7657-5db5-9e9d-0ba6a94ab45b",
-      "widget_type": "led",
       "config": {
         "position_x": 4,
         "position_y": 1,
@@ -192,12 +193,12 @@
         "color_on": "green",
         "color_off": "red",
         "locked": false,
-        "showTagName": true
+        "showTagName": true,
+        "widget_type": "led"
       }
     },
     {
       "tag": "a9453495-7657-5db5-9e9d-0ba6a94ab45b",
-      "widget_type": "bool_label",
       "config": {
         "position_x": 4,
         "position_y": 2,
@@ -206,12 +207,12 @@
         "text_on": "On",
         "text_off": "Off",
         "showTagName": false,
-        "locked": false
+        "locked": false,
+        "widget_type": "bool_label"
       }
     },
     {
       "tag": "a9453495-7657-5db5-9e9d-0ba6a94ab45b",
-      "widget_type": "switch",
       "config": {
         "position_x": 4,
         "position_y": 3,
@@ -219,12 +220,12 @@
         "scale_y": 1,
         "showTagName": false,
         "locked": false,
-        "confirmation": false
+        "confirmation": false,
+        "widget_type": "switch"
       }
     },
     {
       "tag": "aefceee9-6381-57c0-bdc8-51c778bb7ea5",
-      "widget_type": "led",
       "config": {
         "position_x": 5,
         "position_y": 1,
@@ -233,12 +234,12 @@
         "color_on": "green",
         "color_off": "red",
         "locked": false,
-        "showTagName": true
+        "showTagName": true,
+        "widget_type": "led"
       }
     },
     {
       "tag": "aefceee9-6381-57c0-bdc8-51c778bb7ea5",
-      "widget_type": "bool_label",
       "config": {
         "position_x": 5,
         "position_y": 2,
@@ -247,12 +248,12 @@
         "text_on": "On",
         "text_off": "Off",
         "showTagName": false,
-        "locked": false
+        "locked": false,
+        "widget_type": "bool_label"
       }
     },
     {
       "tag": "aefceee9-6381-57c0-bdc8-51c778bb7ea5",
-      "widget_type": "switch",
       "config": {
         "position_x": 5,
         "position_y": 3,
@@ -260,12 +261,12 @@
         "scale_y": 1,
         "showTagName": false,
         "locked": false,
-        "confirmation": false
+        "confirmation": false,
+        "widget_type": "switch"
       }
     },
     {
       "tag": "93b88f0a-bea9-5d78-887d-5430f6a37dd7",
-      "widget_type": "led",
       "config": {
         "position_x": 6,
         "position_y": 1,
@@ -274,12 +275,12 @@
         "color_on": "green",
         "color_off": "red",
         "locked": false,
-        "showTagName": true
+        "showTagName": true,
+        "widget_type": "led"
       }
     },
     {
       "tag": "93b88f0a-bea9-5d78-887d-5430f6a37dd7",
-      "widget_type": "bool_label",
       "config": {
         "position_x": 6,
         "position_y": 2,
@@ -288,12 +289,12 @@
         "text_on": "On",
         "text_off": "Off",
         "showTagName": false,
-        "locked": false
+        "locked": false,
+        "widget_type": "bool_label"
       }
     },
     {
       "tag": "93b88f0a-bea9-5d78-887d-5430f6a37dd7",
-      "widget_type": "switch",
       "config": {
         "position_x": 6,
         "position_y": 3,
@@ -301,12 +302,12 @@
         "scale_y": 1,
         "showTagName": false,
         "locked": false,
-        "confirmation": false
+        "confirmation": false,
+        "widget_type": "switch"
       }
     },
     {
       "tag": "ea180804-1ddb-574f-b8fc-84984036a681",
-      "widget_type": "led",
       "config": {
         "position_x": 7,
         "position_y": 1,
@@ -315,12 +316,12 @@
         "color_on": "green",
         "color_off": "red",
         "locked": false,
-        "showTagName": true
+        "showTagName": true,
+        "widget_type": "led"
       }
     },
     {
       "tag": "ea180804-1ddb-574f-b8fc-84984036a681",
-      "widget_type": "bool_label",
       "config": {
         "position_x": 7,
         "position_y": 2,
@@ -329,12 +330,12 @@
         "text_on": "On",
         "text_off": "Off",
         "showTagName": false,
-        "locked": false
+        "locked": false,
+        "widget_type": "bool_label"
       }
     },
     {
       "tag": "ea180804-1ddb-574f-b8fc-84984036a681",
-      "widget_type": "switch",
       "config": {
         "position_x": 7,
         "position_y": 3,
@@ -342,12 +343,12 @@
         "scale_y": 1,
         "showTagName": false,
         "locked": false,
-        "confirmation": false
+        "confirmation": false,
+        "widget_type": "switch"
       }
     },
     {
       "tag": "4f0d8964-bf89-5fe5-af1c-545b400902ae",
-      "widget_type": "button",
       "config": {
         "position_x": 0,
         "position_y": 4,
@@ -357,12 +358,12 @@
         "confirmation": true,
         "button_text": "Test Button",
         "locked": false,
-        "showTagName": true
+        "showTagName": true,
+        "widget_type": "button"
       }
     },
     {
       "tag": null,
-      "widget_type": "label",
       "config": {
         "position_x": 0,
         "position_y": 5,
@@ -370,12 +371,12 @@
         "scale_y": 1,
         "text": "Test Discrete Inputs",
         "locked": false,
-        "showTagName": true
+        "showTagName": true,
+        "widget_type": "label"
       }
     },
     {
       "tag": "ff51c1f9-0552-5947-acba-31268c78474c",
-      "widget_type": "led",
       "config": {
         "position_x": 0,
         "position_y": 6,
@@ -384,12 +385,12 @@
         "color_on": "green",
         "color_off": "red",
         "locked": false,
-        "showTagName": true
+        "showTagName": true,
+        "widget_type": "led"
       }
     },
     {
       "tag": "ff51c1f9-0552-5947-acba-31268c78474c",
-      "widget_type": "bool_label",
       "config": {
         "position_x": 0,
         "position_y": 7,
@@ -398,12 +399,12 @@
         "text_on": "On",
         "text_off": "Off",
         "showTagName": false,
-        "locked": false
+        "locked": false,
+        "widget_type": "bool_label"
       }
     },
     {
       "tag": "61f35678-faa2-5f74-9369-8a7cc758ae98",
-      "widget_type": "led",
       "config": {
         "position_x": 1,
         "position_y": 6,
@@ -412,12 +413,12 @@
         "color_on": "green",
         "color_off": "red",
         "locked": false,
-        "showTagName": true
+        "showTagName": true,
+        "widget_type": "led"
       }
     },
     {
       "tag": "61f35678-faa2-5f74-9369-8a7cc758ae98",
-      "widget_type": "bool_label",
       "config": {
         "position_x": 1,
         "position_y": 7,
@@ -426,12 +427,12 @@
         "text_on": "On",
         "text_off": "Off",
         "showTagName": false,
-        "locked": false
+        "locked": false,
+        "widget_type": "bool_label"
       }
     },
     {
       "tag": "02299ad7-86c1-50d5-86e7-895c168d5879",
-      "widget_type": "led",
       "config": {
         "position_x": 2,
         "position_y": 6,
@@ -440,12 +441,12 @@
         "color_on": "green",
         "color_off": "red",
         "locked": false,
-        "showTagName": true
+        "showTagName": true,
+        "widget_type": "led"
       }
     },
     {
       "tag": "02299ad7-86c1-50d5-86e7-895c168d5879",
-      "widget_type": "bool_label",
       "config": {
         "position_x": 2,
         "position_y": 7,
@@ -454,12 +455,12 @@
         "text_on": "On",
         "text_off": "Off",
         "showTagName": false,
-        "locked": false
+        "locked": false,
+        "widget_type": "bool_label"
       }
     },
     {
       "tag": "dcdc440a-6ddc-55d3-b648-734ef7c1a78f",
-      "widget_type": "led",
       "config": {
         "position_x": 3,
         "position_y": 6,
@@ -468,12 +469,12 @@
         "color_on": "green",
         "color_off": "red",
         "locked": false,
-        "showTagName": true
+        "showTagName": true,
+        "widget_type": "led"
       }
     },
     {
       "tag": "dcdc440a-6ddc-55d3-b648-734ef7c1a78f",
-      "widget_type": "bool_label",
       "config": {
         "position_x": 3,
         "position_y": 7,
@@ -482,12 +483,12 @@
         "text_on": "On",
         "text_off": "Off",
         "showTagName": false,
-        "locked": false
+        "locked": false,
+        "widget_type": "bool_label"
       }
     },
     {
       "tag": "a2f0528a-4251-5bb8-8af2-b62a59e6338a",
-      "widget_type": "led",
       "config": {
         "position_x": 4,
         "position_y": 6,
@@ -496,12 +497,12 @@
         "color_on": "green",
         "color_off": "red",
         "locked": false,
-        "showTagName": true
+        "showTagName": true,
+        "widget_type": "led"
       }
     },
     {
       "tag": "a2f0528a-4251-5bb8-8af2-b62a59e6338a",
-      "widget_type": "bool_label",
       "config": {
         "position_x": 4,
         "position_y": 7,
@@ -510,12 +511,12 @@
         "text_on": "On",
         "text_off": "Off",
         "showTagName": false,
-        "locked": false
+        "locked": false,
+        "widget_type": "bool_label"
       }
     },
     {
       "tag": "f05f4556-0294-54a0-864c-b024edbf0c55",
-      "widget_type": "led",
       "config": {
         "position_x": 5,
         "position_y": 6,
@@ -524,12 +525,12 @@
         "color_on": "green",
         "color_off": "red",
         "locked": false,
-        "showTagName": true
+        "showTagName": true,
+        "widget_type": "led"
       }
     },
     {
       "tag": "f05f4556-0294-54a0-864c-b024edbf0c55",
-      "widget_type": "bool_label",
       "config": {
         "position_x": 5,
         "position_y": 7,
@@ -538,12 +539,12 @@
         "text_on": "On",
         "text_off": "Off",
         "showTagName": false,
-        "locked": false
+        "locked": false,
+        "widget_type": "bool_label"
       }
     },
     {
       "tag": "8e6c4947-d996-5ad1-ae63-9ac90f4932f8",
-      "widget_type": "led",
       "config": {
         "position_x": 6,
         "position_y": 6,
@@ -552,12 +553,12 @@
         "color_on": "green",
         "color_off": "red",
         "locked": false,
-        "showTagName": true
+        "showTagName": true,
+        "widget_type": "led"
       }
     },
     {
       "tag": "8e6c4947-d996-5ad1-ae63-9ac90f4932f8",
-      "widget_type": "bool_label",
       "config": {
         "position_x": 6,
         "position_y": 7,
@@ -566,12 +567,12 @@
         "text_on": "On",
         "text_off": "Off",
         "showTagName": false,
-        "locked": false
+        "locked": false,
+        "widget_type": "bool_label"
       }
     },
     {
       "tag": "f3865c29-fba5-54f9-bc60-57ed15adb469",
-      "widget_type": "led",
       "config": {
         "position_x": 7,
         "position_y": 6,
@@ -580,12 +581,12 @@
         "color_on": "green",
         "color_off": "red",
         "locked": false,
-        "showTagName": true
+        "showTagName": true,
+        "widget_type": "led"
       }
     },
     {
       "tag": "f3865c29-fba5-54f9-bc60-57ed15adb469",
-      "widget_type": "bool_label",
       "config": {
         "position_x": 7,
         "position_y": 7,
@@ -594,12 +595,12 @@
         "text_on": "On",
         "text_off": "Off",
         "showTagName": false,
-        "locked": false
+        "locked": false,
+        "widget_type": "bool_label"
       }
     },
     {
       "tag": null,
-      "widget_type": "label",
       "config": {
         "position_x": 9,
         "position_y": 0,
@@ -607,12 +608,12 @@
         "scale_y": 1,
         "text": "Test Input Registers",
         "locked": false,
-        "showTagName": true
+        "showTagName": true,
+        "widget_type": "label"
       }
     },
     {
       "tag": "1c090f11-080b-584f-9464-159bd6600ee5",
-      "widget_type": "meter",
       "config": {
         "position_x": 9,
         "position_y": 1,
@@ -628,12 +629,12 @@
         "prefix": "",
         "suffix": "",
         "display_range": true,
-        "display_value": false
+        "display_value": false,
+        "widget_type": "meter"
       }
     },
     {
       "tag": "74d91df7-597a-534b-a81e-165cca0e832b",
-      "widget_type": "meter",
       "config": {
         "position_x": 9,
         "position_y": 2,
@@ -649,12 +650,12 @@
         "prefix": "",
         "suffix": "",
         "display_range": true,
-        "display_value": false
+        "display_value": false,
+        "widget_type": "meter"
       }
     },
     {
       "tag": "f7ea6439-69be-5e6b-b98e-31c43054b3ec",
-      "widget_type": "meter",
       "config": {
         "position_x": 9,
         "position_y": 3,
@@ -670,12 +671,12 @@
         "prefix": "",
         "suffix": "",
         "display_range": true,
-        "display_value": false
+        "display_value": false,
+        "widget_type": "meter"
       }
     },
     {
       "tag": "11a2fc20-fc66-5d1a-a958-4e4835acea4d",
-      "widget_type": "meter",
       "config": {
         "position_x": 9,
         "position_y": 4,
@@ -691,12 +692,12 @@
         "prefix": "",
         "suffix": "",
         "display_range": true,
-        "display_value": false
+        "display_value": false,
+        "widget_type": "meter"
       }
     },
     {
       "tag": "c0adc73c-114c-5092-b1fa-938a950e9bd9",
-      "widget_type": "chart",
       "config": {
         "position_x": 9,
         "position_y": 5,
@@ -712,12 +713,12 @@
         "line_width": 2,
         "show_grid": true,
         "y_min": null,
-        "y_max": null
+        "y_max": null,
+        "widget_type": "chart"
       }
     },
     {
       "tag": "c0adc73c-114c-5092-b1fa-938a950e9bd9",
-      "widget_type": "gauge",
       "config": {
         "position_x": 9,
         "position_y": 8,
@@ -731,12 +732,12 @@
         "locked": false,
         "showTagName": true,
         "prefix": "",
-        "suffix": ""
+        "suffix": "",
+        "widget_type": "gauge"
       }
     },
     {
       "tag": "c0adc73c-114c-5092-b1fa-938a950e9bd9",
-      "widget_type": "number_label",
       "config": {
         "position_x": 9,
         "position_y": 11,
@@ -746,12 +747,12 @@
         "prefix": "Value: ",
         "locked": false,
         "showTagName": true,
-        "suffix": ""
+        "suffix": "",
+        "widget_type": "number_label"
       }
     },
     {
       "tag": null,
-      "widget_type": "label",
       "config": {
         "position_x": 15,
         "position_y": 0,
@@ -759,12 +760,12 @@
         "scale_y": 1,
         "text": "Test Holding Registers",
         "locked": false,
-        "showTagName": true
+        "showTagName": true,
+        "widget_type": "label"
       }
     },
     {
       "tag": "c4ce759f-b6d3-51d2-a0bd-7cadd606c043",
-      "widget_type": "meter",
       "config": {
         "position_x": 15,
         "position_y": 1,
@@ -781,12 +782,12 @@
         "prefix": "",
         "suffix": "",
         "display_range": true,
-        "display_value": false
+        "display_value": false,
+        "widget_type": "meter"
       }
     },
     {
       "tag": "c4ce759f-b6d3-51d2-a0bd-7cadd606c043",
-      "widget_type": "slider",
       "config": {
         "position_x": 15,
         "position_y": 2,
@@ -801,12 +802,12 @@
         "prefix": "",
         "suffix": "",
         "display_range": true,
-        "display_value": false
+        "display_value": false,
+        "widget_type": "slider"
       }
     },
     {
       "tag": "c351df0a-0059-5d55-8641-a49766fe9c96",
-      "widget_type": "meter",
       "config": {
         "position_x": 15,
         "position_y": 3,
@@ -823,12 +824,12 @@
         "prefix": "",
         "suffix": "",
         "display_range": true,
-        "display_value": false
+        "display_value": false,
+        "widget_type": "meter"
       }
     },
     {
       "tag": "c351df0a-0059-5d55-8641-a49766fe9c96",
-      "widget_type": "slider",
       "config": {
         "position_x": 15,
         "position_y": 4,
@@ -843,12 +844,12 @@
         "prefix": "",
         "suffix": "",
         "display_range": true,
-        "display_value": false
+        "display_value": false,
+        "widget_type": "slider"
       }
     },
     {
       "tag": "d2de1bbb-1115-578c-ab76-631b5f8ef2de",
-      "widget_type": "meter",
       "config": {
         "position_x": 15,
         "position_y": 5,
@@ -865,12 +866,12 @@
         "prefix": "",
         "suffix": "",
         "display_range": true,
-        "display_value": false
+        "display_value": false,
+        "widget_type": "meter"
       }
     },
     {
       "tag": "d2de1bbb-1115-578c-ab76-631b5f8ef2de",
-      "widget_type": "slider",
       "config": {
         "position_x": 15,
         "position_y": 6,
@@ -885,12 +886,12 @@
         "prefix": "",
         "suffix": "",
         "display_range": true,
-        "display_value": false
+        "display_value": false,
+        "widget_type": "slider"
       }
     },
     {
       "tag": "842d1970-6a56-5dec-9366-c5b52cf965ba",
-      "widget_type": "meter",
       "config": {
         "position_x": 15,
         "position_y": 7,
@@ -907,12 +908,12 @@
         "prefix": "",
         "suffix": "",
         "display_range": true,
-        "display_value": false
+        "display_value": false,
+        "widget_type": "meter"
       }
     },
     {
       "tag": "842d1970-6a56-5dec-9366-c5b52cf965ba",
-      "widget_type": "slider",
       "config": {
         "position_x": 15,
         "position_y": 8,
@@ -927,12 +928,12 @@
         "prefix": "",
         "suffix": "",
         "display_range": true,
-        "display_value": false
+        "display_value": false,
+        "widget_type": "slider"
       }
     },
     {
       "tag": "842d1970-6a56-5dec-9366-c5b52cf965ba",
-      "widget_type": "dropdown",
       "config": {
         "position_x": 15,
         "position_y": 9,
@@ -954,12 +955,12 @@
         ],
         "locked": false,
         "showTagName": true,
-        "confirmation": false
+        "confirmation": false,
+        "widget_type": "dropdown"
       }
     },
     {
       "tag": "842d1970-6a56-5dec-9366-c5b52cf965ba",
-      "widget_type": "multi_label",
       "config": {
         "position_x": 17,
         "position_y": 9,
@@ -980,12 +981,12 @@
           }
         ],
         "locked": false,
-        "showTagName": true
+        "showTagName": true,
+        "widget_type": "multi_label"
       }
     },
     {
       "tag": "cad479d9-c9df-5569-b61a-1e79d2f7dfd9",
-      "widget_type": "led",
       "config": {
         "position_x": 15,
         "position_y": 10,
@@ -994,12 +995,12 @@
         "color_on": "green",
         "color_off": "red",
         "locked": false,
-        "showTagName": true
+        "showTagName": true,
+        "widget_type": "led"
       }
     },
     {
       "tag": "cad479d9-c9df-5569-b61a-1e79d2f7dfd9",
-      "widget_type": "switch",
       "config": {
         "position_x": 15,
         "position_y": 11,
@@ -1007,12 +1008,12 @@
         "scale_y": 1,
         "showTagName": false,
         "locked": false,
-        "confirmation": false
+        "confirmation": false,
+        "widget_type": "switch"
       }
     },
     {
       "tag": "9caec646-8379-537c-9dbb-f92f623cb973",
-      "widget_type": "led",
       "config": {
         "position_x": 16,
         "position_y": 10,
@@ -1021,12 +1022,12 @@
         "color_on": "green",
         "color_off": "red",
         "locked": false,
-        "showTagName": true
+        "showTagName": true,
+        "widget_type": "led"
       }
     },
     {
       "tag": "9caec646-8379-537c-9dbb-f92f623cb973",
-      "widget_type": "switch",
       "config": {
         "position_x": 16,
         "position_y": 11,
@@ -1034,12 +1035,12 @@
         "scale_y": 1,
         "showTagName": false,
         "locked": false,
-        "confirmation": false
+        "confirmation": false,
+        "widget_type": "switch"
       }
     },
     {
       "tag": "b309f83a-3a0d-56b1-99ac-b3dcd2439e94",
-      "widget_type": "led",
       "config": {
         "position_x": 17,
         "position_y": 10,
@@ -1048,12 +1049,12 @@
         "color_on": "green",
         "color_off": "red",
         "locked": false,
-        "showTagName": true
+        "showTagName": true,
+        "widget_type": "led"
       }
     },
     {
       "tag": "b309f83a-3a0d-56b1-99ac-b3dcd2439e94",
-      "widget_type": "switch",
       "config": {
         "position_x": 17,
         "position_y": 11,
@@ -1061,12 +1062,12 @@
         "scale_y": 1,
         "showTagName": false,
         "locked": false,
-        "confirmation": false
+        "confirmation": false,
+        "widget_type": "switch"
       }
     },
     {
       "tag": "0578ef20-c80a-546b-af09-c5baab951f3f",
-      "widget_type": "led",
       "config": {
         "position_x": 18,
         "position_y": 10,
@@ -1075,12 +1076,12 @@
         "color_on": "green",
         "color_off": "red",
         "locked": false,
-        "showTagName": true
+        "showTagName": true,
+        "widget_type": "led"
       }
     },
     {
       "tag": "0578ef20-c80a-546b-af09-c5baab951f3f",
-      "widget_type": "switch",
       "config": {
         "position_x": 18,
         "position_y": 11,
@@ -1088,12 +1089,12 @@
         "scale_y": 1,
         "showTagName": false,
         "locked": false,
-        "confirmation": false
+        "confirmation": false,
+        "widget_type": "switch"
       }
     },
     {
       "tag": "52c2afbe-772e-5385-b3da-4f358d91bd96",
-      "widget_type": "led",
       "config": {
         "position_x": 19,
         "position_y": 10,
@@ -1102,12 +1103,12 @@
         "color_on": "green",
         "color_off": "red",
         "locked": false,
-        "showTagName": true
+        "showTagName": true,
+        "widget_type": "led"
       }
     },
     {
       "tag": "52c2afbe-772e-5385-b3da-4f358d91bd96",
-      "widget_type": "switch",
       "config": {
         "position_x": 19,
         "position_y": 11,
@@ -1115,12 +1116,12 @@
         "scale_y": 1,
         "showTagName": false,
         "locked": false,
-        "confirmation": false
+        "confirmation": false,
+        "widget_type": "switch"
       }
     },
     {
       "tag": "842d1970-6a56-5dec-9366-c5b52cf965ba",
-      "widget_type": "number_input",
       "config": {
         "position_x": 15,
         "position_y": 12,
@@ -1132,7 +1133,8 @@
         "precision": 2,
         "step": 1,
         "min": 0,
-        "max": 100
+        "max": 100,
+        "widget_type": "number_input"
       }
     }
   ]

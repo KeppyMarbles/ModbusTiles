@@ -129,17 +129,14 @@
  * Object recieved from `api.serializers.DashboardSerializer` through `/api/dashboards/${alias}`
  * @typedef {Object} DashboardObject
  * @property {string} alias The slug field used for routing - unique to the owner
- * @property {string} title The display name
- * @property {string} description User given description of dashboard, if any
- * @property {number} column_count The number of columns in the GridStack grid
+ * @property {Object} config The config object storing title, description, column_count, etc.
  */
 
 /**  
  * Object recieved from `api.serializers.DashboardWidgetSerializer` through `/api/dashboard-widgets/?dashboard=${alias}`
  * @typedef {Object} DashboardWidgetInfoObject
  * @property {string} tag The UUID of the tag assigned to the widget
- * @property {string} widget_type The name of the widget class (mapped in `WidgetRegistry` in `widgets.js`)
- * @property {Object} config The config object of the widget (position, scale, default and custom fields)
+ * @property {Object} config The config object of the widget (position, scale, widget_type, default and custom fields)
  */
 
 /**

@@ -409,22 +409,16 @@ class Dashboard(models.Model):
     """ A user-defined space to display widgets """
 
     alias = models.SlugField(max_length=100, blank=True)
-    title = models.CharField(max_length=100, default="Untitled Dashboard")
     owner = models.ForeignKey(User, on_delete=models.CASCADE)
-    description = models.TextField(blank=True)
     preview_image = models.ImageField(upload_to='dashboard_previews/', null=True, blank=True)
-    column_count = models.PositiveSmallIntegerField(default=20) #TODO use small integer field more often?
-    #external_id = models.UUIDField(default=uuid.uuid4, unique=True)
-    #TODO permitted users?
-    #TODO we should probably change the basic dashboard properties to one json field
-    #created_at = models.DateTimeField(auto_now_add=True)
+    config = models.JSONField(default=dict)
 
     class Meta:
         unique_together = ("owner", "alias")
 
     def save(self, *args, **kwargs):
         # Determine base alias
-        base_slug = slugify(self.title) if self.title else "dashboard"
+        base_slug = slugify(self.config.get("title", "dashboard"))
         
         candidate = base_slug
         counter = 1
@@ -455,26 +449,7 @@ class Dashboard(models.Model):
 class DashboardWidget(models.Model):
     """ An element on a dashboard used to interact with a tag """
 
-    class WidgetTypeChoices(models.TextChoices):
-        LED = "led", "LED Indicator"
-        BOOL_LABEL = "bool_label", "Boolean Label"
-        MULTI_LABEL = "multi_label", "Multi-Value Label"
-        NUMBER_LABEL = "number_label", "Number Label"
-        TIME_LABEL = "time_label", "Time Label"
-        NUMBER_INPUT = "number_input", "Number Input"
-        LINE_CHART = "chart", "Time-Series Chart"
-        BUTTON = "button", "Button"
-        LABEL = "label", "Text Label"
-        SWITCH = "switch", "Switch"
-        METER = "meter", "Meter"
-        SLIDER = "slider", "Slider"
-        DROPDOWN = "dropdown", "Dropdown"
-        GAUGE = "gauge", "Radial Gauge"
-        TREND = "trend", "Trend Arrow"
-
     dashboard = models.ForeignKey(Dashboard, on_delete=models.CASCADE, related_name="widgets")
-
-    widget_type = models.TextField(choices=WidgetTypeChoices.choices)
 
     tag = models.ForeignKey(Tag, null=True, blank=True, on_delete=models.SET_NULL, related_name="widgets")
     external_id = models.UUIDField(default=uuid.uuid4, unique=True)
@@ -482,4 +457,5 @@ class DashboardWidget(models.Model):
     config = models.JSONField(default=dict)
 
     def __str__(self):
-        return f"{self.widget_type} on {self.dashboard.alias}"
+        w_type = self.config.get("widget_type", "")
+        return f"{w_type} on {self.dashboard.alias}"

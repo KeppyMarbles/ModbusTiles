@@ -33,7 +33,7 @@ export class Dashboard {
         /** @type {Inspector} */
         this.inspector = new Inspector(document.getElementById('inspector-form'));
 
-        /** @type {DashboardObject} */
+        /** @type {Object} */
         this.config = null;
 
         /** @type {HTMLDivElement} */
@@ -210,7 +210,7 @@ export class Dashboard {
 
         // Add widgets to the gridstack grid
         this.canvasGridStack.batchUpdate();
-        widgetData.forEach(wData => this.createWidget(wData.widget_type, serverCache.tags[wData.tag], wData.config));
+        widgetData.forEach(wData => this.createWidget(wData.config?.widget_type, serverCache.tags[wData.tag], wData.config));
         this.canvasGridStack.batchUpdate(false);
 
         this._settingUp = false;
@@ -329,7 +329,8 @@ export class Dashboard {
 
             /** @type {DashboardObject} */
             const meta = await metaResp.json();
-            this.config = { alias: alias, title: meta.title, description: meta.description, column_count: meta.column_count };
+            this.alias = alias;
+            this.config = meta.config || { column_count: 20, description: "", title: "" };
 
             // Set up recieved info
             this.setupWidgets(widgets, this.config.column_count);
@@ -357,28 +358,26 @@ export class Dashboard {
      * Update the server with new widget config and screenshot
      */
     async save() {
-        
-        const formData = new FormData();
+        const fullConfig = this.getFullConfig();
 
-        // Add meta
-        const config = this.getFullConfig();
-
-        formData.append('title', config.title);
-        formData.append('description', config.description);
-        formData.append('column_count', config.column_count);
-        formData.append('widgets', JSON.stringify(config.widgets));
-
-        // Get image data
-        const imageBlob = await this.getPreview(); //TODO only do if widgets changed? Would need a better dirty flag system
-        if (imageBlob) formData.append('preview_image', imageBlob, 'preview.jpg');
-
-        requestServer(`/api/dashboards/${this.config.alias}/save-data/`, 'POST', formData, (data) => {
+        // Save config and widgets using JSON
+        requestServer(`/api/dashboards/${this.alias}/save-data/`, 'POST', fullConfig, async (data) => {
             this.isDirty = false;
-            this.config.alias = data.new_alias;
+            this.alias = data.new_alias;
+
             const titleElem = document.getElementById('dashboard-title');
             titleElem.innerText = this.config.title;
-            titleElem.title = this.config.description;
-            history.pushState({}, "", `/dashboard/${this.config.alias}/`); // Change URL
+            titleElem.title = this.config.description || "";
+            history.pushState({}, "", `/dashboard/${this.alias}/`); // Change URL
+
+            // Capture and upload the preview image in the background
+            const imageBlob = await this.getPreview();
+            if (imageBlob) {
+                const imgFormData = new FormData();
+                imgFormData.append('preview_image', imageBlob, 'preview.jpg');
+                await requestServer(`/api/dashboards/${this.alias}/upload-preview/`, 'POST', imgFormData);
+            }
+
             alert("Dashboard Saved!");
         });
     }
@@ -394,7 +393,7 @@ export class Dashboard {
 
             const a = document.createElement("a");
             a.href = url;
-            a.download = `${this.config.alias}-config.json`;
+            a.download = `${this.alias}-config.json`;
             a.click();
             URL.revokeObjectURL(url);
         } 
@@ -413,7 +412,7 @@ export class Dashboard {
             /** @type {DashboardConfigObject} */
             const config = JSON.parse(text);
             const confirm = window.confirm(`Replace all widgets with ${config.widgets.length} new widgets?`)
-            if(confirm) this.setupWidgets(config.widgets, config.column_count);
+            if(confirm) this.setupWidgets(config.widgets, config.config?.column_count || 20);
         } 
         catch (err) {
             alert("Error importing configuration: " + err.message);
@@ -424,12 +423,16 @@ export class Dashboard {
      * @returns {DashboardConfigObject} All data needed to recreate this dashboard
      */
     getFullConfig() {
-        return { ...this.config,
-            widgets: [...this.widgets].map(widget => ({
-                tag: widget.tag?.external_id || null,
-                widget_type: widget.gridElem.dataset.type,
-                config: structuredClone(widget.config)
-            }))
+        return {
+            config: this.config,
+            widgets: [...this.widgets].map(widget => {
+                const widgetConfig = structuredClone(widget.config);
+                widgetConfig.widget_type = widget.gridElem.dataset.type;
+                return {
+                    tag: widget.tag?.external_id || null,
+                    config: widgetConfig
+                };
+            })
         };
     }
 
@@ -515,7 +518,7 @@ export class Dashboard {
      * @param {DashboardStateObject} state 
      */
     restoreState(state) {
-        this.setupWidgets(state.config.widgets, state.config.column_count);
+        this.setupWidgets(state.config.widgets, state.config.config?.column_count);
 
         this.selectedWidgets.clear();
 

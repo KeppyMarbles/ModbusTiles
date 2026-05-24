@@ -41,9 +41,15 @@ List all dashboards or create a dashboard in the form of [DashboardObject](#dash
 Get or update a specific dashboard in the form of [DashboardObject](#dashboardobject).
 
 ### `POST` /api/dashboards/{alias}/save-data/
-Update a dashboard using formData, with properties of [DashboardConfigObject](#dashboardconfigobject). Can also append a `preview_image`. Response:
+Update a dashboard config and widgets using JSON (Content-Type: application/json) in the form of [DashboardConfigObject](#dashboardconfigobject). Response:
 ```typescript
 { new_alias: string }
+```
+
+### `POST` /api/dashboards/{alias}/upload-preview/
+Upload a preview screenshot image for the dashboard using formData. Should include a field `preview_image` containing the image file. Response:
+```typescript
+{ status: string }
 ```
 
 ## Dashboard Widget
@@ -83,27 +89,27 @@ Requires authentication.
 List activated alarms.
 
 **Query Parameters:**
-- `is_active` (boolean string: `true` | `false`): Filter active or resolved alarms.
-- `threat_level` ('low' | 'high' | 'crit'): Filter by alarm config threat level.
-- `acknowledged` (boolean string: `true` | `false`): Filter by acknowledgment status.
-- `search` (string): Case-insensitive search on alarm message, tag alias, or tag description.
-- `limit` (number): Pagination page size.
-- `offset` (number): Pagination offset.
-
+```typescript
+is_active: 'true' | 'false' // Filter active or resolved alarms
+threat_level: 'low' | 'high' | 'crit' // Filter by alarm config threat level
+acknowledged: 'true' | 'false' // Filter by acknowledgment status
+search: string // Case-insensitive search on alarm message, tag alias, or tag description
+offset: number // Pagination offset
+```
 **Response:**
-- If the `limit` query parameter is not provided, pagination is bypassed and it returns:
-  ```typescript
-  ActivatedAlarmObject[]
-  ```
-- If the `limit` query parameter is provided, returns a paginated result list:
-  ```typescript
-  {
-      count: number,
-      next: string | null,
-      previous: string | null,
-      results: ActivatedAlarmObject[]
-  }
-  ```
+If the `limit` query parameter is provided, a paginated result list:
+```typescript
+{
+    count: number,
+    next: string | null,
+    previous: string | null,
+    results: ActivatedAlarmObject[]
+}
+```
+Else:
+```typescript
+ActivatedAlarmObject[]
+```
 
 ### `GET`, /api/activated-alarms/active_count/
 Get the number of currently active alarms. Response:
@@ -269,8 +275,7 @@ Contains metadata about a user dashboard.
 {
     alias: string,
     title: string,
-    description: string,
-    column_count: string,
+    config: Record<string, any>, // Stores description, column_count, and visual settings
 }
 ```
 
@@ -279,8 +284,7 @@ Contains metadata about a specific widget on a dashboard.
 ```typescript
 {
     tag: string, // UUID of the tag assigned to the widget
-    widget_type: string, // Name of the widget class
-    config: Object,
+    config: Record<string, any>, // Stores visual config, position, widget_type, etc.
 }
 ```
 

@@ -127,22 +127,34 @@ class AlarmSubscriptionAdmin(admin.ModelAdmin):
 class DashboardWidgetInline(admin.TabularInline):
     model = DashboardWidget
     extra = 0
-    fields = ("widget_type", "tag", "external_id")
+    fields = ("tag", "external_id", "config")
     readonly_fields = ("external_id",)
     show_change_link = True
 
 
 @admin.register(DashboardWidget)
 class DashboardWidgetAdmin(admin.ModelAdmin):
-    list_display = ("widget_type", "dashboard", "tag", "external_id")
+    list_display = ("widget_type_display", "dashboard", "tag", "external_id")
     search_fields = ("dashboard__alias", "tag__alias")
     readonly_fields = ("external_id",)
+
+    def widget_type_display(self, obj):
+        return obj.config.get("widget_type", "")
+    widget_type_display.short_description = "Widget Type"
 
 
 # Dashboard
 
 @admin.register(Dashboard)
 class DashboardAdmin(admin.ModelAdmin):
-    list_display = ("alias", "owner", "description")
+    list_display = ("alias", "owner", "description_display", "title_display")
     search_fields = ("alias", "owner__username")
     inlines = [DashboardWidgetInline]
+
+    def description_display(self, obj):
+        return obj.config.get("description", "")
+    description_display.short_description = "Description"
+
+    def title_display(self, obj):
+        return obj.config.get("title", "")
+    title_display.short_description = "Title"

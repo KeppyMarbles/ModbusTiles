@@ -32,8 +32,8 @@
                         <div class="placeholder">No Preview</div>
                     {% endif %}
                 </div>
-                <h3 class="title">{{ db.title }}</h3>
-                <p>{{ db.description }}</p>
+                <h3 class="title">{{ db.config.title }}</h3>
+                <p>{{ db.config.description }}</p>
             </a>
             {% endfor %}
             <button id="create-dashboard" class="btn">+ New Dashboard</button>
