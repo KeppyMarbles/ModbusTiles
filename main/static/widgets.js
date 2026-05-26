@@ -1243,9 +1243,7 @@ class HistogramWidget extends HistoryWidget {
         super.clear();
 
         const now = Date.now() / 1000;
-        const mean = 50;
-        const stddev = 10;
-        const totalSamples = 1000; 
+        const mean = 50, stddev = 10, totalSamples = 1000; 
         const binCount = Math.max(1, this.config.bins);
 
         // Gaussian curve
@@ -1357,35 +1355,47 @@ class HistogramWidget extends HistoryWidget {
  * Attempt to update an element font size to fit its parent rect
  * @param {HTMLElement} elem 
  */
+
 function fitText(elem) {
-    const parent = elem.parentElement;
-    if (!parent) return;
+    const p = elem.parentElement;
+    if (!p) return;
 
-    const cs = window.getComputedStyle(parent);
-    
-    const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
-    const maxH = parent.clientHeight - padY;
-    const maxW = elem.clientWidth; 
+    const cs = getComputedStyle(p);
+    const maxW = p.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    const maxH = p.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
 
-    let low = 6;
-    let high = 196;
-    let optimalSize = low;
+    const MIN = 6, MAX = 196;
 
-    while (low <= high) {
-        const mid = Math.floor((low + high) / 2);
-        elem.style.fontSize = mid + "px";
+    const fits = s => {
+        elem.style.fontSize = s + "px";
+        return elem.scrollWidth <= maxW + 1 && elem.scrollHeight <= maxH + 1;
+    };
 
-        if (elem.scrollWidth <= maxW + 1 && elem.scrollHeight <= maxH + 1) {
-            optimalSize = mid; // Fits, try larger
-            low = mid + 1;
-        } else {
-            high = mid - 1; // Too big (either wraps too many lines, or a word overflows horizontally)
+    let cur = +elem.dataset.lastFit || parseFloat(getComputedStyle(elem).fontSize) || 16;
+    let lo = cur, hi = cur, step = 1;
+
+    if (fits(cur)) {
+        while ((hi = cur + step) <= MAX && fits(hi)) {
+            lo = hi;
+            step *= 2;
         }
+        hi = Math.min(hi, MAX);
+    } 
+    else {
+        while ((lo = cur - step) >= MIN && !fits(lo)) {
+            hi = lo;
+            step *= 2;
+        }
+        lo = Math.max(lo, MIN);
     }
 
-    // Apply the final optimal size
-    optimalSize *= 0.8;
-    elem.style.fontSize = optimalSize + "px";
+    while (lo <= hi) {
+        const mid = (lo + hi) >> 1;
+        fits(mid) ? lo = mid + 1 : hi = mid - 1;
+    }
+
+    elem.dataset.lastFit = hi;
+    elem.style.fontSize = hi * 0.8 + "px";
 }
 
 /**
