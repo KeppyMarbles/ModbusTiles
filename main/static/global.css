@@ -132,6 +132,17 @@ body {
     margin-top: 2px;
 }
 
+input[type="color"].form-input {
+    height: 30px;
+    padding: 4px;
+    cursor: pointer;
+}
+
+input[type="color"].form-input.is-empty {
+    padding: 12px;
+    border-style: dashed;
+}
+
 .form-input.bool { 
     width: auto; 
     flex: 0 0 auto; 

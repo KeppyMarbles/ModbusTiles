@@ -204,6 +204,11 @@ export class Inspector {
 
             case "color":
                 input.type = "color"; //TODO add clear button?
+                if(!currentValue) {
+                    input.value = "#ffffff";
+                    input.classList.add("is-empty");
+                    input.addEventListener('input', () => input.classList.remove('is-empty'));
+                }
                 getValue = () => input.value;
                 break;
 
@@ -433,12 +438,14 @@ export class Inspector {
         const title = this.addTitle("Dashboard");
         const dashboardSection = this.addSection();
 
-        this.addField({ label: "Dashboard Name", type: "text" }, dashboard.config.title, (value) => { dashboard.config.title = value }, dashboardSection);
-        this.addField({ label: "Description", type: "text" }, dashboard.config.description, (value) => { dashboard.config.description = value }, dashboardSection);
-
-        const dashboardPropertiesSection = this.addSection();
-        this.addField({ label: "Columns", type: "int" }, dashboard.config.column_count, (value) => dashboard.setColumnCount(value), dashboardPropertiesSection);
-        this.addField({ label: "Background Color", type: "color" }, dashboard.config.background_color, (value) => dashboard.setColor(value), dashboardPropertiesSection);
+        /** @type {typeof Dashboard} */
+        const dashboardClass = dashboard.constructor;
+        dashboardClass.defaultFields.forEach(field => {
+            this.addField(field, dashboard.config[field.name], (newVal) => {
+                dashboard.config[field.name] = newVal;
+                dashboard.applyConfig();
+            }, dashboardSection);
+        })
 
         const saveSection = this.addSection();
         this.addButton("Save Dashboard", () => dashboard.save(), saveSection);

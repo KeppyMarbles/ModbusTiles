@@ -12,6 +12,16 @@ import { Inspector } from "./inspector.js";
  */
 export class Dashboard {
     /**
+     * @type {InspectorFieldDefinition[]}
+     */
+    static defaultFields = [
+        { name: "title", type: "string", default: "", label: "Dashboard Name" },
+        { name: "description", type: "string", default: "", label: "Description" },
+        { name: "column_count", type: "number", default: "", label: "Column Count" },
+        { name: "background_color", type: "color", default: "", label: "Background Color" },
+    ];
+
+    /**
      * @param {string} alias 
      */
     constructor(alias) {
@@ -204,7 +214,7 @@ export class Dashboard {
     setupWidgets(widgetData, columnCount) {
         this._settingUp = true;
         
-        this.canvasGridStack ? this.setColumnCount(columnCount) : this._setupGridStack(columnCount);
+        if(!this.canvasGridStack) this._setupGridStack(columnCount);
         this.canvasGridStack.removeAll();
         this.listener.clear();
 
@@ -272,6 +282,7 @@ export class Dashboard {
                 widget.clear();
                 widget.setAlarm(null); //TODO add to clear()?
             });
+            this.updateSelection();
         }
         else {
             document.body.classList.remove('edit-mode');
@@ -304,16 +315,6 @@ export class Dashboard {
     }
 
     /**
-     * Update number of columns used in GridStack grid
-     * @param {number} val 
-     */
-    setColumnCount(val) {
-        this.config.column_count = val;
-        this.canvasGridStack.column(val);
-        this.updateSquareCells();
-    }
-
-    /**
      * Fetch and apply widget data from the server based on the given name
      * @param {string} alias
      */
@@ -333,9 +334,8 @@ export class Dashboard {
             this.config = meta.config || { column_count: 20, description: "", title: "" };
 
             // Set up recieved info
-            if(this.config.backgroundColor)
-                this.setColor(this.config.backgroundColor);
             this.setupWidgets(widgets, this.config.column_count);
+            this.applyConfig();
 
             if(widgets.length === 0) {
                 this.toggleEdit(true);
@@ -426,7 +426,7 @@ export class Dashboard {
      */
     getFullConfig() {
         return {
-            config: this.config,
+            config: structuredClone(this.config),
             widgets: [...this.widgets].map(widget => {
                 const widgetConfig = structuredClone(widget.config);
                 widgetConfig.widget_type = widget.gridElem.dataset.type;
@@ -534,6 +534,7 @@ export class Dashboard {
         });
 
         this.updateSelection();
+        this.applyConfig();
     }
 
     pushState() {
@@ -556,9 +557,17 @@ export class Dashboard {
         this.restoreState(nextState);
     }
 
-    setColor(value) {
-        document.body.style.backgroundColor = value;
-        this.config.backgroundColor = value;
+    applyConfig() {
+        if(this.canvasGridStack.getColumn() !== this.config.column_count) {
+            this.canvasGridStack.column(this.config.column_count);
+            this.updateSquareCells();
+        }
+        document.body.style.backgroundColor = this.config.background_color;
+        const title = document.getElementById("dashboard-title");
+        if(title) {
+            title.textContent = this.config.title;
+            title.title = this.config.description;
+        }
     }
 }
 

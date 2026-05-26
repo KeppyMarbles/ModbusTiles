@@ -272,10 +272,10 @@ class InputWidget extends Widget {
  * @abstract
  */
 class HistoryWidget extends Widget {
-    static defaultFields = [ ...Widget.defaultFields,
+    static defaultFields = [
         { name: "history_seconds", type: "number", default: 60, label: "History Length (s)",
             description: "The maximum age of values that this widget should use.",
-        },
+        }, ...Widget.defaultFields
     ];
 
     constructor(gridElem, config, tag) {
@@ -1208,6 +1208,149 @@ class TrendWidget extends HistoryWidget {
     }
 }
 
+class HistogramWidget extends HistoryWidget {
+    static allowedChannels = ["hr", "ir"];
+    static allowedTypes = ["int16", "uint16", "int32", "uint32", "int64", "uint64", "float32", "float64"];
+    static customFields = [
+        { name: "title", type: "text", default: "Histogram", label: "Title" },
+        { name: "bins", type: "int", default: 20, label: "Bin Count" },
+        { name: "bar_color", type: "color", default: "#3498db", label: "Bar Color" },
+    ];
+
+    constructor(gridElem, config, tag) {
+        super(gridElem, config, tag);
+        this.chartDiv = this.elem.querySelector(".chart-container");
+        this.uplot = null;
+    }
+
+    onHistoryRecieved() {
+        this.renderHistogram();
+    }
+
+    onValue(val, time) {
+        super.onValue(val, time);
+        this.renderHistogram();
+    }
+
+    applyConfig() {
+        super.applyConfig();
+        this.clear();
+    }
+
+    clear() {
+        super.clear();
+
+        const now = Date.now() / 1000;
+        const mean = 50;
+        const stddev = 10;
+        const totalSamples = 1000; 
+        const binCount = Math.max(1, this.config.bins);
+
+        // Gaussian curve
+        for (let i = 0; i < binCount; i++) {
+            const t = (i / (binCount - 1)) * 6 - 3; // Ranges from -3 to +3
+            const value = mean + t * stddev;
+            const exponent = -0.5 * Math.pow(t, 2);
+            const density = Math.exp(exponent); // Relative height (0 to 1)
+            const countForBin = Math.round(density * (totalSamples / binCount) * 2.5);
+
+            for (let j = 0; j < countForBin; j++) {
+                this.yData.push(value);
+                this.xData.push(now + this.yData.length);
+            }
+        }
+
+        this.renderHistogram();
+    }
+
+    onResize() {
+        this.uplot?.setSize({
+            width: this.chartDiv.clientWidth,
+            height: this.chartDiv.clientHeight,
+        });
+    }
+
+    computeHistogram() {
+        if (this.yData.length === 0)
+            return { bins: [], counts: [] };
+
+        const values = this.yData;
+
+        const min = Math.min(...values);
+        const max = Math.max(...values);
+
+        if (min === max) {
+            return { bins: [min], counts: [values.length] };
+        }
+
+        const binCount = Math.max(1, this.config.bins);
+        const binSize = (max - min) / binCount;
+        const counts = new Array(binCount).fill(0);
+        const bins = new Array(binCount);
+
+        for (let i = 0; i < binCount; i++) {
+            bins[i] = min + (i + 0.5) * binSize;
+        }
+
+        for (const value of values) {
+            let idx = Math.floor((value - min) / binSize);
+
+            // include max value in last bucket
+            if (idx >= binCount)
+                idx = binCount - 1;
+
+            counts[idx]++;
+        }
+
+        return { bins, counts };
+    }
+
+    renderHistogram() {
+        const { bins, counts } = this.computeHistogram();
+
+        if (this.uplot)
+            this.uplot.destroy();
+
+        this.chartDiv.innerHTML = "";
+
+        if (bins.length < 2)
+            return;
+
+        // Get half the width of a single bin to use as padding
+        const binWidth = bins[1] - bins[0];
+        const halfWidth = binWidth / 2;
+        const minX = bins[0] - binWidth * 0.6;
+        const maxX = bins[bins.length - 1] + binWidth * 0.6;
+
+        const opts = {
+            title: this.config.title,
+            width: this.chartDiv.clientWidth || 300,
+            height: this.chartDiv.clientHeight || 200,
+            scales: {
+                x: { time: false, min: minX, max: maxX },
+                y: { auto: true }
+            },
+            axes: [
+                { label: "Value" },
+                { label: "Count" }
+            ],
+            series: [
+                {},
+                {
+                    fill: this.config.bar_color,
+                    stroke: this.config.bar_color,
+                    paths: uPlot.paths.bars({
+                        size: [0.9, 100],
+                        align: 0, // Keep center alignment
+                    }),
+                }
+            ]
+        };
+
+        this.uplot = new uPlot(opts, [bins, counts], this.chartDiv);
+    }
+}
+
 /**
  * Attempt to update an element font size to fit its parent rect
  * @param {HTMLElement} elem 
@@ -1272,4 +1415,5 @@ export const WidgetRegistry = {
     "dropdown" : DropdownWidget,
     "gauge" : GaugeWidget,
     "trend" : TrendWidget,
+    "histogram" : HistogramWidget,
 };
