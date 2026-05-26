@@ -882,6 +882,107 @@ class NumberInputWidget extends InputWidget {
     }
 }
 
+class GaugeWidget extends Widget {
+    static allowedChannels = ["hr", "ir"];
+    static allowedTypes = ["int16", "uint16", "int32", "uint32", "float32", "float64"];
+    
+    static customFields = [
+        { name: "title", type: "text", default: "", label: "Title" },
+        { name: "min_value", type: "number", default: 0, label: "Min Value" },
+        { name: "max_value", type: "number", default: 100, label: "Max Value" },
+        { name: "warning_threshold", type: "number", default: 75, label: "Warning Start",
+            description: "Minimum value for the warning color."
+        },
+        { name: "critical_threshold", type: "number", default: 90, label: "Critical Start",
+            description: "Minimum value for the critical color."
+        },
+        { name: "prefix", type: "text", default: "", label: "Value Prefix" },
+        { name: "suffix", type: "text", default: "", label: "Value Suffix" },
+    ];
+
+    constructor(gridElem, config, tag) {
+        super(gridElem, config, tag);
+        
+        // Grab the elements directly from the existing HTML structure
+        this.valuePath = this.elem.querySelector('.gauge-value-path');
+        this.valueText = this.elem.querySelector('.gauge-value-text');
+        this.titleDiv = this.elem.querySelector('.gauge-title');
+
+        // Grab the new zone paths
+        this.safeZone = this.elem.querySelector('.safe-zone');
+        this.warnZone = this.elem.querySelector('.warning-zone');
+        this.critZone = this.elem.querySelector('.critical-zone');
+    }
+
+    applyConfig() {
+        super.applyConfig();
+        if (this.titleDiv) {
+            this.titleDiv.textContent = this.config.title;
+        }
+
+        const range = this.config.max_value - this.config.min_value;
+
+        if (range > 0) {
+            // Calculate percentages (clamped between 0 and 1)
+            let warnP = Math.max(0, Math.min(1, (this.config.warning_threshold - this.config.min_value) / range));
+            let critP = Math.max(0, Math.min(1, (this.config.critical_threshold - this.config.min_value) / range));
+            
+            // Ensure warning doesn't overlap critical if configured backwards
+            if (warnP > critP) warnP = critP;
+
+            const totalLength = this.safeZone.getTotalLength();
+
+            const safeLen = warnP * totalLength;
+            const warnLen = (critP - warnP) * totalLength;
+            const critLen = (1 - critP) * totalLength;
+
+            // helper to apply a segment
+            const setSegment = (el, len, offset) => {
+                el.style.strokeDasharray = `${len} ${totalLength}`;
+                el.style.strokeDashoffset = `-${offset}`;
+            };
+
+            setSegment(this.safeZone, safeLen, 0);
+            setSegment(this.warnZone, warnLen, safeLen);
+            setSegment(this.critZone, critLen, safeLen + warnLen);
+        }
+    }
+
+    onValue(val) {
+        // Clamp the value so the arc doesn't break if it exceeds bounds
+        const clampedVal = Math.max(this.config.min_value, Math.min(this.config.max_value, val));
+        
+        // Calculate the percentage of the range
+        const range = this.config.max_value - this.config.min_value;
+        const percent = range === 0 ? 0 : (clampedVal - this.config.min_value) / range;
+
+        const pathLength = this.safeZone.getTotalLength();
+        const offset = pathLength - (percent * pathLength);
+        
+        // Update SVG path offset and text
+        this.valuePath.style.strokeDashoffset = offset;
+        
+        // Format decimal display if needed
+        const displayVal = (typeof val === 'number' && val % 1 !== 0) ? parseFloat(val).toFixed(2) : val;
+        this.valueText.textContent = `${this.config.prefix}${displayVal}${this.config.suffix}`;
+        
+        // Update colors based on config thresholds
+        if (val >= this.config.critical_threshold) {
+            this.valuePath.style.stroke = "#e74c3c"; // Red
+        } else if (val >= this.config.warning_threshold) {
+            this.valuePath.style.stroke = "#f1c40f"; // Yellow
+        } else {
+            this.valuePath.style.stroke = "#2ecc71"; // Green
+        }
+    }
+
+    clear() {
+        this.onValue(this.config.min_value);
+    }
+}
+
+// -------- History Widgets --------
+
 class ChartWidget extends HistoryWidget { 
     static allowedChannels = ["hr", "ir"]; 
     static allowedTypes = ["int16", "uint16", "int32", "uint32", "int64", "uint64", "float32", "float64"];
@@ -1000,105 +1101,6 @@ class ChartWidget extends HistoryWidget {
         };
 
         this.uplot = new uPlot(opts, [this.xData, this.yData], this.chartDiv);
-    }
-}
-
-class GaugeWidget extends Widget {
-    static allowedChannels = ["hr", "ir"];
-    static allowedTypes = ["int16", "uint16", "int32", "uint32", "float32", "float64"];
-    
-    static customFields = [
-        { name: "title", type: "text", default: "", label: "Title" },
-        { name: "min_value", type: "number", default: 0, label: "Min Value" },
-        { name: "max_value", type: "number", default: 100, label: "Max Value" },
-        { name: "warning_threshold", type: "number", default: 75, label: "Warning Start",
-            description: "Minimum value for the warning color."
-        },
-        { name: "critical_threshold", type: "number", default: 90, label: "Critical Start",
-            description: "Minimum value for the critical color."
-        },
-        { name: "prefix", type: "text", default: "", label: "Value Prefix" },
-        { name: "suffix", type: "text", default: "", label: "Value Suffix" },
-    ];
-
-    constructor(gridElem, config, tag) {
-        super(gridElem, config, tag);
-        
-        // Grab the elements directly from the existing HTML structure
-        this.valuePath = this.elem.querySelector('.gauge-value-path');
-        this.valueText = this.elem.querySelector('.gauge-value-text');
-        this.titleDiv = this.elem.querySelector('.gauge-title');
-
-        // Grab the new zone paths
-        this.safeZone = this.elem.querySelector('.safe-zone');
-        this.warnZone = this.elem.querySelector('.warning-zone');
-        this.critZone = this.elem.querySelector('.critical-zone');
-    }
-
-    applyConfig() {
-        super.applyConfig();
-        if (this.titleDiv) {
-            this.titleDiv.textContent = this.config.title;
-        }
-
-        const range = this.config.max_value - this.config.min_value;
-
-        if (range > 0) {
-            // Calculate percentages (clamped between 0 and 1)
-            let warnP = Math.max(0, Math.min(1, (this.config.warning_threshold - this.config.min_value) / range));
-            let critP = Math.max(0, Math.min(1, (this.config.critical_threshold - this.config.min_value) / range));
-            
-            // Ensure warning doesn't overlap critical if configured backwards
-            if (warnP > critP) warnP = critP;
-
-            const totalLength = this.safeZone.getTotalLength();
-
-            const safeLen = warnP * totalLength;
-            const warnLen = (critP - warnP) * totalLength;
-            const critLen = (1 - critP) * totalLength;
-
-            // helper to apply a segment
-            const setSegment = (el, len, offset) => {
-                el.style.strokeDasharray = `${len} ${totalLength}`;
-                el.style.strokeDashoffset = `-${offset}`;
-            };
-
-            setSegment(this.safeZone, safeLen, 0);
-            setSegment(this.warnZone, warnLen, safeLen);
-            setSegment(this.critZone, critLen, safeLen + warnLen);
-        }
-    }
-
-    onValue(val) {
-        // Clamp the value so the arc doesn't break if it exceeds bounds
-        const clampedVal = Math.max(this.config.min_value, Math.min(this.config.max_value, val));
-        
-        // Calculate the percentage of the range
-        const range = this.config.max_value - this.config.min_value;
-        const percent = range === 0 ? 0 : (clampedVal - this.config.min_value) / range;
-
-        const pathLength = this.safeZone.getTotalLength();
-        const offset = pathLength - (percent * pathLength);
-        
-        // Update SVG path offset and text
-        this.valuePath.style.strokeDashoffset = offset;
-        
-        // Format decimal display if needed
-        const displayVal = (typeof val === 'number' && val % 1 !== 0) ? parseFloat(val).toFixed(2) : val;
-        this.valueText.textContent = `${this.config.prefix}${displayVal}${this.config.suffix}`;
-        
-        // Update colors based on config thresholds
-        if (val >= this.config.critical_threshold) {
-            this.valuePath.style.stroke = "#e74c3c"; // Red
-        } else if (val >= this.config.warning_threshold) {
-            this.valuePath.style.stroke = "#f1c40f"; // Yellow
-        } else {
-            this.valuePath.style.stroke = "#2ecc71"; // Green
-        }
-    }
-
-    clear() {
-        this.onValue(this.config.min_value);
     }
 }
 

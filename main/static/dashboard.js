@@ -207,6 +207,48 @@ export class Dashboard {
     }
 
     /**
+     * Fetch and apply widget data from the server based on the given name
+     * @param {string} alias
+     */
+    async load(alias) {
+        try {
+            const [metaResp, widgetResp] = await Promise.all([
+                fetch(`/api/dashboards/${alias}`),
+                fetch(`/api/dashboard-widgets/?dashboard=${alias}`)
+            ]);
+
+            /** @type {DashboardWidgetInfoObject[]} */
+            const widgets = await widgetResp.json();
+
+            /** @type {DashboardObject} */
+            const meta = await metaResp.json();
+            this.alias = alias;
+            this.config = meta.config || { column_count: 20, description: "", title: "" };
+
+            // Set up recieved info
+            this.setupWidgets(widgets, this.config.column_count);
+            this.applyConfig();
+
+            if(widgets.length === 0) {
+                this.toggleEdit(true);
+            }
+            else {
+                this.widgets.forEach(widget => this.listener.registerWidget(widget));
+                await this.listener.connect();
+            }
+
+            document.getElementById('loading-spinner').classList.remove('hidden');
+        } 
+        catch (err) {
+            console.error(err);
+            this.widgetGrid.innerHTML = `<div class="error">Error loading dashboard: ${err.message}</div>`;
+        } 
+        finally {
+            document.getElementById('loading-spinner').classList.add('hidden');
+        }
+    }
+
+    /**
      * Populate the dashboard with new widgets from the given data
      * @param {DashboardWidgetInfoObject[]} widgetData 
      * @param {number} columnCount
@@ -295,6 +337,19 @@ export class Dashboard {
         }
     }
 
+    applyConfig() {
+        if(this.canvasGridStack.getColumn() !== this.config.column_count) {
+            this.canvasGridStack.column(this.config.column_count);
+            this.updateSquareCells();
+        }
+        document.body.style.backgroundColor = this.config.background_color;
+        const title = document.getElementById("dashboard-title");
+        if(title) {
+            title.textContent = this.config.title;
+            title.title = this.config.description;
+        }
+    }
+
     /**
      * Resize the GridStack cell width to maintain 1:1 aspect ratio
      */
@@ -314,46 +369,20 @@ export class Dashboard {
         this.canvasGridStack.setAnimation(this.editMode); // TODO? kinda hacky. Might not be performant
     }
 
-    /**
-     * Fetch and apply widget data from the server based on the given name
-     * @param {string} alias
-     */
-    async load(alias) {
-        try {
-            const [metaResp, widgetResp] = await Promise.all([
-                fetch(`/api/dashboards/${alias}`),
-                fetch(`/api/dashboard-widgets/?dashboard=${alias}`)
-            ]);
+    updateSelection() {
+        this.widgets.forEach(w => w.gridElem.classList.toggle("selected", this.selectedWidgets.has(w)));
 
-            /** @type {DashboardWidgetInfoObject[]} */
-            const widgets = await widgetResp.json();
+        if(this.selectedWidgets.size > 0)
+            this.inspector.inspectWidgets([...this.selectedWidgets], () => this.pushState());
+        else
+            this.inspector.inspectDashboard(this);
+    }
 
-            /** @type {DashboardObject} */
-            const meta = await metaResp.json();
-            this.alias = alias;
-            this.config = meta.config || { column_count: 20, description: "", title: "" };
-
-            // Set up recieved info
-            this.setupWidgets(widgets, this.config.column_count);
-            this.applyConfig();
-
-            if(widgets.length === 0) {
-                this.toggleEdit(true);
-            }
-            else {
-                this.widgets.forEach(widget => this.listener.registerWidget(widget));
-                await this.listener.connect();
-            }
-
-            document.getElementById('loading-spinner').classList.remove('hidden');
-        } 
-        catch (err) {
-            console.error(err);
-            this.widgetGrid.innerHTML = `<div class="error">Error loading dashboard: ${err.message}</div>`;
-        } 
-        finally {
-            document.getElementById('loading-spinner').classList.add('hidden');
-        }
+    deleteSelection() {
+        this.canvasGridStack.batchUpdate();
+        this.selectedWidgets.forEach(w => this.canvasGridStack.removeWidget(w.gridElem));
+        this.canvasGridStack.batchUpdate(false);
+        this.inspector.inspectDashboard(this);
     }
 
     /** 
@@ -382,6 +411,23 @@ export class Dashboard {
 
             alert("Dashboard Saved!");
         });
+    }
+
+    /**
+     * @returns {DashboardConfigObject} All data needed to recreate this dashboard
+     */
+    getFullConfig() {
+        return {
+            config: structuredClone(this.config),
+            widgets: [...this.widgets].map(widget => {
+                const widgetConfig = structuredClone(widget.config);
+                widgetConfig.widget_type = widget.gridElem.dataset.type;
+                return {
+                    tag: widget.tag?.external_id || null,
+                    config: widgetConfig
+                };
+            })
+        };
     }
 
     /**
@@ -419,23 +465,6 @@ export class Dashboard {
         catch (err) {
             alert("Error importing configuration: " + err.message);
         }
-    }
-
-    /**
-     * @returns {DashboardConfigObject} All data needed to recreate this dashboard
-     */
-    getFullConfig() {
-        return {
-            config: structuredClone(this.config),
-            widgets: [...this.widgets].map(widget => {
-                const widgetConfig = structuredClone(widget.config);
-                widgetConfig.widget_type = widget.gridElem.dataset.type;
-                return {
-                    tag: widget.tag?.external_id || null,
-                    config: widgetConfig
-                };
-            })
-        };
     }
 
     /**
@@ -490,20 +519,24 @@ export class Dashboard {
         }
     }
 
-    deleteSelection() {
-        this.canvasGridStack.batchUpdate();
-        this.selectedWidgets.forEach(w => this.canvasGridStack.removeWidget(w.gridElem));
-        this.canvasGridStack.batchUpdate(false);
-        this.inspector.inspectDashboard(this);
+    pushState() {
+        this.undoStack.push(this.getState());
+        this.redoStack = [];
+        this.isDirty = true;
     }
 
-    updateSelection() {
-        this.widgets.forEach(w => w.gridElem.classList.toggle("selected", this.selectedWidgets.has(w)));
+    undo() {
+        if (this.undoStack.length === 0) return;
+        this.redoStack.push(this.getState());
+        const previousState = this.undoStack.pop();
+        this.restoreState(previousState);
+    }
 
-        if(this.selectedWidgets.size > 0)
-            this.inspector.inspectWidgets([...this.selectedWidgets], () => this.pushState());
-        else
-            this.inspector.inspectDashboard(this);
+    redo() {
+        if (this.redoStack.length === 0) return;
+        this.undoStack.push(this.getState());
+        const nextState = this.redoStack.pop();
+        this.restoreState(nextState);
     }
 
     /**
@@ -535,39 +568,6 @@ export class Dashboard {
 
         this.updateSelection();
         this.applyConfig();
-    }
-
-    pushState() {
-        this.undoStack.push(this.getState());
-        this.redoStack = [];
-        this.isDirty = true;
-    }
-
-    undo() {
-        if (this.undoStack.length === 0) return;
-        this.redoStack.push(this.getState());
-        const previousState = this.undoStack.pop();
-        this.restoreState(previousState);
-    }
-
-    redo() {
-        if (this.redoStack.length === 0) return;
-        this.undoStack.push(this.getState());
-        const nextState = this.redoStack.pop();
-        this.restoreState(nextState);
-    }
-
-    applyConfig() {
-        if(this.canvasGridStack.getColumn() !== this.config.column_count) {
-            this.canvasGridStack.column(this.config.column_count);
-            this.updateSquareCells();
-        }
-        document.body.style.backgroundColor = this.config.background_color;
-        const title = document.getElementById("dashboard-title");
-        if(title) {
-            title.textContent = this.config.title;
-            title.title = this.config.description;
-        }
     }
 }
 
