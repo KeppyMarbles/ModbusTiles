@@ -43,9 +43,13 @@ echo.
 echo *** COLLECTING STATIC FILES ***
 python manage.py collectstatic --noinput
 
-REM ---------- Start Server ----------
+REM ---------- Start Server & Poller ----------
 echo.
 echo *** STARTING DJANGO SERVER ***
-python manage.py run_server
+start cmd /k "call .venv\Scripts\activate && python manage.py run_server"
+timeout /t 1 >nul
+
+echo *** STARTING POLLER ***
+python manage.py run_poller
 
 pause

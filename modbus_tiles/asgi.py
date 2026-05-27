@@ -12,7 +12,7 @@ import os
 from django.core.asgi import get_asgi_application
 from channels.routing import ProtocolTypeRouter, URLRouter
 from django.urls import path
-from main.consumers import DashboardConsumer
+from main.consumers import DashboardConsumer, PollerConsumer
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'modbus_tiles.settings')
 
@@ -25,5 +25,6 @@ application = ProtocolTypeRouter({
     # WebSocket handler
     "websocket": URLRouter([
         path("ws/dashboard/", DashboardConsumer.as_asgi()),
+        path("ws/poller/", PollerConsumer.as_asgi()),
     ]),
 })

@@ -1,17 +1,17 @@
 import asyncio
 import time
 import logging
+import json
 from dataclasses import dataclass
 from collections import defaultdict
 from django.utils import timezone
 from django.db import connection
 from pymodbus.client import AsyncModbusTcpClient, AsyncModbusUdpClient
 from pymodbus.client.base import ModbusBaseClient
-from channels.layers import get_channel_layer
 from channels.db import database_sync_to_async
 from ..models import Device, Tag, TagWriteRequest, AlarmConfig, ActivatedAlarm
 from ..api.serializers import TagValueSerializer
-#from .notify_alarms import send_alarm_notifications #TODO use
+from websockets.exceptions import ConnectionClosed
 
 
 @dataclass
@@ -20,104 +20,202 @@ class ReadBlock:
     length: int
     tags: list[Tag]
 
+
 @dataclass
 class PollContext:
-    updated_tags: list[Tag]
-    read_tags: list[Tag]
+    updated_tags: dict[int, Tag]
+    read_tags: dict[int, Tag]
+
 
 @dataclass
 class DeviceState:
     failures: int = 0
     next_retry: float = 0.0
     disabled_until: float = 0.0
+    total_duration: float = 0.0
+    iteration_count: int = 0
+
 
 logger = logging.getLogger(__name__)
-
-channel_layer = get_channel_layer()
-clients: dict[str, ModbusBaseClient] = {}
-device_states: dict[str, DeviceState] = defaultdict(DeviceState)
+clients: dict[int, ModbusBaseClient] = {}
+device_states: dict[int, DeviceState] = defaultdict(DeviceState)
 
 
-async def poll_devices(poll_interval=0.25, info_interval=30):
-    """ Gather tag data and process write requests at a steady rate """
-
-    @database_sync_to_async
-    def get_active_devices() -> list[Device]:
-        """ Get devices enabled in the DB with prefetched tags """
-        return list(Device.objects.filter(is_active=True).prefetch_related('tags'))
-
-    @database_sync_to_async
-    def update_tags(context: PollContext):
-        connection.ensure_connection()
-
-        Tag.objects.bulk_update(context.read_tags, ['last_updated'])
-        Tag.objects.bulk_update(context.updated_tags, ['current_value'])
-        Tag.bulk_create_history(context.updated_tags)
-
-        AlarmConfig.update_alarms(context.updated_tags) #TODO might be doing too much? kind of heavy
+async def poll_devices(ws, poll_interval=0.25, refresh_interval=5, info_interval=30):
+    """ Reconcile active devices and manage device tasks """
     
     @database_sync_to_async
-    def get_tag_data(context: PollContext):
-        serialized = TagValueSerializer(
-            context.updated_tags, many=True, 
-            context={"alarm_map": ActivatedAlarm.get_tag_map(context.updated_tags)}
-        )
-        return serialized.data
+    def get_active_device_ids() -> list[int]:
+        return list(Device.objects.filter(is_active=True).values_list('id', flat=True))
     
-    async def log_duration(): #TODO more logging info?
-        """ Notify if we're keeping up with the target frequency """
-        nonlocal total_duration, iteration_count
+    async def log_performance():
+        """ Periodically reports performance metrics across all active devices """
         while True:
-            if iteration_count > 0:
-                avg = total_duration / iteration_count
-                amt = (avg / poll_interval)*100 if poll_interval > 0 else 0
-                msg = f"Average poll duration: {avg:.3f}s ({amt:.2f}%)"
+            await asyncio.sleep(info_interval)
+            for alias, state in list(device_states.items()):
+                if state.iteration_count == 0:
+                    continue
+                
+                avg = state.total_duration / state.iteration_count
+                utilization = (avg / poll_interval) * 100 if poll_interval > 0 else 0
+                
+                msg = f"Device [{alias}] -> Avg Poll: {avg:.3f}s ({utilization:.1f}% capacity) over {state.iteration_count} cycles"
+                
                 if avg > poll_interval:
-                    logger.warning(msg)
+                    logger.warning(f"[OVERLOAD] {msg}")
                 else:
                     logger.info(msg)
+                
+                # Reset metrics for the next interval window
+                state.total_duration = 0.0
+                state.iteration_count = 0
 
-            total_duration = iteration_count = 0
-            await asyncio.sleep(info_interval)
-
-    logger.info("Starting Async Poller...")
-
-    total_duration = iteration_count = 0
-    asyncio.create_task(log_duration())
+    logger.info("Starting Async Poller Supervisor...")
     
-    while True:
-        start_time = time.perf_counter()
+    queue = asyncio.Queue()
+    writer_task = asyncio.create_task(_db_and_ws_write(ws, queue))
+    perf_task = asyncio.create_task(log_performance())
+    
+    device_tasks = {}
+    
+    try:
+        while True:
+            if writer_task.done():
+                exc = writer_task.exception()
+                if exc:
+                    raise exc
+                raise RuntimeError("WebSocket writer task stopped unexpectedly.")
 
-        devices = await get_active_devices()
-        context = PollContext(updated_tags=[], read_tags=[])
-        
-        # Process devices concurrently
-        tasks = [_poll_device(d, context) for d in devices]
-        await asyncio.gather(*tasks)
-        await update_tags(context)
+            active_ids = await get_active_device_ids()
+            active_set = set(active_ids)
+            
+            # Cancel tasks for devices that are no longer active
+            for d_id, task in list(device_tasks.items()):
+                if d_id not in active_set:
+                    task.cancel()
+                    del device_tasks[d_id]
+            
+            # Start tasks for newly active devices
+            for d_id in active_ids:
+                if d_id not in device_tasks:
+                    device_tasks[d_id] = asyncio.create_task(
+                        _poll_single_device_loop(d_id, queue, poll_interval, refresh_interval)
+                    )
+            
+            await asyncio.sleep(refresh_interval)
+            
+    finally:
+        logger.info("Poller supervisor cancelled. Stopping tasks...")
+        for task in device_tasks.values():
+            task.cancel()
+        writer_task.cancel()
+        perf_task.cancel()
 
-        # Send data to the websocket using the tag serializer
-        tag_data = await get_tag_data(context)
-        await channel_layer.group_send(
-            "poller_broadcast", {
-                "type": "tag_update",
-                "updates": tag_data
-            }
+
+async def _db_and_ws_write(ws, queue: asyncio.Queue):
+    """ Read from the queue, merge updates, save to DB, and send updates over WebSocket """
+
+    @database_sync_to_async
+    def get_tag_data(updated_tags: list[Tag]):
+        serialized = TagValueSerializer(
+            updated_tags, many=True, 
+            context={"alarm_map": ActivatedAlarm.get_tag_map(updated_tags)}
         )
+        return serialized.data
 
-        # Sleep
-        elapsed = time.perf_counter() - start_time
-        sleep_time = max(0, poll_interval - elapsed)
+    @database_sync_to_async
+    def perform_db_update(updated_tags, read_tags):
+        connection.ensure_connection()
+        if read_tags:
+            Tag.objects.bulk_update(read_tags, ['last_updated'])
+        if updated_tags:
+            Tag.objects.bulk_update(updated_tags, ['current_value'])
+            Tag.bulk_create_history(updated_tags)
+            AlarmConfig.update_alarms(updated_tags)
 
-        total_duration += elapsed
-        iteration_count += 1
+    while True:
+        first_context: PollContext = await queue.get()
+        items_count = 1
+        
+        while not queue.empty():
+            try:
+                next_context: PollContext = queue.get_nowait()
+                first_context.updated_tags.update(next_context.updated_tags)
+                first_context.read_tags.update(next_context.read_tags)
+                items_count += 1
+            except asyncio.QueueEmpty:
+                break
+        
+        updated_list = list(first_context.updated_tags.values())
+        read_list = list(first_context.read_tags.values())
 
-        await asyncio.sleep(sleep_time)
+        if updated_list or read_list:
+            try:
+                await perform_db_update(updated_list, read_list)
+            except Exception as e:
+                logger.error(f"Error performing DB updates in poller: {e}")
+        
+        if updated_list:
+            try:
+                tag_data = await get_tag_data(updated_list)
+                await ws.send(json.dumps({
+                    "type": "tag_update",
+                    "updates": tag_data
+                }))
+
+            except ConnectionClosed as cce:
+                logger.error("WebSocket connection lost in writer task")
+                raise cce
+            except Exception as e:
+                logger.error(f"Error preparing updates or serialization: {e}")
+
+        for _ in range(items_count):
+            queue.task_done()
+
+
+async def _poll_single_device_loop(device_id: int, queue: asyncio.Queue, poll_interval: float, refresh_interval: float):
+    """ Loop specific to one device. """
+    
+    @database_sync_to_async
+    def fetch_device(d_id: int):
+        return Device.objects.prefetch_related('tags').filter(id=d_id).first()
+
+    last_fetch = None
+
+    try:
+        while True:
+            start_time = time.perf_counter()
+            
+            # Refresh device and tags config periodically
+            if last_fetch is None or time.perf_counter() - last_fetch > refresh_interval:
+                device = await fetch_device(device_id)
+                state = device_states[device.id]
+                if last_fetch is None:
+                    logger.info(f"Started polling loop for {device}")
+                last_fetch = time.perf_counter()
+            
+            context = PollContext(updated_tags={}, read_tags={})
+            await _poll_device(device, context)
+            await queue.put(context)
+                
+            elapsed = time.perf_counter() - start_time
+            if elapsed > poll_interval:
+                logger.warning(f"{device} poll took {elapsed:.3f}s, exceeding interval of {poll_interval}s.")
+
+            state.total_duration += elapsed
+            state.iteration_count += 1
+                
+            sleep_time = max(0, poll_interval - elapsed)
+            await asyncio.sleep(sleep_time)
+            
+    except asyncio.CancelledError:
+        logger.info(f"Polling loop for {device} cancelled.")
+        raise
 
 
 async def _poll_device(device: Device, context: PollContext):
     """ Process read and writes for a device """
-    if time.monotonic() < device_states[device.alias].disabled_until:
+    if time.monotonic() < device_states[device.id].disabled_until:
         return
     
     try:
@@ -137,8 +235,8 @@ async def _poll_device(device: Device, context: PollContext):
 async def _get_client(device: Device, base_backoff_seconds=2, max_backoff_seconds=60) -> ModbusBaseClient | None:
     """Get or create a persistent client connection"""
 
-    state = device_states[device.alias]
-    conn = clients.get(device.alias)
+    state = device_states[device.id]
+    conn = clients.get(device.id)
 
     if conn is None or not conn.connected:
         match device.protocol:
@@ -151,7 +249,7 @@ async def _get_client(device: Device, base_backoff_seconds=2, max_backoff_second
             #    conn = ModbusSerialClient(device.port)
         if await conn.connect():
             state.failures = 0
-            clients[device.alias] = conn
+            clients[device.id] = conn
             logger.info(f"Established connection: {conn}")
         else:
             state.failures += 1
@@ -159,7 +257,7 @@ async def _get_client(device: Device, base_backoff_seconds=2, max_backoff_second
             backoff = min(base_backoff_seconds * (2 ** (min(state.failures, 32) - 1)), max_backoff_seconds)
             state.disabled_until = time.monotonic() + backoff
 
-            logger.warning(f"{device.alias} unreachable. Trying again in {backoff:.1f}s.")
+            logger.warning(f"{device} unreachable. Trying again in {backoff:.1f}s.")
             raise ConnectionError("Could not connect to PLC", conn)
     
     return conn
@@ -176,6 +274,8 @@ def _build_read_blocks(tags: list[Tag], max_gap=8, max_size=125) -> list[ReadBlo
     blocks = []
 
     for channel, channel_tags in grouped_tags.items():
+        if not channel_tags:
+            continue
         channel_tags.sort(key=lambda x: x.address)
 
         # First block
@@ -267,13 +367,13 @@ async def _process_block(block: ReadBlock, client: ModbusBaseClient, context: Po
             # Update tag
             if tag.current_value != values:
                 tag.current_value = values
-                context.updated_tags.append(tag)
+                context.updated_tags[tag.id] = tag
             
             tag.last_updated = timezone.now()
-            context.read_tags.append(tag)
+            context.read_tags[tag.id] = tag
 
         except Exception as e:
-            logger.error(f"Error processing tag {tag.alias}: {e}")
+            logger.error(f"Error processing {tag}: {e}")
 
 
 async def _process_writes(client, device: Device, context: PollContext):
@@ -306,7 +406,7 @@ async def _process_writes(client, device: Device, context: PollContext):
         except Exception as e:
             logger.error(f"Write failed for {req.tag}: {e}")
             req.failed = True
-            context.updated_tags.append(req.tag) # Send the client an update so their value is reset
+            context.updated_tags[req.tag.id] = req.tag # Send the client an update so their value is reset
 
         # Mark as done
         req.processed = True
