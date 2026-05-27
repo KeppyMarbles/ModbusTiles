@@ -11,7 +11,6 @@ from pymodbus.client.base import ModbusBaseClient
 from channels.db import database_sync_to_async
 from ..models import Device, Tag, TagWriteRequest, AlarmConfig, ActivatedAlarm
 from ..api.serializers import TagValueSerializer
-from websockets.exceptions import ConnectionClosed
 
 
 @dataclass
@@ -41,7 +40,7 @@ clients: dict[int, ModbusBaseClient] = {}
 device_states: dict[int, DeviceState] = defaultdict(DeviceState)
 
 
-async def poll_devices(ws, poll_interval=0.25, refresh_interval=5, info_interval=30):
+async def poll_devices(ws_queue: asyncio.Queue = None, poll_interval=0.25, refresh_interval=5, info_interval=30):
     """ Reconcile active devices and manage device tasks """
     
     @database_sync_to_async
@@ -72,8 +71,8 @@ async def poll_devices(ws, poll_interval=0.25, refresh_interval=5, info_interval
 
     logger.info("Starting Async Poller Supervisor...")
     
-    queue = asyncio.Queue()
-    writer_task = asyncio.create_task(_db_and_ws_write(ws, queue))
+    poll_queue = asyncio.Queue()
+    writer_task = asyncio.create_task(_db_and_ws_write(ws_queue, poll_queue))
     perf_task = asyncio.create_task(log_performance())
     
     device_tasks = {}
@@ -99,7 +98,7 @@ async def poll_devices(ws, poll_interval=0.25, refresh_interval=5, info_interval
             for d_id in active_ids:
                 if d_id not in device_tasks:
                     device_tasks[d_id] = asyncio.create_task(
-                        _poll_single_device_loop(d_id, queue, poll_interval, refresh_interval)
+                        _poll_single_device_loop(d_id, poll_queue, poll_interval, refresh_interval)
                     )
             
             await asyncio.sleep(refresh_interval)
@@ -112,7 +111,7 @@ async def poll_devices(ws, poll_interval=0.25, refresh_interval=5, info_interval
         perf_task.cancel()
 
 
-async def _db_and_ws_write(ws, queue: asyncio.Queue):
+async def _db_and_ws_write(ws_queue: asyncio.Queue | None, poll_queue: asyncio.Queue):
     """ Read from the queue, merge updates, save to DB, and send updates over WebSocket """
 
     @database_sync_to_async
@@ -134,12 +133,12 @@ async def _db_and_ws_write(ws, queue: asyncio.Queue):
             AlarmConfig.update_alarms(updated_tags)
 
     while True:
-        first_context: PollContext = await queue.get()
+        first_context: PollContext = await poll_queue.get()
         items_count = 1
         
-        while not queue.empty():
+        while not poll_queue.empty():
             try:
-                next_context: PollContext = queue.get_nowait()
+                next_context: PollContext = poll_queue.get_nowait()
                 first_context.updated_tags.update(next_context.updated_tags)
                 first_context.read_tags.update(next_context.read_tags)
                 items_count += 1
@@ -155,22 +154,17 @@ async def _db_and_ws_write(ws, queue: asyncio.Queue):
             except Exception as e:
                 logger.error(f"Error performing DB updates in poller: {e}")
         
-        if updated_list:
+        if updated_list and ws_queue is not None and getattr(ws_queue, "connected", False):
             try:
                 tag_data = await get_tag_data(updated_list)
-                await ws.send(json.dumps({
-                    "type": "tag_update",
-                    "updates": tag_data
-                }))
-
-            except ConnectionClosed as cce:
-                logger.error("WebSocket connection lost in writer task")
-                raise cce
+                msg = json.dumps({"type": "tag_update", "updates": tag_data})
+                await ws_queue.put(msg) 
+                
             except Exception as e:
                 logger.error(f"Error preparing updates or serialization: {e}")
 
         for _ in range(items_count):
-            queue.task_done()
+            poll_queue.task_done()
 
 
 async def _poll_single_device_loop(device_id: int, queue: asyncio.Queue, poll_interval: float, refresh_interval: float):

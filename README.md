@@ -40,6 +40,8 @@ Options:
         Target loop period (in seconds) for reading data from Devices. [Default: 0.25]
     --refresh-interval
         Loop period (in seconds) for refreshing Device and Tag configuration. [Default: 5]
+    --websocket
+        If the poller should connect to the web server. [Default: True]
 ```
 ```
 python manage.py run_simulation [OPTIONS]
